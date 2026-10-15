@@ -548,17 +548,35 @@
     { id: 'verify', group: 'Setup', label: 'Verify wallet', build: verify, shot: '21-VerifyWallet-Top', swift: 'WalletVerifyView.swift' },
   ]
 
-  /** Path to the simulator screenshot a screen was rebuilt from (for the overlay) */
-  const shotURL = (screen, mode) => `../fastlane/screenshots/${mode}/en-US/${encodeURIComponent(`iPhone 17 Pro-${screen.shot}.png`)}`
+  /**
+   * Where the simulator screenshots for the overlay can live, in the order they are tried: the
+   * birch-screenshots submodule in a birch-wallet checkout, then a screenshots/ folder next to
+   * this page (the GitHub Pages build copies them there). ds-app.js picks the first that loads.
+   */
+  const SHOT_BASES = ['../fastlane/screenshots/', 'screenshots/']
+  let shotBase = null
+  /** Path of the screenshot a screen was rebuilt from, relative to a shot base */
+  const shotPath = (screen, mode) => `${mode}/en-US/${encodeURIComponent(`iPhone 17 Pro-${screen.shot}.png`)}`
 
   function phone(screen, mode) {
     // The wrapper reserves the scaled size; the phone itself is scaled with a transform, because
     // CSS zoom lets Safari bump 10pt text up to its minimum font size and break the layout
+    const rel = shotPath(screen, mode)
     return `<div class="ph-wrap"><figure class="ph m-${mode}" data-screen="${screen.id}" data-mode="${mode}">
       <div class="ph-screen">${screen.build(mode)}${statusBar(mode)}<i class="ph-island"></i>
-        <img class="ph-ref" src="${shotURL(screen, mode)}" alt="" loading="lazy" decoding="async"></div>
+        <img class="ph-ref"${shotBase ? ` src="${shotBase + rel}"` : ''} data-shot="${rel}" alt="" loading="lazy" decoding="async"></div>
     </figure></div>`
   }
 
-  root.BirchShipped = { SCREENS, phone }
+  root.BirchShipped = {
+    SCREENS,
+    phone,
+    SHOT_BASES,
+    shotPath,
+    /** Points every overlay image, current and future, at the screenshots under `base` */
+    setShotBase(base) {
+      shotBase = base
+      document.querySelectorAll('img.ph-ref[data-shot]').forEach((img) => (img.src = base + img.dataset.shot))
+    },
+  }
 })(typeof window !== 'undefined' ? window : globalThis)

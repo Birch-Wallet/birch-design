@@ -7,6 +7,8 @@ This repo does two jobs:
 1. **Reference for the app as it ships.** It records Birch's current design system: colors, type, shape, components and screens. Use it when building a feature that needs new UI, so the new screens match the rest of the app.
 2. **Playground for design changes.** A browser page rebuilds the real app screens and lets you adjust every design variable, compare alternative directions, and pin comments that Claude Code can implement.
 
+**Open the playground: https://birch-wallet.github.io/birch-design/**
+
 ## What's here
 
 | Path | What it is |
@@ -15,6 +17,7 @@ This repo does two jobs:
 | `design-system.html` | The playground. Open it in a browser. There is no build step and no server. |
 | `assets/` | The page's scripts and styles. `ds-assets.js` is generated; don't edit it by hand. |
 | `tools/` | The asset generator and the end-to-end check of the page. |
+| `.github/workflows/pages.yml` | Publishes the playground to GitHub Pages. |
 | `reviews/` | Exported reviews waiting to be implemented. |
 | `AGENTS.md` | Instructions for AI coding agents working in this repo. |
 
@@ -26,19 +29,19 @@ This repo is a submodule of birch-wallet, checked out at `design/`.
 git clone --recurse-submodules git@github.com:Birch-Wallet/birch-wallet.git
 
 # or, in an existing clone
-git submodule update --init design
+git submodule update --init design fastlane/screenshots
 ```
 
-Use it inside birch-wallet, not as a standalone clone. Two features read files from the parent repo:
+Two features use the simulator screenshots from [birch-screenshots](https://github.com/Birch-Wallet/birch-screenshots):
 
-- **Overlay app** lays the simulator screenshots from `../fastlane/screenshots/` over the rebuilt screens.
-- **`tools/build-assets.py`** cuts the QR codes and status bar out of the same screenshots.
+- **Overlay app** lays them over the rebuilt screens.
+- **`tools/build-assets.py`** cuts the QR codes and status bar out of them.
 
-The screenshots aren't committed. To generate them, run `fastlane screenshots only:"iPhone 17 Pro" frame:false` in birch-wallet.
+birch-wallet has birch-screenshots as a second submodule at `fastlane/screenshots/`, and the page finds it there. In a standalone clone of this repo, clone birch-screenshots into `screenshots/` instead. That folder is ignored by git. Without either, the Overlay button is dimmed and says what's missing.
 
 ## Using the playground
 
-Open `design-system.html` in Safari. Safari is the reference browser because it renders SF Pro Rounded and SF Mono the same way iOS does.
+Use the [hosted copy](https://birch-wallet.github.io/birch-design/), or open `design-system.html` from your checkout in Safari. Safari is the reference browser because it renders SF Pro Rounded and SF Mono the same way iOS does.
 
 The presets:
 
@@ -59,7 +62,7 @@ The presets:
 
 **Focus** shows one preset in full: tokens, type, buttons, components and the nine app screens in light and dark. **Compare** puts one screen side by side across every preset.
 
-Your tuning and comments are saved in that browser's local storage. To move them to another browser, export JSON from one and import it in the other.
+Your tuning and comments are saved in that browser's local storage, separately for the hosted copy and for each local file. To move them, export JSON from one and import it in the other.
 
 ## From idea to app
 
@@ -84,6 +87,14 @@ After adding an SF Symbol to a screen, regenerate the assets. This needs macOS, 
 
 ```sh
 python3 tools/build-assets.py
+```
+
+## Publishing
+
+Every push to `main` publishes the playground to GitHub Pages. The build copies the iPhone 17 Pro screenshots from the latest birch-screenshots, and it fails if any screen's screenshot is missing. To pick up new screenshots without changing anything here, run the workflow by hand:
+
+```sh
+gh workflow run pages.yml -R Birch-Wallet/birch-design
 ```
 
 ## Updating birch-wallet

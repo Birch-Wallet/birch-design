@@ -1,0 +1,67 @@
+# Publishes design-system.html to GitHub Pages, with the iPhone 17 Pro
+# screenshots from birch-screenshots so Overlay app works on the site.
+name: Publish to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Run by hand to pick up new screenshots without a change here
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the design system
+        uses: actions/checkout@v7
+        with:
+          path: design
+
+      - name: Check out the iPhone 17 Pro screenshots
+        uses: actions/checkout@v7
+        with:
+          repository: Birch-Wallet/birch-screenshots
+          path: shots
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /dark/en-US/iPhone 17 Pro-*.png
+            /light/en-US/iPhone 17 Pro-*.png
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -R design/design-system.html design/assets _site/
+          cp design/design-system.html _site/index.html
+          for mode in dark light; do
+            mkdir -p "_site/screenshots/$mode/en-US"
+            cp shots/$mode/en-US/iPhone\ 17\ Pro-*.png "_site/screenshots/$mode/en-US/"
+          done
+          # Fail if a screen's screenshot is missing, so Overlay never ships half broken
+          for shot in $(grep -o "shot: '[^']*'" design/assets/ds-shipped.js | cut -d"'" -f2); do
+            for mode in dark light; do
+              test -f "_site/screenshots/$mode/en-US/iPhone 17 Pro-$shot.png" || { echo "Missing $mode screenshot: $shot"; exit 1; }
+            done
+          done
+          du -sh _site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

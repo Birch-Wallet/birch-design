@@ -59,6 +59,7 @@ button { font: inherit; color: inherit; }
 .xbtn { height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--x-line2); background: var(--x-panel); color: var(--x-ink);
   font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
 .xbtn:hover { border-color: var(--x-ink3); }
+.xbtn.is-unavailable { opacity: .5; }
 .xbtn[aria-pressed="true"] { background: var(--x-sel); color: var(--x-onsel); border-color: var(--x-sel); }
 .xbtn.pin-on[aria-pressed="true"] { background: var(--x-pin); border-color: var(--x-pin); color: var(--x-onpin); }
 .xbtn .count { font-variant-numeric: tabular-nums; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--x-panel2); color: var(--x-ink); font-size: 11px; font-weight: 600; display: inline-grid; place-items: center; }

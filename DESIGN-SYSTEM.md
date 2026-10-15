@@ -13,7 +13,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | Path | What it is |
 |---|---|
 | `design/DESIGN-SYSTEM.md` | This document. |
-| `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule. |
+| `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
 | `design/assets/ds-shipped.js`, `ds-shipped.css` | The nine app screens, rebuilt point for point from the SwiftUI views. Every size, spacing, radius, type and color value is a Tune variable. |
@@ -28,7 +28,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 
 # Part 1: Current state
 
-Everything below describes the app as it ships today. Values come from `birch/Views/Components/Theme.swift` and the views that use it. Screenshots: `fastlane/screenshots/{light,dark}/en-US/`.
+Everything below describes the app as it ships today. Values come from `birch/Views/Components/Theme.swift` and the views that use it. Screenshots: `fastlane/screenshots/{light,dark}/en-US/`, the [birch-screenshots](https://github.com/Birch-Wallet/birch-screenshots) submodule.
 
 ## 1.1 Theme architecture
 

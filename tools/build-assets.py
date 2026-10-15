@@ -6,9 +6,10 @@ shipped-layout screens use.
   python3 design/tools/build-assets.py
 
 Needs macOS (Swift + AppKit render the SF Symbols) and ImageMagick (`magick`)
-for the pieces cut from fastlane/screenshots. Symbols are discovered by
-scanning ds-shipped.js for quoted 'name:size:weight' keys, so adding a symbol
-to a screen and rerunning this script is all it takes.
+for the pieces cut from the screenshots: the birch-screenshots submodule at
+fastlane/screenshots in birch-wallet, or a clone of it at design/screenshots.
+Symbols are discovered by scanning ds-shipped.js for quoted 'name:size:weight'
+keys, so adding a symbol to a screen and rerunning this script is all it takes.
 """
 import base64
 import json
@@ -21,7 +22,9 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESIGN = os.path.dirname(HERE)
 REPO = os.path.dirname(DESIGN)
-SHOTS = os.path.join(REPO, 'fastlane', 'screenshots')
+# The birch-screenshots submodule in birch-wallet, or a clone of it next to the page
+SHOTS = next((d for d in (os.path.join(REPO, 'fastlane', 'screenshots'), os.path.join(DESIGN, 'screenshots'))
+              if os.path.isdir(os.path.join(d, 'dark', 'en-US'))), os.path.join(REPO, 'fastlane', 'screenshots'))
 SHIPPED = os.path.join(DESIGN, 'assets', 'ds-shipped.js')
 OUT = os.path.join(DESIGN, 'assets', 'ds-assets.js')
 KEY = re.compile(r"'([a-z0-9]+(?:\.[a-z0-9]+)*:\d+(?:\.\d+)?:(?:ultralight|thin|light|regular|medium|semibold|bold|heavy|black)(?::(?:small|medium|large))?)'")

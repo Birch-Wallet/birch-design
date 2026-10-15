@@ -478,9 +478,27 @@ async function views(p) {
   check(w1 > w0 && fits, area, 'Size slider scales phones and keeps layout space in step', `${w0.toFixed(0)} → ${w1.toFixed(0)}`)
 
   // Overlay
+  // The page looks for the screenshots first, so wait for it to turn the overlay on
   await p.locator('#refBtn').click()
-  await settle(p)
-  const refShown = await p.evaluate(() => getComputedStyle(document.querySelector('#scope .ph-ref')).display !== 'none')
+  const refShown = await p
+    .waitForFunction(() => document.body.classList.contains('show-ref') && getComputedStyle(document.querySelector('#scope .ph-ref')).display !== 'none', null, { timeout: 5000 })
+    .then(() => true, () => false)
+  // Every phone's overlay points at a real 1206 x 2622 screenshot
+  const refSrc = await p.evaluate(() => document.querySelector('#scope .ph-ref').getAttribute('src') || '')
+  const refsLoad = await p.evaluate(() =>
+    Promise.all(
+      [...document.querySelectorAll('#scope .ph-ref')].map(
+        (el) =>
+          new Promise((resolve) => {
+            const img = new Image()
+            img.onload = () => resolve(img.naturalWidth === 1206 && img.naturalHeight === 2622)
+            img.onerror = () => resolve(false)
+            img.src = el.src
+          })
+      )
+    ).then((all) => all.length > 0 && all.every(Boolean))
+  )
+  check(refsLoad, area, 'Overlay screenshots load for every phone', refSrc.split('/').slice(0, 3).join('/'))
   await p.keyboard.press('o')
   await settle(p)
   const refHidden = await p.evaluate(() => getComputedStyle(document.querySelector('#scope .ph-ref')).display === 'none')

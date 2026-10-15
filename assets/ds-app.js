@@ -457,12 +457,12 @@
   // Helpers
   // ---------------------------------------------------------------------------
 
-  function toast(msg) {
+  function toast(msg, ms = 1800) {
     const t = $('#toast')
     t.textContent = msg
     t.classList.add('show')
     clearTimeout(toast.t)
-    toast.t = setTimeout(() => t.classList.remove('show'), 1800)
+    toast.t = setTimeout(() => t.classList.remove('show'), ms)
   }
 
   function copyText(text, okMsg = 'Copied') {
@@ -1070,6 +1070,43 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Overlay
+  // ---------------------------------------------------------------------------
+
+  /** Resolves to the first shot base whose screenshots load, or null when there are none */
+  let shotsFound = null
+  function findShots() {
+    const loads = (url) =>
+      new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        img.src = url
+      })
+    shotsFound =
+      shotsFound ||
+      (async () => {
+        for (const base of SH.SHOT_BASES) if (await loads(base + SH.shotPath(SH.SCREENS[0], 'dark'))) return base
+        return null
+      })()
+    return shotsFound
+  }
+
+  async function toggleRef() {
+    if (!showRef) {
+      const base = await findShots()
+      if (!base) {
+        $('#refBtn').classList.add('is-unavailable')
+        $('#refBtn').title = 'No simulator screenshots found. Open this page from a birch-wallet checkout with the birch-screenshots submodule at fastlane/screenshots.'
+        return toast('No simulator screenshots found. Check out the birch-screenshots submodule in birch-wallet.', 4000)
+      }
+      SH.setShotBase(base)
+    }
+    showRef = !showRef
+    renderTop()
+  }
+
+  // ---------------------------------------------------------------------------
   // Comments
   // ---------------------------------------------------------------------------
 
@@ -1671,10 +1708,7 @@
       save()
     })
     $('#commentBtn').addEventListener('click', () => setCommenting(!commenting))
-    $('#refBtn').addEventListener('click', () => {
-      showRef = !showRef
-      renderTop()
-    })
+    $('#refBtn').addEventListener('click', toggleRef)
     $('#exportBtn').addEventListener('click', () => openDrawer('export'))
     $('#tuneBtn').addEventListener('click', () => {
       S.dialOpen = !S.dialOpen
@@ -1762,10 +1796,8 @@
         save()
         renderTop()
       } else if (k === 'e') openDrawer('export')
-      else if (k === 'o') {
-        showRef = !showRef
-        renderTop()
-      } else if (['1', '2', '3', '4'].includes(k)) switchPreset(BUILT_IN[+k - 1])
+      else if (k === 'o') toggleRef()
+      else if (['1', '2', '3', '4'].includes(k)) switchPreset(BUILT_IN[+k - 1])
     })
   }
 
