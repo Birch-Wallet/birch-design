@@ -28,13 +28,19 @@ When a feature needs new screens or UI elements:
 5. If the feature adds a reusable element or a new pattern, add it to Part 1 and tell the user.
 6. Part 2 (Catkin, Leaf, Bark and the interview decisions) is exploration and has not shipped. Don't apply it to app code unless the user asks.
 
-## Implementing an exported review
+## Applying an export
 
-Reviews are saved in `reviews/` as `birch-design-review-YYYY-MM-DD.md` and `.json`. Each one lists the preset under review, the parameter changes, comments pinned to elements (with the screen, the mode and the SwiftUI file) and section notes, plus the resolved tokens and the `Theme.swift` name each replaces. Its "How to apply" section explains the mapping.
+The page's Markdown export is a prompt for you: it asks you to update the SwiftUI code in birch-wallet. It arrives pasted into the conversation or saved in `reviews/` as `birch-design-changes-YYYY-MM-DD.md`, with a matching `.json` holding the same changes as exact values. Files named `birch-design-review-*` come from an earlier version of the same export.
 
-- Decide for each comment whether it asks for an app change (SwiftUI in birch-wallet) or a playground change (this repo). If that isn't clear, ask.
-- Where a comment conflicts with the token table, the comment wins.
-- After changing the app, bring Part 1 and the Today preset up to date so the reference still matches the app.
+Each export contains:
+
+- **The selected preset.** Today means "keep the shipped design and apply these changes". Any other preset means "move the app to this direction".
+- **Instructions**, under "How to make the changes". Follow them.
+- **Changes from the shipped app.** Settings, with readable names, the Tune path, and the shipped and new values. Colors, with their light and dark hex values and the Swift name each one replaces. Only these change.
+- **Comments to apply**, each with the screen, element, SwiftUI file and appearance. A comment wins over a table. Comments made on other presets and resolved comments are context only.
+- **A reference** with every value of the selected preset.
+
+If a comment asks for a change to the playground rather than the app, make it in this repo instead and say so. After changing the app, bring Part 1 and the Today preset up to date so the reference still matches the app.
 
 ## Changing the playground
 
@@ -90,7 +96,7 @@ If `Theme.swift` or a rebuilt view changes in birch-wallet:
 
 - Don't commit or push unless the user asks.
 - Commit and push in this repo (and in birch-screenshots) first, then commit the updated `design` and `fastlane/screenshots` pointers in birch-wallet. Never point birch-wallet at a commit that hasn't been pushed.
-- Exported reviews in `reviews/` are committed, so the design history stays together.
+- Exports saved in `reviews/` are committed, so the design history stays together.
 
 ## Writing style for the docs
 

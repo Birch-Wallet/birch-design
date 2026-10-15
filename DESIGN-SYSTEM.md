@@ -22,7 +22,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/assets/ds-app.js` | Views, the tuning panel, comments, export and the screenshot harness. |
 | `design/tools/build-assets.py`, `render-symbols.swift` | Regenerates `ds-assets.js`. Run it after adding a symbol to a screen. |
 | `design/tools/check-page.js` | End-to-end check of the page: drags every Tune control in every preset and exercises comments, export, import, views, shortcuts and saved-state migration. |
-| `design/reviews/` | Exported reviews (`birch-design-review-YYYY-MM-DD.md` and `.json`) for Claude Code to implement. |
+| `design/reviews/` | Saved exports (`birch-design-changes-YYYY-MM-DD.md` and `.json`): prompts for Claude Code to update the app. |
 
 ---
 
@@ -233,7 +233,7 @@ Tuning a slider can't push text below AA. When a secondary or tertiary text slid
 
 ## Screen fidelity
 
-The screens in `design-system.html` are the shipped layouts, not redesigns. Each one is rebuilt from its SwiftUI view on the 402 × 874pt iPhone 17 Pro canvas, using the same stacks, paddings, spacing and fonts. With the **Today** preset, the screens line up with `fastlane/screenshots` to within about a point in both modes. **Overlay app** lays the screenshot over each phone so you can check this yourself.
+The screens in `design-system.html` are the shipped layouts, not redesigns. Each one is rebuilt from its SwiftUI view on the 402 × 874pt iPhone 17 Pro canvas, using the same stacks, paddings, spacing and fonts. With the **Today** preset, the screens line up with `fastlane/screenshots` to within about a point in both modes. **Overlay Screenshot** lays the screenshot over each phone so you can check this yourself.
 
 | Screen | Rebuilt from | Screenshot |
 |---|---|---|
@@ -284,13 +284,13 @@ Today shows Theme.swift's exact colors. Editing any color switches it to a gener
 
 To re-check the page after a change, run `node design/tools/check-page.js webkit` (or `chromium`). It needs `playwright-core`; set `PLAYWRIGHT_CORE` to an install path if it isn't resolvable from the repo.
 
-## Reviewing in `design-system.html`
+## Using `design-system.html`
 
-1. **Pick a preset** in the toolbar, or press 1 to 4. Focus view shows its tokens, type, the button matrix and patterns, the component boards and the nine app screens in light and dark. **Overlay app** (O) shows the simulator screenshot on top.
+1. **Pick a preset** in the toolbar, or press 1 to 4. The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the nine app screens in light and dark. **Overlay Screenshot** (O) shows the simulator screenshot on top.
 2. **Compare** shows one screen across all options side by side, with Today if you include it.
 3. **Tune** (T) opens the panel. Drag a slider or type a value and press Enter. Every change shows a dot; click the dot to reset that value, or Reset preset for all of them. "Save as preset" keeps a named copy.
 4. **Comment** (C) lets you click any element to pin a note. Each pin records the option, the mode, the screen or board, the element and its current computed styles. Section notes sit at the end of each section.
-5. **Export** (E) produces Markdown and JSON with the parameter changes, comments, notes, resolved tokens and their Theme.swift mapping. Save them to `design/reviews/` and ask Claude Code to implement them.
+5. **Export** (E) produces a prompt for Claude Code to update the SwiftUI code. It lists the selected preset, the settings and colors that differ from the shipped app (with the Swift names they replace), the comments and notes, and step-by-step instructions. Paste it into Claude Code in birch-wallet, or save it to `design/reviews/`. The JSON version holds the same changes as exact values and can be imported back into the page.
 
 State is saved in that browser's local storage. To move to another browser, use Import JSON.
 

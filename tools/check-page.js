@@ -105,6 +105,44 @@ async function drag(p, sel, frac) {
   await settle(p, 60)
 }
 
+/** What a first visit shows, and the change export from an untouched and a tuned Today */
+async function firstVisit(p) {
+  const area = 'First visit'
+  const top = await p.evaluate(() => ({
+    presets: [...document.querySelectorAll('#presetSeg [data-preset]')].map((b) => b.dataset.preset),
+    selected: document.querySelector('#presetSeg [aria-pressed="true"]').dataset.preset,
+    view: document.querySelector('#viewSeg [aria-pressed="true"]').dataset.view,
+    title: document.querySelector('.top .mark').textContent.trim(),
+    overlay: document.querySelector('#refBtn').textContent.trim(),
+    overlayOn: document.body.classList.contains('show-ref') || document.querySelector('#refBtn').getAttribute('aria-checked') === 'true',
+  }))
+  check(top.presets.slice(0, 4).join(',') === 'T,A,B,C' && top.selected === 'T', area, 'Today is listed first and selected', top.presets.join(','))
+  check(top.view === 'focus', area, 'The view starts on Focus', top.view)
+  check(top.overlay === 'Overlay Screenshot' && !top.overlayOn, area, 'Overlay Screenshot starts off', top.overlay)
+  check(top.title === 'Birch Design System', area, 'Header reads Birch Design System', top.title)
+
+  // Untouched Today: nothing to change
+  await p.locator('#exportBtn').click()
+  await p.locator('#drawer [data-tab="export"]').click()
+  let md = await p.locator('#expPre').textContent()
+  check(md.startsWith('# Update the Birch app’s design') && md.includes('**Selected preset:** Today') && md.includes('## How to make the changes') && md.includes('`birch/Views/Components/Theme.swift`'), area, 'Export is a prompt to update the Swift code')
+  check(md.includes('None. Shape, type, spacing, buttons, layout and app chrome stay as they ship.') && md.includes('None. Colors stay as they ship.'), area, 'Untouched Today exports no changes')
+  await p.locator('#drawerClose').click()
+
+  // Tuned Today: only what moved is listed, with readable setting names
+  await drag(p, '#dial input[type=range][data-path="brand.hue"]', 0.25)
+  await expandAll(p)
+  await drag(p, '#dial input[type=range][data-path="shape.card"]', 0.2)
+  await p.locator('#exportBtn').click()
+  md = await p.locator('#expPre').textContent()
+  const changes = md.split('## Comments to apply')[0].split('### Colors')
+  check(/\| Shape › Card radius \(`shape\.card`\) \| 12 pt \| \d+ pt \|/.test(changes[0]) && !changes[0].includes('Spacing ›'), area, 'Tuned settings are listed by name with shipped and new values', (changes[0].match(/\| Shape › Card radius[^\n]*/) || ['missing'])[0])
+  const colorRows = (changes[1] || '').split('\n').filter((l) => l.startsWith('| `'))
+  check(colorRows.some((l) => l.startsWith('| `brand` |')) && !colorRows.some((l) => /^\| `(ground|card|ink|ink2)` \|/.test(l)), area, 'A color edit on Today lists only the colors it moved', `${colorRows.length} rows: ${colorRows.map((l) => l.split('|')[1].trim()).join(' ')}`)
+  await p.locator('#drawerClose').click()
+  await resetPreset(p)
+}
+
 async function tuneAudit(p) {
   for (const preset of PRESETS) {
     await selectPreset(p, preset)
@@ -391,9 +429,10 @@ async function comments(p) {
   const md = await p.locator('#expPre').textContent()
   check(md.includes('Brand gold should be warmer.') && md.includes('Resolved comments (1)') && md.includes('Dark ground feels too warm.') && md.includes('Take Catkin forward.'), area, 'Markdown export holds comments, notes and overall notes')
   check(md.includes('SendReviewView.swift') && md.includes('| `brand` |'), area, 'Markdown export names Swift files and the token table')
+  check(md.includes('**Selected preset:** Catkin') && md.includes('| Type › Title weight (`type.titleWeight`) | Medium | Semibold |') && md.includes('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |'), area, 'Exporting another preset lists its differences from the shipped app')
   await p.locator('#drawer [data-fmt="json"]').click()
   const json = JSON.parse(await p.locator('#expPre').textContent())
-  check(json.schema === 'birch-design-review/1' && json.comments.length === 3 && json.layout && json.layout.spacing, area, 'JSON export parses and includes layout values')
+  check(json.schema === 'birch-design-changes/1' && json.comments.length === 3 && json.layout && json.layout.spacing && json.instructions.length > 0 && json.changesFromShipped.settings.length > 0 && json.changesFromShipped.colors.length > 0, area, 'JSON export parses and includes instructions, changes and layout values')
 
   const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 5000 }).catch(() => null), p.locator('#expDl').click()])
   let file = null
@@ -401,7 +440,7 @@ async function comments(p) {
     file = path.join(os.tmpdir(), `birch-review-${Date.now()}.json`)
     await dl.saveAs(file)
   }
-  check(!!dl && /birch-design-review-.*\.json$/.test(dl.suggestedFilename()), area, 'Download produces a review file', dl ? dl.suggestedFilename() : 'no download event')
+  check(!!dl && /birch-design-changes-.*\.json$/.test(dl.suggestedFilename()), area, 'Download produces a changes file', dl ? dl.suggestedFilename() : 'no download event')
 
   // Clear, then import the downloaded JSON
   await p.locator('#expClear').click()
@@ -484,7 +523,7 @@ async function views(p) {
   // The page looks for the screenshots first, so wait for it to turn the overlay on
   await p.locator('#refBtn').click()
   const refShown = await p
-    .waitForFunction(() => document.body.classList.contains('show-ref') && getComputedStyle(document.querySelector('#scope .ph-ref')).display !== 'none', null, { timeout: 5000 })
+    .waitForFunction(() => document.body.classList.contains('show-ref') && document.querySelector('#refBtn').getAttribute('aria-checked') === 'true' && getComputedStyle(document.querySelector('#scope .ph-ref')).display !== 'none', null, { timeout: 5000 })
     .then(() => true, () => false)
   // Every phone's overlay points at a real 1206 x 2622 screenshot
   const refSrc = await p.evaluate(() => document.querySelector('#scope .ph-ref').getAttribute('src') || '')
@@ -504,7 +543,7 @@ async function views(p) {
   check(refsLoad, area, 'Overlay screenshots load for every phone', refSrc.split('/').slice(0, 3).join('/'))
   await p.keyboard.press('o')
   await settle(p)
-  const refHidden = await p.evaluate(() => getComputedStyle(document.querySelector('#scope .ph-ref')).display === 'none')
+  const refHidden = await p.evaluate(() => getComputedStyle(document.querySelector('#scope .ph-ref')).display === 'none' && document.querySelector('#refBtn').getAttribute('aria-checked') === 'false')
   check(refShown && refHidden, area, 'Overlay button and O key show and hide the screenshot')
 
   // Page theme cycles system → light → dark → system
@@ -518,7 +557,7 @@ async function views(p) {
   // Number keys switch presets
   await p.keyboard.press('3')
   await settle(p)
-  check((await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')) === 'C', area, 'Number keys switch presets')
+  check((await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')) === 'B', area, 'Number keys switch presets in toolbar order')
   await p.keyboard.press('1')
 
   // Rail navigation
@@ -565,7 +604,7 @@ async function migration(p) {
   await waitSave(p)
   const st = await p.evaluate(() => JSON.parse(localStorage.getItem('birch-ds-v1')))
   const margin = await p.evaluate(() => getComputedStyle(document.querySelector('#scope [data-screen="review"][data-mode="dark"] .pbtn').parentElement).paddingLeft)
-  check(st.v === 2 && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st), area, 'v1 state migrates: new layout defaults, tunes and comments kept', `gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
+  check(st.v === 3 && st.current === 'T' && st.view === 'focus' && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
 }
 
 ;(async () => {
@@ -578,7 +617,7 @@ async function migration(p) {
   p.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   const t0 = Date.now()
   await open(p)
-  for (const [name, fn] of [['tune audit', SKIP_TUNE ? null : tuneAudit], ['tune features', tuneFeatures], ['comments', comments], ['views', views], ['migration', migration]]) {
+  for (const [name, fn] of [['first visit', firstVisit], ['tune audit', SKIP_TUNE ? null : tuneAudit], ['tune features', tuneFeatures], ['comments', comments], ['views', views], ['migration', migration]]) {
     if (!fn) continue
     try {
       await fn(p)

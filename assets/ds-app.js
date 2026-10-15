@@ -18,7 +18,8 @@
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel))
   const clone = (o) => JSON.parse(JSON.stringify(o))
   const STORAGE_KEY = 'birch-ds-v1'
-  const BUILT_IN = ['A', 'B', 'C', 'T']
+  // Today (the app as it ships) first, then the three directions
+  const BUILT_IN = ['T', 'A', 'B', 'C']
 
   const FONTS = {
     rounded: 'ui-rounded, "Birch SF Rounded", "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
@@ -233,8 +234,8 @@
 
   function defaults() {
     return {
-      v: 2,
-      current: 'A',
+      v: 3,
+      current: 'T',
       params: freshParams(),
       custom: {},
       view: 'focus',
@@ -261,15 +262,16 @@
       s = null
     }
     const d = defaults()
-    if (!s || (s.v !== 1 && s.v !== 2)) return d
-    if (s.v === 1) {
-      migrateV1(s)
-      migrated = true
-    }
+    if (!s || ![1, 2, 3].includes(s.v)) return d
+    if (s.v === 1) migrateV1(s)
+    if (s.v === 2) migrateV2(s)
+    if (s.v !== 3) return d
+    migrated = migrated || s.migrated
+    delete s.migrated
     const merged = Object.assign(d, s)
     // Fill keys a newer preset definition added
     for (const id of BUILT_IN) merged.params[id] = deepMerge(clone(TK.PRESETS[id]), merged.params[id] || {})
-    if (!merged.params[merged.current]) merged.current = 'A'
+    if (!merged.params[merged.current]) merged.current = 'T'
     return merged
   }
 
@@ -297,6 +299,15 @@
     }
     delete st.rules
     st.v = 2
+    st.migrated = true
+  }
+
+  /** v3 made Today the default preset and Focus the default view; open there once, keeping everything else */
+  function migrateV2(st) {
+    st.current = 'T'
+    st.view = 'focus'
+    st.v = 3
+    st.migrated = true
   }
 
   function deepMerge(base, over) {
@@ -320,7 +331,7 @@
       }
     }, 300)
   }
-  // Write a migrated v1 state straight back so storage matches what the page shows
+  // Write a migrated state straight back so storage matches what the page shows
   if (migrated) save()
 
   const presetIds = () => [...BUILT_IN, ...Object.keys(S.custom)]
@@ -541,7 +552,7 @@
       .join('')
     $$('#viewSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)))
     $$('#modeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modes === S.modes)))
-    $('#refBtn').setAttribute('aria-pressed', String(showRef))
+    $('#refBtn').setAttribute('aria-checked', String(showRef))
     document.body.classList.toggle('show-ref', showRef)
     $('#zoom').value = S.zoom[S.view]
     document.documentElement.style.setProperty('--zoom', S.zoom[S.view])
@@ -695,7 +706,7 @@
         ${notesBlock('components', 'components')}</section>
 
       <section class="sec" id="screens"><p class="eyebrow">Screens</p><h2>Screens</h2>
-        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Overlay app</b> lays the screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
+        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Overlay Screenshot</b> lays the simulator screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
         ${screensHtml}${notesBlock('screens', 'screens')}</section>
     </div>`
     observeSections()
@@ -1026,7 +1037,7 @@
         const id = S.current
         delete S.custom[id]
         delete S.params[id]
-        S.current = 'A'
+        S.current = 'T'
         save()
         rerenderAll()
         toast('Preset deleted')
@@ -1339,14 +1350,14 @@
       : `<div class="empty-note">No comments yet. Turn on <b>Comment</b> (or press <span class="kbd">C</span>) and click any element on a screen, board, token row or check. Each pin records the option, mode, screen and the element’s current styles.</div>`
     const text = exportFormat === 'md' ? buildMarkdown() : JSON.stringify(buildJSON(), null, 2)
     const exportHtml = `
-      <label class="field-x"><span>Overall notes</span><textarea id="overall" placeholder="Direction-level feedback: which option to take forward, what to merge from the others.">${esc(S.overall)}</textarea></label>
+      <label class="field-x"><span>Overall notes</span><textarea id="overall" placeholder="Context for Claude Code that isn’t pinned to an element: the goal of these changes, priorities, what to leave alone.">${esc(S.overall)}</textarea></label>
       <div class="row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div class="seg" role="group" aria-label="Format"><button type="button" data-fmt="md" aria-pressed="${exportFormat === 'md'}">Markdown</button><button type="button" data-fmt="json" aria-pressed="${exportFormat === 'json'}">JSON</button></div>
         <span style="flex:1"></span>
         <button type="button" class="xbtn" id="expCopy">${IC('doc.on.doc', 14)} Copy</button>
         <button type="button" class="xbtn primary" id="expDl">${IC('arrow.down.to.line', 14)} Download</button>
       </div>
-      <p class="lede" style="font-size:12.5px;margin:0">Save the file to <code>design/reviews/</code> and ask Claude Code to implement it. The Markdown is for reading. The JSON holds exact values and can be imported back here.</p>
+      <p class="lede" style="font-size:12.5px;margin:0">A prompt for Claude Code to update the app’s SwiftUI code to match the selected preset (${esc(presetName(S.current))}), its tuned values and your comments. Copy it into Claude Code in birch-wallet, or download it to <code>design/reviews/</code> and point Claude Code at the file. The JSON holds the same changes as exact values and can be imported back here.</p>
       <pre class="export-pre" id="expPre">${esc(text)}</pre>
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap">
         <button type="button" class="xbtn" id="expImport">${IC('tray.and.arrow.down', 14)} Import JSON</button>
@@ -1356,7 +1367,7 @@
       </div>
       <div id="clearConfirm"></div>`
     $('#drawer').innerHTML = `
-      <div class="drawer-head"><b>Review</b>
+      <div class="drawer-head"><b>Changes</b>
         <div class="seg" role="group" aria-label="Drawer tab"><button type="button" data-tab="comments" aria-pressed="${drawerTab === 'comments'}">Comments ${open ? `(${open})` : ''}</button><button type="button" data-tab="export" aria-pressed="${drawerTab === 'export'}">Export</button></div>
         <button type="button" class="xbtn icon" id="drawerClose" aria-label="Close">${IC('xmark', 14)}</button></div>
       <div class="drawer-body">${drawerTab === 'comments' ? commentsHtml : exportHtml}</div>`
@@ -1457,8 +1468,8 @@
         break
       case 'expDl': {
         const day = new Date().toISOString().slice(0, 10)
-        if (exportFormat === 'md') download(`birch-design-review-${day}.md`, buildMarkdown(), 'text/markdown')
-        else download(`birch-design-review-${day}.json`, JSON.stringify(buildJSON(), null, 2), 'application/json')
+        if (exportFormat === 'md') download(`birch-design-changes-${day}.md`, buildMarkdown(), 'text/markdown')
+        else download(`birch-design-changes-${day}.json`, JSON.stringify(buildJSON(), null, 2), 'application/json')
         break
       }
       case 'expImport':
@@ -1490,8 +1501,9 @@
         toast('That file is not valid JSON')
         return
       }
-      if (!data || data.schema !== 'birch-design-review/1') {
-        toast('Not a Birch design review export')
+      // birch-design-review/1 is the earlier name for the same export
+      if (!data || !['birch-design-changes/1', 'birch-design-review/1'].includes(data.schema)) {
+        toast('Not a Birch Design System export')
         return
       }
       const known = new Set(S.comments.map((c) => c.id))
@@ -1551,14 +1563,99 @@
     }
   }
 
+  /** Tune rows by path, with their group name, for readable setting names */
+  const DIAL_ROWS = Object.fromEntries(DIAL.flatMap((g) => g.rows.map((r) => [r[0], { group: g, row: r }])))
+
+  function settingLabel(path) {
+    const d = DIAL_ROWS[path]
+    return d ? `${d.group.name} › ${d.row[1]}` : path
+  }
+
+  function settingValue(path, v) {
+    const d = DIAL_ROWS[path]
+    if (!d) return fmtVal(v)
+    const [, , kind, opts, , , unit] = d.row
+    if (kind === 'seg') {
+      const o = opts.find(([val]) => val === v)
+      return o ? o[1] : fmtVal(v)
+    }
+    return fmtVal(v) + (unit && v !== undefined ? (unit === '×' ? '×' : ' ' + unit) : '')
+  }
+
+  /**
+   * Shape, type, spacing, button, layout, chrome and color-role settings that differ from the
+   * shipped app (the untouched Today preset), in Tune panel order
+   */
+  function settingChanges(id) {
+    const shipped = TK.PRESETS.T
+    const now = P(id)
+    // The accent group's hue and lightness are colors; only its role choices count as settings
+    return DIAL.filter((g) => !g.color || g.id === 'accent')
+      .flatMap((g) => g.rows)
+      .filter(([path]) => !path.startsWith('accent.'))
+      .map(([path]) => ({ path, setting: settingLabel(path), shipped: getPath(shipped, path), now: getPath(now, path) }))
+      .filter((c) => c.now !== c.shipped && !(typeof c.now === 'number' && typeof c.shipped === 'number' && Math.abs(c.now - c.shipped) < 1e-9))
+      .map((c) => ({ ...c, shippedLabel: settingValue(c.path, c.shipped), nowLabel: settingValue(c.path, c.now) }))
+  }
+  /**
+   * Color tokens that differ from the shipped Theme.swift values. Editing a color on Today swaps
+   * the exact values for a generated palette that matches them only to about 0.01 ΔE, so Today is
+   * compared with its untuned generated palette: only tokens the edits actually moved are listed.
+   */
+  function colorChanges(id) {
+    const shipped = TK.derive(TK.PRESETS.T)
+    let ref = shipped
+    if (id === 'T' && !P('T').overrides) {
+      const untuned = clone(TK.PRESETS.T)
+      delete untuned.overrides
+      ref = TK.derive(untuned)
+    }
+    const now = tokens(id)
+    return resolvedTokens(id)
+      .map((t) => ({
+        token: t.token,
+        role: t.role,
+        swift: t.swift,
+        light: { shipped: showColor(shipped.light[t.token]), now: showColor(now.light[t.token]), changed: showColor(ref.light[t.token]) !== showColor(now.light[t.token]) },
+        dark: { shipped: showColor(shipped.dark[t.token]), now: showColor(now.dark[t.token]), changed: showColor(ref.dark[t.token]) !== showColor(now.dark[t.token]) },
+      }))
+      .filter((c) => c.light.changed || c.dark.changed)
+  }
+
+  /** What Claude Code should do with the export; shared by the Markdown and the JSON */
+  const INSTRUCTIONS = [
+    'Read `design/AGENTS.md` and Part 1 of `design/DESIGN-SYSTEM.md` first. They describe how the app’s design is built today and which Swift code owns each part.',
+    'Change shared code first. Colors live in `birch/Views/Components/Theme.swift` (`HBTheme.birchDark`, `HBTheme.birchLight` and the `Color.hb*` accessors). Shape, type, spacing and buttons live in the shared components and modifiers (`BirchCard`, `BirchSelected`, `HBPrimaryButtonModifier`, `HBSecondaryButtonModifier`, `HBBarButtonStyle`, `Font.hb*`). Edit a single view only when a comment is about that screen or no shared code covers the change. Don’t add inline colors or fonts.',
+    'Apply every comment under “Comments to apply”. Each names the screen, the element, the SwiftUI file and the appearance it was made in. Where a comment conflicts with a table, the comment wins.',
+    'Change only what this lists. Everything else keeps its shipped value.',
+    'Keep Birch Light and Birch Dark both correct, and keep text at 4.5:1 contrast or better.',
+    'If a change is unclear, or would reach beyond the screens it names, ask before you guess.',
+    'When you’re done, build and run the unit tests as `CLAUDE.md` describes. Then report, for each comment and each changed value, what you changed and where, plus anything you skipped and why.',
+    'Finally, bring the design repo (the `design/` submodule) up to date so it still matches the app: Part 1 of `design/DESIGN-SYSTEM.md` and the Today preset in `design/assets/ds-tokens.js`. `design/AGENTS.md` explains how.',
+  ]
+
+  /** Comments split by what Claude Code should do with them */
+  function commentGroups(id) {
+    const all = [...S.comments].sort((a, b) => a.n - b.n)
+    const open = all.filter((c) => c.status !== 'resolved')
+    return {
+      apply: open.filter((c) => c.opt === id || c.allOptions),
+      other: open.filter((c) => c.opt !== id && !c.allOptions),
+      resolved: all.filter((c) => c.status === 'resolved'),
+    }
+  }
+
   function buildJSON() {
     const id = S.current
     const others = presetIds().filter((x) => x !== id && isModified(x))
     return {
-      schema: 'birch-design-review/1',
+      schema: 'birch-design-changes/1',
       generatedAt: new Date().toISOString(),
       source: 'design/design-system.html',
-      preset: { id, name: P(id).name, kind: P(id).kind || 'Custom', modified: isModified(id) },
+      task: 'Update the SwiftUI code in birch-wallet so the app matches the selected preset, its tuned values and the open comments.',
+      instructions: INSTRUCTIONS,
+      preset: { id, name: P(id).name, kind: P(id).kind || 'Custom', shipped: id === 'T', modified: isModified(id) },
+      changesFromShipped: { settings: settingChanges(id), colors: colorChanges(id) },
       params: stripMeta(P(id)),
       paramDiff: paramDiff(id),
       tokens: { light: tokens(id).light, dark: tokens(id).dark },
@@ -1574,46 +1671,58 @@
   function buildMarkdown() {
     const id = S.current
     const p = P(id)
-    const diff = paramDiff(id)
-    const comments = [...S.comments].sort((a, b) => a.n - b.n)
-    const open = comments.filter((c) => c.status !== 'resolved')
-    const resolved = comments.filter((c) => c.status === 'resolved')
+    const today = id === 'T'
+    const settings = settingChanges(id)
+    const colors = colorChanges(id)
+    const groups = commentGroups(id)
     const notes = Object.entries(S.notes).filter(([, v]) => v && v.trim())
     const L = []
-    L.push('# Birch design review', '')
-    L.push(`Exported ${new Date().toLocaleString()} from \`design/design-system.html\`.`, '')
-    L.push(`- **Preset under review:** ${p.name} (${p.kind || 'Custom'})${diff.length ? ', tuned in the panel' : ', preset values unchanged'}`)
-    L.push(`- **Comments:** ${open.length} open, ${resolved.length} resolved`)
-    L.push(`- **Section notes:** ${notes.length}`, '')
-    L.push('## How to apply', '')
-    L.push('1. Colors live in `birch/Views/Components/Theme.swift` (`HBTheme.birchDark`, `HBTheme.birchLight`, the `Color.hb*` extensions). The token table maps each design token to the Swift name it replaces. New tokens need new `Color.hb*` accessors.')
-    L.push('2. Shape, type, density and button values map to `BirchCard`, `HBPrimaryButtonModifier`, `HBSecondaryButtonModifier`, `HBBarButtonStyle` and `Font.hb*`.')
-    L.push('3. Each comment names the screen, the element and the SwiftUI file. Where a comment conflicts with the token table, the comment wins.')
-    L.push('4. Follow `design/DESIGN-SYSTEM.md` for component rules (CTA tiers, mono for machine data only, one primary per screen).', '')
+    L.push('# Update the Birch app’s design', '')
+    L.push(`Exported ${new Date().toLocaleString()} from the Birch Design System page (\`design/design-system.html\`).`, '')
+    L.push('You’re working in the birch-wallet repository. Update the SwiftUI code under `birch/` so the app matches the design changes below: the preset selected on the page, the values tuned in its Tune panel, and the comments and notes pinned to its screens and components.', '')
+    if (today) L.push('**Selected preset:** Today, the app as it ships. Apply only the changes listed below.', '')
+    else L.push(`**Selected preset:** ${p.name}, a different direction from the app as it ships. Move the app to it: apply every setting and color listed below as changed from the shipped app.`, '')
 
     if (S.overall.trim()) L.push('## Overall notes', '', S.overall.trim(), '')
 
-    L.push(`## Parameter changes vs. preset ${p.name}`, '')
-    if (diff.length) {
-      L.push('| Parameter | Preset | Now |', '|---|---|---|')
-      diff.forEach((d) => L.push(`| \`${d.path}\` | ${fmtVal(d.from)} | ${fmtVal(d.to)} |`))
-    } else L.push('None. The preset is used as designed.')
+    L.push('## How to make the changes', '')
+    INSTRUCTIONS.forEach((t, i) => L.push(`${i + 1}. ${t}`))
     L.push('')
+
+    L.push('## Changes from the shipped app', '', '### Settings', '')
+    if (settings.length) {
+      L.push('| Setting | Shipped | New |', '|---|---|---|')
+      settings.forEach((c) => L.push(`| ${c.setting} (\`${c.path}\`) | ${c.shippedLabel} | ${c.nowLabel} |`))
+    } else L.push('None. Shape, type, spacing, buttons, layout and app chrome stay as they ship.')
+    L.push('', '### Colors', '')
+    if (colors.length) {
+      L.push('Hex values for Birch Light and Birch Dark. “Same” means that mode keeps its shipped value.', '')
+      L.push('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |', '|---|---|---|---|---|')
+      const cell = (m) => (m.changed ? `${m.shipped} → ${m.now}` : 'Same')
+      colors.forEach((c) => L.push(`| \`${c.token}\` | ${c.role} | ${c.swift || 'New'} | ${cell(c.light)} | ${cell(c.dark)} |`))
+    } else L.push('None. Colors stay as they ship.')
+    L.push('')
+    const tuned = presetIds().filter((x) => x !== id && isModified(x))
+    if (tuned.length) L.push(`Other presets were tuned on the page but aren’t part of this change: ${tuned.map((x) => P(x).name).join(', ')}.`, '')
 
     const commentBlock = (c) => {
       const out = []
       out.push(`### ${c.n}. ${c.type}: ${c.scopeLabel} › ${c.label}`)
-      out.push(`- **Where:** ${c.scopeLabel}${c.swift ? ` (\`${c.swift}\`)` : ''}, ${modeLabel(c.mode).toLowerCase()}, option ${c.optName}${c.allOptions ? ', applies to every option' : ''}`)
+      out.push(`- **Where:** ${c.scopeLabel}${c.swift ? ` (\`${c.swift}\`)` : ''}, ${modeLabel(c.mode).toLowerCase()}, made on ${c.optName}${c.allOptions ? ', applies to every preset' : ''}`)
       out.push(`- **Element:** \`${c.key}\`${c.computed ? `: fill ${c.computed.background}, text ${c.computed.text}, radius ${c.computed.radius}, font ${c.computed.font}, ${c.computed.size}pt` : ''}`)
       out.push('', c.text.split('\n').map((l) => '> ' + l).join('\n'), '')
       return out.join('\n')
     }
-    L.push(`## Comments (${open.length} open)`, '')
-    if (open.length) open.forEach((c) => L.push(commentBlock(c)))
-    else L.push('No open comments.', '')
-    if (resolved.length) {
-      L.push(`## Resolved comments (${resolved.length})`, '', 'Already handled. Kept for context.', '')
-      resolved.forEach((c) => L.push(commentBlock(c)))
+    L.push(`## Comments to apply (${groups.apply.length})`, '')
+    if (groups.apply.length) groups.apply.forEach((c) => L.push(commentBlock(c)))
+    else L.push('None.', '')
+    if (groups.other.length) {
+      L.push(`## Comments made on other presets (${groups.other.length})`, '', `These were pinned while viewing a different preset. Apply one only if it’s about the app whatever the preset; otherwise leave it and mention it in your report.`, '')
+      groups.other.forEach((c) => L.push(commentBlock(c)))
+    }
+    if (groups.resolved.length) {
+      L.push(`## Resolved comments (${groups.resolved.length})`, '', 'Already handled. Context only; don’t apply these.', '')
+      groups.resolved.forEach((c) => L.push(commentBlock(c)))
     }
 
     if (notes.length) {
@@ -1622,7 +1731,7 @@
     }
 
     const lv = layoutValues(p)
-    L.push(`## Layout and type: ${p.name}`, '')
+    L.push(`## Reference: ${p.name} in full`, '', 'Every value of the selected preset, for context. Use “Changes from the shipped app” to decide what to edit.', '')
     L.push(`- **Radius (pt):** card ${lv.radius.card}, field ${lv.radius.field}, button ${lv.radius.button}, pill ${lv.radius.pill}, sheet ${lv.radius.sheet}. Selection ring ${lv.selectionRing}pt. Card stroke ${lv.cardStroke}pt. Light-mode shadow strength ${lv.lightShadow}.`)
     L.push(`- **Type:** text size ×${lv.type.textScale}; titles ${lv.type.titles} weight ${lv.type.titleWeight}; amounts ${lv.type.amounts}; numbers ${lv.type.numbers}; machine data ${lv.type.machineData}.`)
     L.push(`- **Spacing (pt):** screen margin ${lv.spacing.screenMargin}, card padding ${lv.spacing.cardPadding}, field padding ${lv.spacing.fieldPadding}, vertical spacing ×${lv.spacing.verticalScale}, button height ${lv.spacing.buttonHeight}, list row height ${lv.spacing.listRowHeight}.`)
@@ -1630,21 +1739,9 @@
     L.push(`- **Layout:** setup footer ${lv.layout.footer}, signed amounts ${lv.layout.signed ? 'on' : 'off'}, received amounts ${lv.layout.received === 'ink' ? 'ink' : 'success color'}.`)
     L.push(`- **App chrome:** wallet header ${lv.chrome.header}, tab bar ${lv.chrome.tabbar} (opacity ×${lv.chrome.glass}), sheet dimming ×${lv.chrome.dim}.`)
     L.push(`- **Color roles:** selection ${lv.roles.selection}, progress ${lv.roles.progress}, amounts ${lv.roles.amountUnit === 'accent' ? 'accent' : 'brand'}, active tab ${lv.roles.tabTint}, toggles ${lv.roles.toggles}.`, '')
-
-    L.push(`## Resolved tokens: ${p.name}`, '')
     L.push('| Token | Light | Dark | Role | Replaces |', '|---|---|---|---|---|')
     resolvedTokens(id).forEach((t) => L.push(`| \`${t.token}\` | ${t.light} | ${t.dark} | ${t.role} | ${t.swift} |`))
     L.push('')
-
-    const others = presetIds().filter((x) => x !== id && isModified(x))
-    if (others.length) {
-      L.push('## Other presets you tuned', '')
-      for (const x of others) {
-        L.push(`### ${P(x).name}`, '', '| Parameter | Preset | Now |', '|---|---|---|')
-        paramDiff(x).forEach((d) => L.push(`| \`${d.path}\` | ${fmtVal(d.from)} | ${fmtVal(d.to)} |`))
-        L.push('')
-      }
-    }
     return L.join('\n')
   }
 

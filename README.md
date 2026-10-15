@@ -18,7 +18,7 @@ This repo does two jobs:
 | `assets/` | The page's scripts and styles. `ds-assets.js` is generated; don't edit it by hand. |
 | `tools/` | The asset generator and the end-to-end check of the page. |
 | `.github/workflows/pages.yml` | Publishes the playground to GitHub Pages. |
-| `reviews/` | Exported reviews waiting to be implemented. |
+| `reviews/` | Exported change prompts, kept with the work they produced. |
 | `AGENTS.md` | Instructions for AI coding agents working in this repo. |
 
 ## Getting it
@@ -34,7 +34,7 @@ git submodule update --init design fastlane/screenshots
 
 Two features use the simulator screenshots from [birch-screenshots](https://github.com/Birch-Wallet/birch-screenshots):
 
-- **Overlay app** lays them over the rebuilt screens.
+- **Overlay Screenshot** lays them over the rebuilt screens.
 - **`tools/build-assets.py`** cuts the QR codes and status bar out of them.
 
 birch-wallet has birch-screenshots as a second submodule at `fastlane/screenshots/`, and the page finds it there. In a standalone clone of this repo, clone birch-screenshots into `screenshots/` instead. That folder is ignored by git. Without either, the Overlay button is dimmed and says what's missing.
@@ -57,19 +57,19 @@ The presets:
 | 1 to 4 | Switch preset |
 | T | Tune: sliders for brand, surfaces, type, spacing, shape, buttons and layout |
 | C | Comment: click any element to pin a note |
-| E | Export comments and changes as Markdown and JSON |
+| E | Export a prompt for Claude Code to update the app's Swift code |
 | O | Overlay the simulator screenshots on the screens |
 
-**Focus** shows one preset in full: tokens, type, buttons, components and the nine app screens in light and dark. **Compare** puts one screen side by side across every preset.
+The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the nine app screens in light and dark. **Compare** puts one screen side by side across every preset.
 
 Your tuning and comments are saved in that browser's local storage, separately for the hosted copy and for each local file. To move them, export JSON from one and import it in the other.
 
 ## From idea to app
 
-1. **Explore.** Pick a preset, tune it, and compare it against the others.
-2. **Comment.** Pin notes on the elements you want changed, and add section notes.
-3. **Export** to `reviews/`.
-4. **Implement.** Ask Claude Code to implement the review in birch-wallet.
+1. **Choose.** Start from Today, the app as it ships, or pick another preset to move the app to.
+2. **Tune and comment.** Adjust values in Tune, pin notes on the elements you want changed, and add section notes.
+3. **Export.** The Markdown export is a prompt for Claude Code. It lists the selected preset, every setting and color that differs from the shipped app, and your comments, with instructions for changing the SwiftUI code.
+4. **Implement.** Paste it into Claude Code in birch-wallet, or save it to `reviews/` and point Claude Code at the file.
 5. **Update this repo.** Once the app changes, bring Part 1 of `DESIGN-SYSTEM.md` and the Today preset up to date. The reference is only useful while it matches the app.
 
 ## Keeping it accurate

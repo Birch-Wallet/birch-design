@@ -1,5 +1,5 @@
 # Publishes design-system.html to GitHub Pages, with the iPhone 17 Pro
-# screenshots from birch-screenshots so Overlay app works on the site.
+# screenshots from birch-screenshots so Overlay Screenshot works on the site.
 name: Publish to GitHub Pages
 
 on:
