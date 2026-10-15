@@ -4,7 +4,10 @@
  * preset, comments, export and import, views, shortcuts and saved-state
  * migration. Drives the page with real mouse and keyboard input.
  *
- *   node design/tools/check-page.js [webkit|chromium] [--presets A,B,C,T] [--skip-tune]
+ *   node design/tools/check-page.js [webkit|chromium] [--presets A,B,C,T] [--skip-tune] [--url <url>]
+ *
+ * --url checks a served copy instead of the local file, for example the GitHub Pages site:
+ * https://birch-wallet.github.io/birch-design/
  *
  * Needs playwright-core. Point PLAYWRIGHT_CORE at an install if it is not
  * resolvable from here; WebKit needs Playwright's WebKit build, chromium uses
@@ -22,7 +25,7 @@ const engine = args.find((a) => a === 'webkit' || a === 'chromium') || 'webkit'
 const presetArg = args.includes('--presets') ? args[args.indexOf('--presets') + 1] : 'A,B,C,T'
 const PRESETS = presetArg.split(',')
 const SKIP_TUNE = args.includes('--skip-tune')
-const PAGE = 'file://' + path.resolve(__dirname, '..', 'design-system.html')
+const PAGE = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'file://' + path.resolve(__dirname, '..', 'design-system.html')
 
 const results = []
 const pass = (area, name, detail = '') => results.push({ ok: true, area, name, detail })

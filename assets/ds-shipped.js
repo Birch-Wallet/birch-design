@@ -549,11 +549,12 @@
   ]
 
   /**
-   * Where the simulator screenshots for the overlay can live, in the order they are tried: the
-   * birch-screenshots submodule in a birch-wallet checkout, then a screenshots/ folder next to
-   * this page (the GitHub Pages build copies them there). ds-app.js picks the first that loads.
+   * Where the simulator screenshots for the overlay can live: the birch-screenshots submodule in a
+   * birch-wallet checkout, or a screenshots/ folder next to this page (the GitHub Pages build copies
+   * them there). ds-app.js picks the first that loads. A served copy tries its own folder first,
+   * so the hosted site doesn't request a path outside it.
    */
-  const SHOT_BASES = ['../fastlane/screenshots/', 'screenshots/']
+  const SHOT_BASES = root.location && root.location.protocol === 'file:' ? ['../fastlane/screenshots/', 'screenshots/'] : ['screenshots/', '../fastlane/screenshots/']
   let shotBase = null
   /** Path of the screenshot a screen was rebuilt from, relative to a shot base */
   const shotPath = (screen, mode) => `${mode}/en-US/${encodeURIComponent(`iPhone 17 Pro-${screen.shot}.png`)}`

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Birch Design System</title>
+<link rel="icon" href="data:,">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Design system exploration for Birch, the watch-only Bitcoin multisig coordinator: three options in light and dark, a tuning panel, and review comments that export for Claude Code.">
 <style>
@@ -535,9 +536,16 @@ sup.only { color: var(--x-pin); font-weight: 700; margin-left: 1px; font-size: 1
 }
 </style>
 <link rel="stylesheet" href="assets/ds-shipped.css">
+<script>
+  // SF Pro Rounded for engines without ui-rounded (Chrome). Only a page opened from a file may
+  // load the system font file, so the hosted copy falls back to SF Pro there; Safari is unaffected.
+  if (location.protocol === 'file:') {
+    const st = document.createElement('style')
+    st.textContent = '@font-face { font-family: "Birch SF Rounded"; src: url("file:///System/Library/Fonts/SFNSRounded.ttf"); font-weight: 1 1000; }'
+    document.head.appendChild(st)
+  }
+</script>
 <style>
-/* SF Pro Rounded for engines without ui-rounded (local file use only) */
-@font-face { font-family: "Birch SF Rounded"; src: local("SF Pro Rounded"), url("file:///System/Library/Fonts/SFNSRounded.ttf"); font-weight: 1 1000; }
 body.harness { margin: 0; background: #000; }
 body.harness .ph-wrap { width: 402px; height: 874px; }
 body.harness .ph { transform: none; padding: 0; border-radius: 0; box-shadow: none; background: none; width: 402px; height: 874px; }

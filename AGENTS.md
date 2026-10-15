@@ -74,7 +74,7 @@ node tools/check-page.js webkit
 node tools/check-page.js chromium
 ```
 
-Both runs must pass every check with no page errors. Set `PLAYWRIGHT_CORE` to a `playwright-core` install path if Node can't resolve it. If you touched a screen, re-diff it against its screenshot in both modes.
+Both runs must pass every check with no page errors. Set `PLAYWRIGHT_CORE` to a `playwright-core` install path if Node can't resolve it. If you touched a screen, re-diff it against its screenshot in both modes. After a deploy, run both again with `--url https://birch-wallet.github.io/birch-design/` to check the hosted copy, which loads over HTTPS and can't read local files.
 
 ## When the app changes
 

@@ -41,7 +41,7 @@ birch-wallet has birch-screenshots as a second submodule at `fastlane/screenshot
 
 ## Using the playground
 
-Use the [hosted copy](https://birch-wallet.github.io/birch-design/), or open `design-system.html` from your checkout in Safari. Safari is the reference browser because it renders SF Pro Rounded and SF Mono the same way iOS does.
+Use the [hosted copy](https://birch-wallet.github.io/birch-design/), or open `design-system.html` from your checkout. Use Safari: it renders SF Pro Rounded and SF Mono the same way iOS does. Chrome can only show SF Pro Rounded when the page is opened from a local file. On the hosted copy it falls back to SF Pro, because Apple's license doesn't allow hosting the font.
 
 The presets:
 
@@ -80,6 +80,8 @@ With the Today preset, the rebuilt screens match the simulator screenshots to wi
 node tools/check-page.js webkit
 node tools/check-page.js chromium
 ```
+
+To check the hosted copy after a deploy, add `--url https://birch-wallet.github.io/birch-design/`.
 
 The check drags every Tune control in every preset, then exercises comments, export, import, views, shortcuts and upgrades of saved settings. It needs [`playwright-core`](https://www.npmjs.com/package/playwright-core). Set `PLAYWRIGHT_CORE` to its install path if Node can't find it from here. WebKit also needs Playwright's WebKit build (`npx playwright install webkit`). Chromium uses your installed Google Chrome.
 
