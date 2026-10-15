@@ -5,7 +5,7 @@ The design system for [Birch](https://github.com/Birch-Wallet/birch-wallet), the
 This repo does two jobs:
 
 1. **Reference for the app as it ships.** It records Birch's current design system: colors, type, shape, components and screens. Use it when building a feature that needs new UI, so the new screens match the rest of the app.
-2. **Playground for design changes.** A browser page rebuilds the real app screens and lets you adjust every design variable, compare alternative directions, and pin comments that Claude Code can implement.
+2. **Playground for design changes.** A browser page rebuilds the real app screens and lets you adjust every design variable, try layout changes in the Future design, compare color themes, and pin comments that Claude Code can implement.
 
 **Open the playground: https://birch-wallet.github.io/birch-design/**
 
@@ -13,7 +13,7 @@ This repo does two jobs:
 
 | Path | What it is |
 |---|---|
-| `DESIGN-SYSTEM.md` | The written design system. Part 1 is the app as it ships. Part 2 is the exploration. Part 3 will hold the final system once a direction is chosen. |
+| `DESIGN-SYSTEM.md` | The written design system. Part 1 is the app as it ships. Part 2 is the exploration: the Future design and the color themes. Part 3 will hold the final system once a direction is chosen. |
 | `design-system.html` | The playground. Open it in a browser. There is no build step and no server. |
 | `assets/` | The page's scripts and styles. `ds-assets.js` is generated; don't edit it by hand. |
 | `tools/` | The asset generator and the end-to-end check of the page. |
@@ -43,30 +43,33 @@ birch-wallet has birch-screenshots as a second submodule at `fastlane/screenshot
 
 Use the [hosted copy](https://birch-wallet.github.io/birch-design/), or open `design-system.html` from your checkout. Use Safari: it renders SF Pro Rounded and SF Mono the same way iOS does. Chrome can only show SF Pro Rounded when the page is opened from a local file. On the hosted copy it falls back to SF Pro, because Apple's license doesn't allow hosting the font.
 
-The presets:
+The toolbar groups the presets in two. **Designs** can change layout as well as theme. **Color themes** only recolor Today's layout.
 
-| Preset | What it is |
-|---|---|
-| **Today** | The app as it ships, using the exact colors from `Theme.swift`. |
-| **Catkin** | An evolution of today's look with a refined gold. |
-| **Leaf** | A bolder direction: the leaf from the app icon becomes the brand color. |
-| **Bark** | A bolder direction: monochrome slate controls with a single autumn amber accent. |
+| Preset | Group | What it is |
+|---|---|---|
+| **Today** | Design | The app as it ships, using the exact colors from `Theme.swift`. |
+| **Future** | Design | The next version of the app's design, built on Today. It starts as an exact copy; layout, type, color and component changes are made here a few at a time. |
+| **A · Catkin** | Color theme | An evolution of today's look with a refined gold. |
+| **B · Leaf** | Color theme | A bolder direction: the leaf from the app icon becomes the brand color. |
+| **C · Bark** | Color theme | A bolder direction: monochrome slate controls with a single autumn amber accent. |
 
 | Key | Action |
 |---|---|
-| 1 to 4 | Switch preset |
+| 1 to 5 | Switch preset, in toolbar order |
 | T | Tune: sliders for brand, surfaces, type, spacing, shape, buttons and layout |
 | C | Comment: click any element to pin a note |
 | E | Export a prompt for Claude Code to update the app's Swift code |
 | O | Overlay the simulator screenshots on the screens |
 
-The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the nine app screens in light and dark. **Compare** puts one screen side by side across every preset.
+The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the fourteen app screens in light and dark. **Compare** puts one screen side by side across every preset.
+
+The screens cover the wallet (Transactions, UTXO list, UTXO detail, Settings), sending and signing (recipients, network fee, review, PSBT QR, scan), and setup (Welcome, Wallet setup, multisig configuration, cosigners, verify).
 
 Your tuning and comments are saved in that browser's local storage, separately for the hosted copy and for each local file. To move them, export JSON from one and import it in the other.
 
 ## From idea to app
 
-1. **Choose.** Start from Today, the app as it ships, or pick another preset to move the app to.
+1. **Choose.** Start from Today, the app as it ships, from Future, or pick a color theme to move the app to.
 2. **Tune and comment.** Adjust values in Tune, pin notes on the elements you want changed, and add section notes.
 3. **Export.** The Markdown export is a prompt for Claude Code. It lists the selected preset, every setting and color that differs from the shipped app, and your comments, with instructions for changing the SwiftUI code.
 4. **Implement.** Paste it into Claude Code in birch-wallet, or save it to `reviews/` and point Claude Code at the file.

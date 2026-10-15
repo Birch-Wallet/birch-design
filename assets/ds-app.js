@@ -18,8 +18,9 @@
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel))
   const clone = (o) => JSON.parse(JSON.stringify(o))
   const STORAGE_KEY = 'birch-ds-v1'
-  // Today (the app as it ships) first, then the three directions
-  const BUILT_IN = ['T', 'A', 'B', 'C']
+  // The designs first: Today (the app as it ships) and Future (the next version, built on Today).
+  // Then the color themes, which recolor Today's layout
+  const BUILT_IN = ['T', 'F', 'A', 'B', 'C']
 
   const FONTS = {
     rounded: 'ui-rounded, "Birch SF Rounded", "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
@@ -220,7 +221,7 @@
     ['components', 'Components'],
     ['screens', 'Screens'],
   ]
-  const SCREEN_GROUPS = ['Wallet', 'Send', 'Signing', 'Setup']
+  const SCREEN_GROUPS = ['Wallet', 'Send', 'Signing', 'UTXOs', 'Settings', 'Setup']
 
   // ---------------------------------------------------------------------------
   // State
@@ -336,6 +337,10 @@
 
   const presetIds = () => [...BUILT_IN, ...Object.keys(S.custom)]
   const P = (id = S.current) => S.params[id]
+  /** Toolbar group: a design (layout and theme) or a color theme over Today's layout */
+  const groupOf = (id) => (P(id) && P(id).group) || 'theme'
+  /** Which layout the screens are built with: 'today' or 'future' */
+  const designOf = (id) => (P(id) && P(id).design) || 'today'
   function baseOf(id) {
     if (TK.PRESETS[id]) return TK.PRESETS[id]
     return S.custom[id] ? S.custom[id].base : P(id)
@@ -536,7 +541,7 @@
   }
 
   const presetName = (id) => (P(id) ? `${P(id).name}` : id)
-  const presetLabel = (id) => (BUILT_IN.includes(id) && id !== 'T' ? `${id} · ${presetName(id)}` : presetName(id))
+  const presetLabel = (id) => (BUILT_IN.includes(id) && groupOf(id) === 'theme' ? `${id} · ${presetName(id)}` : presetName(id))
   const modeLabel = (m) => (m === 'light' ? 'Light' : m === 'dark' ? 'Dark' : 'Both modes')
 
   // ---------------------------------------------------------------------------
@@ -544,12 +549,16 @@
   // ---------------------------------------------------------------------------
 
   function renderTop() {
-    $('#presetSeg').innerHTML = presetIds()
-      .map((id) => {
-        const d = tokens(id)
-        return `<button type="button" data-preset="${id}" aria-pressed="${id === S.current}"><i class="dot2" style="background:linear-gradient(90deg,${d.light.brand} 50%,${d.dark.brand} 50%)"></i>${esc(presetLabel(id))}${isModified(id) ? ' •' : ''}</button>`
-      })
-      .join('')
+    const button = (id) => {
+      const d = tokens(id)
+      return `<button type="button" data-preset="${id}" aria-pressed="${id === S.current}"><i class="dot2" style="background:linear-gradient(90deg,${d.light.brand} 50%,${d.dark.brand} 50%)"></i>${esc(presetLabel(id))}${isModified(id) ? ' •' : ''}</button>`
+    }
+    const group = (g, label) =>
+      `<span class="vlabel">${label}</span><div class="seg" role="group" aria-label="${label}">${presetIds()
+        .filter((id) => groupOf(id) === g)
+        .map(button)
+        .join('')}</div>`
+    $('#presetSeg').innerHTML = group('design', 'Design') + group('theme', 'Color themes')
     $$('#viewSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === S.view)))
     $$('#modeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.modes === S.modes)))
     $('#refBtn').setAttribute('aria-checked', String(showRef))
@@ -588,7 +597,7 @@
     $('#rail').innerHTML =
       SECTIONS.map(([id, l]) => `<a href="#${id}" data-sec="${id}">${l}</a>`).join('') +
       SCREEN_GROUPS.map((g) => `<a class="sub" href="#screens-${g.toLowerCase()}">${g}</a>`).join('') +
-      `<hr><div class="hint"><kbd>C</kbd> comment &nbsp;<kbd>T</kbd> tune<br><kbd>E</kbd> export &nbsp;<kbd>O</kbd> overlay<br><kbd>1</kbd>–<kbd>4</kbd> presets &nbsp;<kbd>Esc</kbd> close</div>`
+      `<hr><div class="hint"><kbd>C</kbd> comment &nbsp;<kbd>T</kbd> tune<br><kbd>E</kbd> export &nbsp;<kbd>O</kbd> overlay<br><kbd>1</kbd>–<kbd>5</kbd> presets &nbsp;<kbd>Esc</kbd> close</div>`
   }
 
   function ovDyn() {
@@ -627,7 +636,7 @@
         <p class="ov-thesis">${esc(p.thesis || '')}</p>
         <div class="facts">${facts.map((f) => `<span>${esc(f)}</span>`).join('')}</div>
         <div class="strip">${strip('light')}${strip('dark')}</div>
-        ${OPTION_NOTES[id] ? `<h3>What changes from today</h3><ul class="diffs">${OPTION_NOTES[id].map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+        ${optionNotes(id) ? `<h3>What changes from today</h3><ul class="diffs">${optionNotes(id).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
       </div>
       <div class="ov-card"${cAttr('checks', 'Contrast checks')}>
         <h3 style="margin-top:0">Contrast checks</h3>
@@ -638,6 +647,23 @@
   }
 
   const cAttr = (key, label) => ` data-c="${esc(key)}" data-cl="${esc(label)}"`
+
+  /** Future's notes are its change log in ds-shipped.js; the color themes have fixed notes */
+  function optionNotes(id) {
+    if (id !== 'F') return OPTION_NOTES[id]
+    return futureChanges().length ? futureChanges().map((c) => `${c.where}: ${c.change}`) : ['Nothing yet. Future is an exact copy of Today.']
+  }
+
+  /** Future's changes from Today, with readable screen names */
+  function futureChanges() {
+    return (SH.FUTURE_CHANGES || []).map((c) => ({
+      ...c,
+      where: (c.screens || []).map((sid) => {
+        const sc = SH.SCREENS.find((x) => x.id === sid)
+        return sc ? `${sc.group} › ${sc.label}` : sid
+      }).join(', ') || 'Every screen',
+    }))
+  }
 
   function colorDyn() {
     const d = tokens()
@@ -669,7 +695,7 @@
       return `<h3 class="grp-title" id="screens-${g.toLowerCase()}">${g}</h3><div class="shots">${list
         .map(
           (s) =>
-            `<div class="shot"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code></div><div class="shot-pair">${SH.phone(s, 'light')}${SH.phone(s, 'dark')}</div></div>`,
+            `<div class="shot"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code></div><div class="shot-pair">${SH.phone(s, 'light', designOf(id))}${SH.phone(s, 'dark', designOf(id))}</div></div>`,
         )
         .join('')}</div>`
     }).join('')
@@ -706,7 +732,7 @@
         ${notesBlock('components', 'components')}</section>
 
       <section class="sec" id="screens"><p class="eyebrow">Screens</p><h2>Screens</h2>
-        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Overlay Screenshot</b> lays the simulator screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
+        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Future</b> builds on Today and is where layout changes are tried; the color themes keep Today’s layout. <b>Overlay Screenshot</b> lays the simulator screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
         ${screensHtml}${notesBlock('screens', 'screens')}</section>
     </div>`
     observeSections()
@@ -750,7 +776,7 @@
     const ids = presetIds().filter((id) => id !== 'T' || S.includeToday)
     const screen = SH.SCREENS.find((s) => s.id === S.compareScreen) || SH.SCREENS[0]
     const head = ids.map((id) => `<div class="cmp-col-head" data-head="${id}">${compareHead(id)}</div>`).join('')
-    const row = (m) => ids.map((id) => `<div class="cmp-cell opt-${id}" data-opt="${id}">${SH.phone(screen, m)}</div>`).join('')
+    const row = (m) => ids.map((id) => `<div class="cmp-cell opt-${id}" data-opt="${id}">${SH.phone(screen, m, designOf(id))}</div>`).join('')
     $('#main').innerHTML = `
       <div class="cmp-bar">
         <span class="eyebrow" style="margin:0">Screen</span>
@@ -870,7 +896,7 @@
     const custom = !BUILT_IN.includes(id)
     const scroll = $('.dial-body') ? $('.dial-body').scrollTop : 0
     const todayNote = exact
-      ? '<div class="dg-note top">Showing Theme.swift’s exact colors. Editing any color switches Today to generated colors that match them closely. Reset preset restores the exact values.</div>'
+      ? `<div class="dg-note top">Showing Theme.swift’s exact colors. Editing any color switches ${esc(presetName(id))} to generated colors that match them closely. Reset preset restores the exact values.</div>`
       : detached
         ? '<div class="dg-note top">Generated colors. Reset preset restores Theme.swift’s exact values.</div>'
         : ''
@@ -953,12 +979,12 @@
     $$('[data-head]').forEach((h) => (h.innerHTML = compareHead(h.dataset.head)))
   }
 
-  /** Editing a color on Today leaves Theme.swift's exact values for the generated palette */
+  /** Editing a color on Today (or Future) leaves Theme.swift's exact values for the generated palette */
   function detachIfNeeded(path) {
     const info = ROWS[path]
     if (!info || !info.group.color || !isExactToday(S.current)) return false
     P().overrides = null
-    toast('Today now uses generated colors. Reset preset restores Theme.swift’s exact values.')
+    toast(`${presetName(S.current)} now uses generated colors. Reset preset restores Theme.swift’s exact values.`)
     return true
   }
 
@@ -1604,20 +1630,25 @@
    */
   function colorChanges(id) {
     const shipped = TK.derive(TK.PRESETS.T)
+    const base = baseOf(id)
     let ref = shipped
-    if (id === 'T' && !P('T').overrides) {
-      const untuned = clone(TK.PRESETS.T)
+    // Colors the preset itself sets apart from the shipped ones, before any tuning
+    let own = shipped
+    if (base.overrides && !P(id).overrides) {
+      const untuned = clone(base)
       delete untuned.overrides
       ref = TK.derive(untuned)
+      own = TK.derive(base)
     }
     const now = tokens(id)
+    const moved = (m, k) => showColor(ref[m][k]) !== showColor(now[m][k]) || showColor(own[m][k]) !== showColor(shipped[m][k])
     return resolvedTokens(id)
       .map((t) => ({
         token: t.token,
         role: t.role,
         swift: t.swift,
-        light: { shipped: showColor(shipped.light[t.token]), now: showColor(now.light[t.token]), changed: showColor(ref.light[t.token]) !== showColor(now.light[t.token]) },
-        dark: { shipped: showColor(shipped.dark[t.token]), now: showColor(now.dark[t.token]), changed: showColor(ref.dark[t.token]) !== showColor(now.dark[t.token]) },
+        light: { shipped: showColor(shipped.light[t.token]), now: showColor(now.light[t.token]), changed: moved('light', t.token) },
+        dark: { shipped: showColor(shipped.dark[t.token]), now: showColor(now.dark[t.token]), changed: moved('dark', t.token) },
       }))
       .filter((c) => c.light.changed || c.dark.changed)
   }
@@ -1654,8 +1685,8 @@
       source: 'design/design-system.html',
       task: 'Update the SwiftUI code in birch-wallet so the app matches the selected preset, its tuned values and the open comments.',
       instructions: INSTRUCTIONS,
-      preset: { id, name: P(id).name, kind: P(id).kind || 'Custom', shipped: id === 'T', modified: isModified(id) },
-      changesFromShipped: { settings: settingChanges(id), colors: colorChanges(id) },
+      preset: { id, name: P(id).name, kind: P(id).kind || 'Custom', design: designOf(id), shipped: id === 'T', modified: isModified(id) },
+      changesFromShipped: { design: designOf(id) === 'future' ? futureChanges() : [], settings: settingChanges(id), colors: colorChanges(id) },
       params: stripMeta(P(id)),
       paramDiff: paramDiff(id),
       tokens: { light: tokens(id).light, dark: tokens(id).dark },
@@ -1672,6 +1703,8 @@
     const id = S.current
     const p = P(id)
     const today = id === 'T'
+    const future = designOf(id) === 'future'
+    const design = future ? futureChanges() : []
     const settings = settingChanges(id)
     const colors = colorChanges(id)
     const groups = commentGroups(id)
@@ -1681,6 +1714,7 @@
     L.push(`Exported ${new Date().toLocaleString()} from the Birch Design System page (\`design/design-system.html\`).`, '')
     L.push('You’re working in the birch-wallet repository. Update the SwiftUI code under `birch/` so the app matches the design changes below: the preset selected on the page, the values tuned in its Tune panel, and the comments and notes pinned to its screens and components.', '')
     if (today) L.push('**Selected preset:** Today, the app as it ships. Apply only the changes listed below.', '')
+    else if (future) L.push(`**Selected preset:** ${p.name}, the next version of the app’s design. It’s built on the app as it ships: apply its design changes and every setting and color listed below as changed from the shipped app.`, '')
     else L.push(`**Selected preset:** ${p.name}, a different direction from the app as it ships. Move the app to it: apply every setting and color listed below as changed from the shipped app.`, '')
 
     if (S.overall.trim()) L.push('## Overall notes', '', S.overall.trim(), '')
@@ -1689,7 +1723,14 @@
     INSTRUCTIONS.forEach((t, i) => L.push(`${i + 1}. ${t}`))
     L.push('')
 
-    L.push('## Changes from the shipped app', '', '### Settings', '')
+    L.push('## Changes from the shipped app', '')
+    if (future) {
+      L.push('### Design', '')
+      if (design.length) design.forEach((c, i) => L.push(`${i + 1}. **${c.where}**${c.swift ? ` (\`${c.swift}\`)` : ''}: ${c.change}`))
+      else L.push('None yet. The layout and components match the shipped app.')
+      L.push('')
+    }
+    L.push('### Settings', '')
     if (settings.length) {
       L.push('| Setting | Shipped | New |', '|---|---|---|')
       settings.forEach((c) => L.push(`| ${c.setting} (\`${c.path}\`) | ${c.shippedLabel} | ${c.nowLabel} |`))
@@ -1759,9 +1800,11 @@
 
   function switchPreset(id) {
     if (!S.params[id] || id === S.current) return
+    const relayout = designOf(id) !== designOf(S.current)
     S.current = id
     save()
-    if (S.view === 'focus') {
+    if (S.view === 'focus' && relayout) renderMain()
+    else if (S.view === 'focus') {
       const scope = $('#scope')
       scope.className = `opt-${id}`
       scope.dataset.opt = id
@@ -1894,12 +1937,12 @@
         renderTop()
       } else if (k === 'e') openDrawer('export')
       else if (k === 'o') toggleRef()
-      else if (['1', '2', '3', '4'].includes(k)) switchPreset(BUILT_IN[+k - 1])
+      else if (/^[1-9]$/.test(k) && BUILT_IN[+k - 1]) switchPreset(BUILT_IN[+k - 1])
     })
   }
 
   // Harness: one bare screen at 402x874 for pixel comparison with the simulator
-  // design-system.html?harness=<screen>&mode=dark|light&preset=T|A|B|C&rules=system&scroll=<pt>
+  // design-system.html?harness=<screen>&mode=dark|light&preset=T|F|A|B|C&rules=system&scroll=<pt>
   // (rules=system applies the interview decisions from the Layout group)
   const HP = new URLSearchParams(location.search)
   if (HP.has('harness')) {
@@ -1910,7 +1953,7 @@
     document.body.className = 'harness'
     if (HP.get('rules') === 'system') for (const [path, v] of Object.entries(INTERVIEW)) setPath(S.params[id], path, v)
     document.getElementById('tokens').textContent = cssFor(id)
-    document.body.innerHTML = `<div id="scope" class="opt-${id}" data-opt="${id}">${SH.phone(screen, mode)}</div>`
+    document.body.innerHTML = `<div id="scope" class="opt-${id}" data-opt="${id}">${SH.phone(screen, mode, designOf(id))}</div>`
     const y = parseFloat(HP.get('scroll') || '0')
     if (y) document.querySelectorAll('.ph-screen > .sx, .ssheet > .sx').forEach((el) => (el.scrollTop = y))
     return

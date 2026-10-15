@@ -5,7 +5,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | Part | Status |
 |---|---|
 | 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped (build 31). |
-| 2. Exploration | In review. Three options in `design-system.html`, tuned and commented in the browser. |
+| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. |
 | 3. Final system | Written once an option is chosen and refined: tokens, components, SwiftUI mapping, migration plan, voice and copy. |
 
 ## Files
@@ -16,8 +16,8 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
-| `design/assets/ds-shipped.js`, `ds-shipped.css` | The nine app screens, rebuilt point for point from the SwiftUI views. Every size, spacing, radius, type and color value is a Tune variable. |
-| `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bar, and QR modules sampled from the screenshots. |
+| `design/assets/ds-shipped.js`, `ds-shipped.css` | The fourteen app screens, rebuilt point for point from the SwiftUI views, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bar, QR modules sampled from the screenshots, and the app icon artwork. |
 | `design/assets/ds-screens.js` | Component boards (buttons, inputs, callouts and so on), built from tokens. |
 | `design/assets/ds-app.js` | Views, the tuning panel, comments, export and the screenshot harness. |
 | `design/tools/build-assets.py`, `render-symbols.swift` | Regenerates `ds-assets.js`. Run it after adding a symbol to a screen. |
@@ -131,6 +131,7 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 - Olive success text on dark cards is 3.5:1. Received amounts in the transaction list are hard to read.
 - Error text on dark cards is 2.7:1.
 - The light-mode fastlane screenshots show segmented controls with a near-black track (Bitcoin Network, Addresses, Protocol, QR settings). The track color is set through `UISegmentedControl.appearance()` in `ThemeManager.applyControlAppearance()`, which only affects controls created afterwards, so a control created before the light palette applies keeps the dark track. On device in light mode the track is light. It is still a latent bug: switching appearance while a screen is open leaves its segmented controls in the old color.
+- The light-mode Settings screenshot shows the menu picker values (Electrum Server, sats, Zeus, USD, System) in the dark palette's gold, `#D4A835`, instead of `#B28622`. The pickers are UIKit menus that keep the `.tint()` color they were created with, the same way the segmented track does. Toggles in the same screenshot use the light gold.
 
 **Semantics**
 - `success`, `secondaryAccent` (`hbSteelBlue`) and the testnet badge are one olive, so "confirmed", "testnet" and "secondary action" look identical.
@@ -219,7 +220,20 @@ Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker ·
 | Secondary button | Card fill, brand text (as today) | Outlined | Outlined |
 | Tertiary button | Brand text | Brand text | Amber text |
 
-A fourth preset, **Today**, renders the shipped Theme.swift colors on the new components as the before picture.
+The presets fall into two groups, and the toolbar shows them apart:
+
+- **Designs** can change layout as well as theme. **Today** is the app as it ships, with the exact Theme.swift colors: the before picture. **Future** is the next version of the app's design, built on Today.
+- **Color themes** recolor Today's layout without changing it: Catkin, Leaf and Bark, above.
+
+## Future
+
+Future starts as an exact copy of Today. Changes to it are made a few at a time, so each can be judged against the app as it ships, and each one is recorded so the export can describe it:
+
+- **Theme values** (colors, shape, type, spacing, buttons) go in the Future preset in `ds-tokens.js`. The export lists them with the other changes from the shipped app.
+- **Layout changes** go in the screen builders in `ds-shipped.js`. Each builder receives the design (`'today'` or `'future'`) as its second argument, and each phone carries a `d-today` or `d-future` class, so a change can branch in the builder or in CSS. Today's screens must not change.
+- **Every change**, of either kind, gets an entry in `FUTURE_CHANGES` in `ds-shipped.js`: the screens it touches, what changes, and the SwiftUI files. The overview lists them under "What changes from today", and the export lists them under "Design".
+
+Nothing has changed yet.
 
 ## How a preset becomes colors
 
@@ -246,6 +260,11 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Multisig configuration | `MultisigConfigView`, `ElectrumServerSetupSection` | `15-MultisigConfig-Testnet4` |
 | Import cosigners | `CosignerImportView` | `18-CosignerImport-Cosigner1` |
 | Verify wallet | `WalletVerifyView` | `21-VerifyWallet-Top` |
+| UTXO list | `UTXOListView` | `12-UTXOs` |
+| UTXO detail | `UTXODetailView` | `13-UTXODetail` |
+| Settings | `SettingsView` | `14-Settings` |
+| Welcome | `WelcomeStepView`, `SetupWizardView` | `01-Welcome` |
+| Wallet setup | `WalletCreationChoiceView` | `02-Wallet-Setup` |
 
 Platform details that the rebuild reproduces:
 
@@ -254,13 +273,17 @@ Platform details that the rebuild reproduces:
 - **Chunked addresses** take a 17pt SF Pro space between groups, because the app joins them with bare `Text(" ")`.
 - **TextFields** sit 2pt taller than a `Text` with the same padding.
 - **The fee sheet** is the iOS 26 floating sheet: laid out full width, then drawn at 386/402 scale, 8pt from the edges, with 12pt corners.
-- **The setup wizard** is a full-width sheet at 62pt over the dimmed welcome screen.
+- **The setup wizard** is a full-width sheet at 62pt over the dimmed welcome screen for the multisig, cosigner and verify steps. Welcome and Wallet setup are the first-launch wizard, full screen.
+- **Lists** keep the iOS 26 metrics: plain lists (Transactions, UTXOs) with 16pt insets and the system chevron; the inset grouped list in Settings with 26pt section corners, 52pt minimum rows, 17pt semibold section headers in the system secondary label color, and 63 × 28pt switches. Separators are `#3C3A38` on the dark card and `#DCD9D2` on the light one. The list shapes are drawn by iOS, so Tune's radius controls don't change them.
+- **Navigation bars** have the Liquid Glass back button (44pt) and the inline title in the system label color.
+- **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button).
+- **The app icon** is the artwork from `Assets.xcassets`. On Welcome, a ground-colored 24pt stroke blurred by 12pt fades its edges, as in `WelcomeStepView`.
 - **The PSBT and receive QR codes** are the actual module grids sampled from the screenshots.
-- **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode. The light-mode screenshots show a near-black track that does not appear on device (see 1.6), so light segmented controls are the one place the rebuild intentionally differs from the screenshots.
+- **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode. The light-mode screenshots show a near-black track that does not appear on device (see 1.6), so light segmented controls are one of two places the rebuild intentionally differs from the screenshots. The other is the light-mode Settings picker values, drawn in the light gold rather than the dark gold the screenshot kept (see 1.6).
 
 Every Tune control reaches these screens, through CSS variables whose Today values equal the shipped layout (listed at the top of `ds-shipped.js`). That makes each design decision testable on the real screen. **Apply interview decisions** in Tune's Layout group sets the four rules from the interview at once: numbers in the amount face, signed amounts, received amounts in ink, and a stacked setup footer.
 
-To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T` at 402 × 874 with device scale 3. This renders the bare screen at 1206 × 2622, the same size as the screenshot. Screen ids: `home`, `send`, `fee`, `review`, `sign`, `scan`, `multisig`, `cosigner`, `verify`. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
+To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T` at 402 × 874 with device scale 3. This renders the bare screen at 1206 × 2622, the same size as the screenshot. Screen ids: `home`, `send`, `fee`, `review`, `sign`, `scan`, `utxos`, `utxo`, `settings`, `welcome`, `setup`, `multisig`, `cosigner`, `verify`. Use `preset=F` to see Future. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
 
 ## Tune controls
 
@@ -286,8 +309,8 @@ To re-check the page after a change, run `node design/tools/check-page.js webkit
 
 ## Using `design-system.html`
 
-1. **Pick a preset** in the toolbar, or press 1 to 4. The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the nine app screens in light and dark. **Overlay Screenshot** (O) shows the simulator screenshot on top.
-2. **Compare** shows one screen across all options side by side, with Today if you include it.
+1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the fourteen app screens in light and dark. **Overlay Screenshot** (O) shows the simulator screenshot on top.
+2. **Compare** shows one screen across all presets side by side, with Today if you include it.
 3. **Tune** (T) opens the panel. Drag a slider or type a value and press Enter. Every change shows a dot; click the dot to reset that value, or Reset preset for all of them. "Save as preset" keeps a named copy.
 4. **Comment** (C) lets you click any element to pin a note. Each pin records the option, the mode, the screen or board, the element and its current computed styles. Section notes sit at the end of each section.
 5. **Export** (E) produces a prompt for Claude Code to update the SwiftUI code. It lists the selected preset, the settings and colors that differ from the shipped app (with the Swift names they replace), the comments and notes, and step-by-step instructions. Paste it into Claude Code in birch-wallet, or save it to `design/reviews/`. The JSON version holds the same changes as exact values and can be imported back into the page.

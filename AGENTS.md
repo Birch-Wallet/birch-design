@@ -26,7 +26,7 @@ When a feature needs new screens or UI elements:
 3. Match the closest existing screen. Setup steps follow the setup wizard; transaction steps follow the Send flow.
 4. Both appearances ship: Birch Dark and Birch Light. Check the new UI in both.
 5. If the feature adds a reusable element or a new pattern, add it to Part 1 and tell the user.
-6. Part 2 (Catkin, Leaf, Bark and the interview decisions) is exploration and has not shipped. Don't apply it to app code unless the user asks.
+6. Part 2 (Future, Catkin, Leaf, Bark and the interview decisions) is exploration and has not shipped. Don't apply it to app code unless the user asks.
 
 ## Applying an export
 
@@ -34,9 +34,9 @@ The page's Markdown export is a prompt for you: it asks you to update the SwiftU
 
 Each export contains:
 
-- **The selected preset.** Today means "keep the shipped design and apply these changes". Any other preset means "move the app to this direction".
+- **The selected preset.** Today means "keep the shipped design and apply these changes". Future means "apply Future's design changes and the values listed". A color theme means "move the app to this direction".
 - **Instructions**, under "How to make the changes". Follow them.
-- **Changes from the shipped app.** Settings, with readable names, the Tune path, and the shipped and new values. Colors, with their light and dark hex values and the Swift name each one replaces. Only these change.
+- **Changes from the shipped app.** For Future, a Design list of its layout and component changes, each with the screens and SwiftUI files. Settings, with readable names, the Tune path, and the shipped and new values. Colors, with their light and dark hex values and the Swift name each one replaces. Only these change.
 - **Comments to apply**, each with the screen, element, SwiftUI file and appearance. A comment wins over a table. Comments made on other presets and resolved comments are context only.
 - **A reference** with every value of the selected preset.
 
@@ -50,8 +50,8 @@ The page is plain HTML, CSS and JavaScript loaded with `<script>` tags. It has n
 
 | File | Contents |
 |---|---|
-| `assets/ds-tokens.js` | The OKLCH token engine. `derive()` turns a preset's parameters into tokens and holds every text token at 4.5:1 or better. Presets: A Catkin, B Leaf, C Bark, T Today. T also carries `overrides` with the exact `Theme.swift` colors. |
-| `assets/ds-shipped.js`, `ds-shipped.css` | The nine app screens, each rebuilt from one SwiftUI view. Every size, spacing, radius, type and color value goes through a CSS variable. The header comment lists the variables and their shipped values. |
+| `assets/ds-tokens.js` | The OKLCH token engine. `derive()` turns a preset's parameters into tokens and holds every text token at 4.5:1 or better. Presets: T Today and F Future (group `design`), A Catkin, B Leaf and C Bark (group `theme`). T carries `overrides` with the exact `Theme.swift` colors; F starts as a copy of T. |
+| `assets/ds-shipped.js`, `ds-shipped.css` | The fourteen app screens, each rebuilt from its SwiftUI view, and `FUTURE_CHANGES`, the Future design's change log. Every size, spacing, radius, type and color value goes through a CSS variable. The header comment lists the variables and their shipped values. |
 | `assets/ds-app.js` | State, `cssFor()` (turns a preset into CSS variables and rules), the Tune panel schema (`DIAL`), comments, export, views and the `?harness=` mode. |
 | `assets/ds-screens.js` | The component boards and the type board. |
 | `assets/ds-icons.js` | Line icons standing in for SF Symbols on the component boards. |
@@ -64,14 +64,25 @@ The page is plain HTML, CSS and JavaScript loaded with `<script>` tags. It has n
 
 - **Today must match the app almost pixel for pixel.** Rebuild a screen by reading its SwiftUI view, not by eyeballing the screenshot. Verify it with `design-system.html?harness=<screen>&mode=dark|light&preset=T` in WebKit at 402 × 874 with device scale 3, and diff the result against `../fastlane/screenshots/<mode>/en-US/iPhone 17 Pro-NN-Name.png`. The only intended difference is the light-mode segmented control (see section 1.6).
 - **Every Tune control must visibly change the app screens.** Controls marked * change the component boards instead. A new control needs an entry in `DIAL`, a CSS variable or rule in `cssFor()`, and a Today value equal to the shipped value. `tools/check-page.js` finds controls from the panel itself, so it covers new ones automatically.
-- **Leave Catkin, Leaf and Bark as they are** unless the user asks to change them. The long-term plan is for options to explore different layouts, not only colors.
+- **Leave Catkin, Leaf and Bark as they are** unless the user asks to change them. They are color themes: they recolor Today's layout and never change it.
+- **Layout changes belong to Future.** See "Changing Future" below.
 - **Saved state** lives in local storage under `birch-ds-v1`, with a schema version `v`. If you change the shape of saved state, bump `v` and extend the migration in `ds-app.js`. Never drop a user's comments or tuned values.
 - **Known pitfalls:**
   - Never rebuild the Tune panel during a drag.
   - Number boxes apply their value on Enter or blur, not while the user types.
   - Scale phones with `transform: scale()`, not CSS `zoom`. Safari's minimum font size breaks `zoom`.
 - **Adding an SF Symbol:** call `Y('name:size:weight')` in `ds-shipped.js`, then run `python3 tools/build-assets.py`. The script finds symbols by grepping for that call shape. It needs macOS, Swift, ImageMagick and the screenshots.
-- **Adding a screen:** rebuild it from its SwiftUI view, then add an entry to `SCREENS` in `ds-shipped.js` with its id, label, builder, screenshot name and Swift files. The views, Overlay and the harness all read from that list. Add a row to the fidelity table in `DESIGN-SYSTEM.md` and diff the screen against its screenshot in both modes.
+- **Adding a screen:** rebuild it from its SwiftUI view, then add an entry to `SCREENS` in `ds-shipped.js` with its id, label, group, builder, screenshot name and Swift files. The views, Overlay and the harness all read from that list; a new group also goes in `SCREEN_GROUPS` in `ds-app.js`. Add a row to the fidelity table in `DESIGN-SYSTEM.md`, diff the screen against its screenshot in both modes, and update the screen count in `tools/check-page.js`.
+
+### Changing Future
+
+Future is the next version of the app's design. It starts as an exact copy of Today, and the user changes it with you a few steps at a time.
+
+- **Theme values** (colors, shape, type, spacing, buttons, chrome) go in `PRESETS.F` in `ds-tokens.js`, after the copy of T. Edit the copied `overrides` for exact colors.
+- **Layout changes** go in the builders in `ds-shipped.js`. Each builder is called as `build(mode, design)`, with `design` `'today'` or `'future'`, and each phone has a `d-today` or `d-future` class. Branch on `design`, or add CSS under `.d-future`. Today's output must stay identical: recheck it against the screenshots after any builder change.
+- **Record every change** in `FUTURE_CHANGES` in `ds-shipped.js`: `{ screens: ['home'], change: 'What changes, in one sentence', swift: 'TransactionRowView.swift' }`, with an empty `screens` list for a change to every screen. The overview and the export read from it, and it is the only way a layout change reaches the export.
+- Note the change under "Future" in Part 2 of `DESIGN-SYSTEM.md`.
+- Every Tune control must still reach Future's screens.
 
 ### Verify before you finish
 
@@ -80,7 +91,7 @@ node tools/check-page.js webkit
 node tools/check-page.js chromium
 ```
 
-Both runs must pass every check with no page errors. Set `PLAYWRIGHT_CORE` to a `playwright-core` install path if Node can't resolve it. If you touched a screen, re-diff it against its screenshot in both modes. After a deploy, run both again with `--url https://birch-wallet.github.io/birch-design/` to check the hosted copy, which loads over HTTPS and can't read local files.
+Both runs must pass every check with no page errors. The check tunes every preset, Future included. Set `PLAYWRIGHT_CORE` to a `playwright-core` install path if Node can't resolve it. If you touched a screen, re-diff it against its screenshot in both modes. After a deploy, run both again with `--url https://birch-wallet.github.io/birch-design/` to check the hosted copy, which loads over HTTPS and can't read local files.
 
 ## When the app changes
 

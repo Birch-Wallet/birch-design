@@ -22,7 +22,7 @@ const pw = require(process.env.PLAYWRIGHT_CORE || 'playwright-core')
 
 const args = process.argv.slice(2)
 const engine = args.find((a) => a === 'webkit' || a === 'chromium') || 'webkit'
-const presetArg = args.includes('--presets') ? args[args.indexOf('--presets') + 1] : 'A,B,C,T'
+const presetArg = args.includes('--presets') ? args[args.indexOf('--presets') + 1] : 'T,F,A,B,C'
 const PRESETS = presetArg.split(',')
 const SKIP_TUNE = args.includes('--skip-tune')
 const PAGE = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'file://' + path.resolve(__dirname, '..', 'design-system.html')
@@ -110,13 +110,15 @@ async function firstVisit(p) {
   const area = 'First visit'
   const top = await p.evaluate(() => ({
     presets: [...document.querySelectorAll('#presetSeg [data-preset]')].map((b) => b.dataset.preset),
+    groups: [...document.querySelectorAll('#presetSeg .seg')].map((g) => `${g.getAttribute('aria-label')}: ${[...g.querySelectorAll('[data-preset]')].map((b) => b.dataset.preset).join(' ')}`),
     selected: document.querySelector('#presetSeg [aria-pressed="true"]').dataset.preset,
     view: document.querySelector('#viewSeg [aria-pressed="true"]').dataset.view,
     title: document.querySelector('.top .mark').textContent.trim(),
     overlay: document.querySelector('#refBtn').textContent.trim(),
     overlayOn: document.body.classList.contains('show-ref') || document.querySelector('#refBtn').getAttribute('aria-checked') === 'true',
   }))
-  check(top.presets.slice(0, 4).join(',') === 'T,A,B,C' && top.selected === 'T', area, 'Today is listed first and selected', top.presets.join(','))
+  check(top.presets.slice(0, 5).join(',') === 'T,F,A,B,C' && top.selected === 'T', area, 'Today is listed first and selected, then Future', top.presets.join(','))
+  check(top.groups.join(' | ') === 'Design: T F | Color themes: A B C', area, 'Designs and color themes are grouped apart', top.groups.join(' | '))
   check(top.view === 'focus', area, 'The view starts on Focus', top.view)
   check(top.overlay === 'Overlay Screenshot' && !top.overlayOn, area, 'Overlay Screenshot starts off', top.overlay)
   check(top.title === 'Birch Design System', area, 'Header reads Birch Design System', top.title)
@@ -141,6 +143,22 @@ async function firstVisit(p) {
   check(colorRows.some((l) => l.startsWith('| `brand` |')) && !colorRows.some((l) => /^\| `(ground|card|ink|ink2)` \|/.test(l)), area, 'A color edit on Today lists only the colors it moved', `${colorRows.length} rows: ${colorRows.map((l) => l.split('|')[1].trim()).join(' ')}`)
   await p.locator('#drawerClose').click()
   await resetPreset(p)
+
+  // Future: a copy of Today that builds its screens with the Future layout
+  await selectPreset(p, 'F')
+  const fut = await p.evaluate(() => ({
+    designs: [...new Set([...document.querySelectorAll('#scope .ph')].map((f) => f.dataset.design))].join(','),
+    screens: document.querySelectorAll('#scope .ph').length,
+    notes: [...document.querySelectorAll('#scope .diffs li')].map((l) => l.textContent).join(' '),
+  }))
+  check(fut.designs === 'future' && fut.screens > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens} phones`)
+  check(/exact copy of Today/.test(fut.notes), area, 'Future starts as an exact copy of Today', fut.notes)
+  await p.locator('#exportBtn').click()
+  md = await p.locator('#expPre').textContent()
+  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
+  await p.locator('#drawerClose').click()
+  await selectPreset(p, 'T')
+  check(await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].every((f) => f.dataset.design === 'today')), area, 'Switching back to Today rebuilds the screens with the Today layout')
 }
 
 async function tuneAudit(p) {
@@ -485,20 +503,28 @@ async function views(p) {
   const area = 'Views'
   await p.locator('#viewSeg [data-view="compare"]').click()
   await settle(p, 100)
-  check((await p.locator('.cmp-grid .ph').count()) === 8, area, 'Compare shows four presets in both modes', `${await p.locator('.cmp-grid .ph').count()} phones`)
+  check((await p.locator('.cmp-grid .ph').count()) === 10, area, 'Compare shows five presets in both modes', `${await p.locator('.cmp-grid .ph').count()} phones`)
+  check((await p.locator('.cmp-grid .opt-F .ph[data-design="future"]').count()) === 2, area, 'Compare builds the Future column with the Future layout')
   await p.locator('#incToday').uncheck()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid .ph').count()) === 6, area, 'Include Today toggles the Today column')
+  check((await p.locator('.cmp-grid .ph').count()) === 8, area, 'Include Today toggles the Today column')
   await p.locator('.chip-x[data-cmp="multisig"]').click()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 6, area, 'Compare screen chips switch the screen')
+  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 8, area, 'Compare screen chips switch the screen')
   await p.locator('#modeSeg [data-modes="dark"]').click()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid .ph').count()) === 3, area, 'Dark only shows one mode in Compare')
+  check((await p.locator('.cmp-grid .ph').count()) === 4, area, 'Dark only shows one mode in Compare')
   await p.locator('#modeSeg [data-modes="both"]').click()
   await p.locator('#viewSeg [data-view="focus"]').click()
   await settle(p, 100)
-  check((await p.locator('#scope .shot').count()) === 9, area, 'Focus shows the nine screens')
+  const shots = await p.locator('#scope .shot').count()
+  const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
+  check(shots === 14 && listed.split(',').length === 14, area, 'Focus shows all fourteen screens', listed)
+  for (const id of ['utxos', 'utxo', 'settings', 'welcome', 'setup']) {
+    const n = await p.locator(`#scope [data-screen="${id}"] .ph-screen`).count()
+    const blank = await p.evaluate((id) => [...document.querySelectorAll(`#scope [data-screen="${id}"] .ph-screen`)].some((s) => s.innerText.trim().length < 20), id)
+    check(n === 2 && !blank, area, `Screen ${id} renders in both modes`)
+  }
 
   await p.locator('#modeSeg [data-modes="light"]').click()
   await settle(p)
@@ -555,9 +581,13 @@ async function views(p) {
   check(themes.join(',') === 'light,dark,system', area, 'Page theme button cycles', themes.join(' → '))
 
   // Number keys switch presets
-  await p.keyboard.press('3')
+  await p.keyboard.press('2')
   await settle(p)
-  check((await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')) === 'B', area, 'Number keys switch presets in toolbar order')
+  const k2 = await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')
+  await p.keyboard.press('4')
+  await settle(p)
+  const k4 = await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')
+  check(k2 === 'F' && k4 === 'B', area, 'Number keys switch presets in toolbar order', `2 → ${k2}, 4 → ${k4}`)
   await p.keyboard.press('1')
 
   // Rail navigation
@@ -605,6 +635,7 @@ async function migration(p) {
   const st = await p.evaluate(() => JSON.parse(localStorage.getItem('birch-ds-v1')))
   const margin = await p.evaluate(() => getComputedStyle(document.querySelector('#scope [data-screen="review"][data-mode="dark"] .pbtn').parentElement).paddingLeft)
   check(st.v === 3 && st.current === 'T' && st.view === 'focus' && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
+  check(st.params.F && st.params.F.design === 'future' && (await p.locator('#presetSeg [data-preset="F"]').count()) === 1, area, 'Saved state from before Future gains the Future preset')
 }
 
 ;(async () => {
@@ -614,7 +645,7 @@ async function migration(p) {
   const p = await ctx.newPage()
   const errors = []
   p.on('pageerror', (e) => errors.push(e.message))
-  p.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+  p.on('console', (m) => (m.type() === 'error' || /Missing SF Symbol/.test(m.text())) && errors.push(m.text()))
   const t0 = Date.now()
   await open(p)
   for (const [name, fn] of [['first visit', firstVisit], ['tune audit', SKIP_TUNE ? null : tuneAudit], ['tune features', tuneFeatures], ['comments', comments], ['views', views], ['migration', migration]]) {

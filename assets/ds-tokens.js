@@ -153,7 +153,8 @@
     ovr('sysGreen', t.success)
     ovr('orange', t.warning)
     ovr('teal', t.net_testnet3)
-    ovr('sep', dark ? 'rgba(84, 84, 88, 0.5)' : 'rgba(60, 60, 67, 0.29)')
+    // List separators as the simulator draws them: #3C3A38 on the dark card, #DCD9D2 on the light one
+    ovr('sep', dark ? 'rgba(84, 84, 88, 0.5)' : 'rgba(60, 60, 67, 0.12)')
     ovr('chev', dark ? 'rgba(235, 235, 245, 0.3)' : 'rgba(60, 60, 67, 0.3)')
     ovr('sheetScrim', dark ? 'rgba(0, 0, 0, 0.47)' : 'rgba(0, 0, 0, 0.2)')
     ovr('grabber', dark ? 'rgba(127, 127, 127, 0.5)' : 'rgba(0, 0, 0, 0.18)')
@@ -165,6 +166,12 @@
     // rgb(118,118,128) at 24% dark / 12% light; the dark thumb is white at 27% over the track
     ovr('segTrack', over('#767680', dark ? 0.24 : 0.12, t.nested))
     ovr('segThumb', dark ? over('#FFFFFF', 0.27, t.segTrack || over('#767680', 0.24, t.nested)) : '#FFFFFF')
+    // UIKit system chrome the app doesn't style: navigation titles and back buttons, list section
+    // headers (secondaryLabel), the off switch track, and the Liquid Glass bar button
+    ovr('sysInk', dark ? '#FFFFFF' : '#000000')
+    ovr('sysInk2', dark ? 'rgba(235, 235, 245, 0.6)' : 'rgba(60, 60, 67, 0.6)')
+    ovr('switchOff', over('#8E8E93', 0.55, t.card))
+    ovr('navGlass', over('#FFFFFF', dark ? 0.13 : 0.45, t.ground))
     ovr('segText', dark ? '#FFFFFF' : '#000000')
     ovr('segTextOn', dark ? '#FFFFFF' : '#000000')
     const stroke = p.shape.stroke
@@ -318,6 +325,8 @@
   const PRESETS = {
     A: {
       id: 'A',
+      group: 'theme',
+      design: 'today',
       name: 'Catkin',
       kind: 'Evolution',
       thesis:
@@ -340,6 +349,8 @@
     },
     B: {
       id: 'B',
+      group: 'theme',
+      design: 'today',
       name: 'Leaf',
       kind: 'Bolder',
       thesis:
@@ -362,6 +373,8 @@
     },
     C: {
       id: 'C',
+      group: 'theme',
+      design: 'today',
       name: 'Bark',
       kind: 'Bolder',
       thesis:
@@ -383,6 +396,8 @@
     },
     T: {
       id: 'T',
+      group: 'design',
+      design: 'today',
       name: 'Today',
       kind: 'Reference',
       thesis:
@@ -441,6 +456,19 @@
       },
     },
   }
+
+  // Future: the next version of the app's design, built on Today. It starts as an exact copy.
+  // Change its parameters and colors here (they reach the export as changes from the shipped
+  // app); layout changes go in ds-shipped.js, in the builders and FUTURE_CHANGES
+  PRESETS.F = Object.assign(JSON.parse(JSON.stringify(PRESETS.T)), {
+    id: 'F',
+    name: 'Future',
+    group: 'design',
+    design: 'future',
+    kind: 'Proposal',
+    thesis:
+      'The next version of Birch, built on Today. Layout, type, color and component changes are made here a few at a time, so each one can be judged against the app as it ships. It starts as an exact copy of Today.',
+  })
 
   // Token reference: name -> role, plus the Theme.swift name it replaces
   const TOKEN_DOCS = [

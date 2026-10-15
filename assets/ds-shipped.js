@@ -536,6 +536,185 @@
       </div>`)
   }
 
+  // ---------------------------------------------------------------------------
+  // UTXOs
+  // ---------------------------------------------------------------------------
+
+  /** Wrapping text at the iOS line height (T()'s font shorthand leaves WebKit's whole-pixel 'normal') */
+  const LH = 'line-height:1.1934;line-height:round(up, 1.1934em, 0.33333px)'
+
+  /** A tinted capsule, as in UTXOListView.statusCapsule and the UTXO detail header */
+  const capsule = (text, color, size, key) =>
+    `<span class="t" style="${F('d', size)};color:${color};padding:3px 8px;border-radius:var(--r-chip);background:color-mix(in srgb, ${color} 15%, transparent)"${key ? c(key, text + ' status') : ''}>${text}</span>`
+
+  /** A tab's title row: hbAmountLarge with the screen's own padding, above a plain List */
+  function tabTitle(title, after = '') {
+    return `<div class="sx-head" style="position:absolute;top:62px;left:0;right:0;z-index:5;background:var(--ground)">
+      <div class="row" style="padding:8px ${M16} 4px;height:${after ? 56 : 54.95}px;align-items:center"${c('title', 'Screen title')}>${T(title, 'a', 36, 700, 'ink')}<span class="sp"></span>${after}</div></div>`
+  }
+
+  const UTXOS = [
+    ['8,754', 'tb1qjankyz...kqd9x7qf', 'March 29, 2026 at 1:02 AM', 'Receive'],
+    ['48,908', 'tb1q54vgck...gsrpef26', 'March 29, 2026 at 1:02 AM', 'Change'],
+    ['9,654', 'tb1qexdwml...hs97eu9j', 'March 22, 2026 at 2:34 PM', 'Receive'],
+    ['5,173', 'tb1qq08cae...hsgw2cfq', 'March 22, 2026 at 2:34 PM', 'Receive'],
+    ['41,904', 'tb1qwhf7ft...jss8mf2d', 'March 20, 2026 at 12:23 AM', 'Change'],
+    ['79,492', 'tb1q8pdyf4...kqnk63yx', 'March 20, 2026 at 12:23 AM', 'Change'],
+  ]
+
+  function utxoRow([amt, address, date, kind], i) {
+    return `<div class="urow"${c('utxo-' + i, `UTXO row: ${amt} sats`)}>
+      <div class="col" style="gap:${S(6)};flex:1;align-items:stretch">
+        <div class="row">${T(amt + ' sats', 'm', 14, 400, 'ink', '', 'amt')}<span class="sp"></span>${capsule('Confirmed', 'var(--success)', 10)}</div>
+        <div class="row">${T(address, 'm', 11, 400, 'ink2')}<span class="sp"></span>${T(date, 'd', 11, 400, 'ink2')}</div>
+        <div class="row">${T(kind, 'd', 10, 400, 'ink2')}</div>
+      </div>
+      <span class="txchev">${Y('chevron.right:15:semibold')}</span>
+    </div>`
+  }
+
+  function utxos() {
+    const filter = `<span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink)"${c('filter', 'Filter button')}>${Y('line.3.horizontal.decrease:20:semibold')}</span>`
+    return `${tabTitle('UTXOs', filter)}
+      <div class="sx" style="top:118px"><div${c('utxo-list', 'UTXO list')}>${UTXOS.map(utxoRow).join('')}</div><div style="height:83px"></div></div>${tabbar('UTXOs')}`
+  }
+
+  /** iOS 26 navigation bar: a Liquid Glass back button and the inline title */
+  function navBar(title) {
+    return `<div class="navbar"><span class="navback"${c('nav-back', 'Back button')}>${Y('chevron.left:22:semibold')}</span>
+      <span class="t navtitle"${c('nav-title', 'Navigation title')}>${title}</span></div>`
+  }
+
+  const UTXO_ADDR = 'tb1qjankyz9puexjzd4uqsegux2fs8mqlnl5g845jqtwhsskjcy7z8kqd9x7qf'
+  const OUTPOINT = '7d9809350287013654fbd9a008ae3884941bd136db2b4829770901f51de22825:0'
+
+  function utxoDetail() {
+    const actions = (key) =>
+      `<span class="row" style="flex:none;gap:8px;align-items:flex-start;color:var(--u-info)"${c(key, 'Copy and open in explorer')}><span class="row" style="width:calc(17px * var(--ts));justify-content:center">${Y('doc.on.doc:14:regular')}</span><span class="row" style="width:calc(15px * var(--ts));justify-content:center">${Y('arrow.up.right.square:14:regular')}</span></span>`
+    const detail = (k, v, amt) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'm', 14, 400, 'ink', '', amt ? 'amt' : '')}</div>`
+    return `${navBar('UTXO Detail')}
+      <div class="sx" style="padding-top:116px">
+        <div class="col" style="gap:${S(16)};padding:${S(16)} ${M16};align-items:stretch">
+          <div class="col cx" style="gap:${S(8)};padding-top:${S(8)}"${c('utxo-amount', 'UTXO amount')}>
+            <span style="color:var(--brandInk);display:flex">${Y('bitcoinsign.circle.fill:44:regular')}</span>
+            ${T('8,754 sats', 'a', 24, 600, 'ink', '', 'amt')}
+            ${T('$ 7.58', 'd', 14, 400, 'ink2')}
+            ${capsule('Confirmed', 'var(--success)', 11, 'utxo-status')}
+          </div>
+          <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('output', 'Output details')}>
+            <div class="col" style="gap:${S(6)};align-items:stretch"${c('address', 'Address')}>
+              ${T('Address', 'd', 13, 400, 'ink2')}
+              <div class="row" style="gap:8px;align-items:flex-start"><span class="t tw addr2">${addr(UTXO_ADDR)}</span><span class="sp" style="min-width:8px"></span>${actions('address-actions')}</div>
+            </div>
+            <div class="divider"></div>
+            ${detail('Amount', '8,754 sats', true)}
+            ${detail('Receive Address Index', '18')}
+            ${detail('Output Index', '0')}
+            ${detail('Type', 'Receive')}
+            ${detail('Block Height', '127747')}
+            ${detail('Timestamp', 'March 29, 2026 at 1:02 AM')}
+            ${detail('Confirmations', '27644')}
+          </div>
+          <div class="hcard col" style="gap:${S(6)};align-items:stretch"${c('label', 'Label')}>
+            <div class="row">${T('Label', 'd', 13, 400, 'ink2')}<span class="sp"></span><span class="row" style="height:calc(16.9px * var(--ts));color:var(--u-info)"${c('add-label', 'Add label')}>${Y('plus.circle:14:regular')}</span></div>
+            ${T('No label', 'd', 16, 400, 'ink2', 'font-style:italic')}
+          </div>
+          <div class="hcard col" style="gap:${S(6)};align-items:stretch"${c('outpoint', 'Outpoint')}>
+            ${T('Outpoint', 'd', 13, 400, 'ink2')}
+            <div class="row" style="gap:8px;align-items:flex-start">${T(OUTPOINT, 'm', 11, 400, 'ink', `word-break:break-all;flex:0 1 auto;${LH}`, 'tw')}<span class="sp" style="min-width:8px"></span>${actions('outpoint-actions')}</div>
+          </div>
+          <div class="hcard"${c('freeze', 'Freeze UTXO')}>
+            <div class="row ub" style="--uc:var(--u-info);gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.29px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))">${Y('snowflake:17:regular')}${T('Freeze UTXO', 'd', 15, 400, 'currentColor')}</div>
+          </div>
+        </div>
+        <div style="height:83px"></div>
+      </div>${tabbar('UTXOs')}`
+  }
+
+  // ---------------------------------------------------------------------------
+  // Settings (an inset grouped List: iOS draws the sections, the app colors the rows)
+  // ---------------------------------------------------------------------------
+
+  function settings() {
+    const toggle = (on, key, label) => `<span class="iswitch${on ? ' on' : ''}"${c(key, label)}><i></i></span>`
+    const titled = (title, sub) => `<div class="col" style="gap:2px;align-items:flex-start;flex:0 1 auto">${T(title, 'd', 17, 400, 'ink', LH)}${T(sub, 'd', 12, 400, 'ink2', LH, 'tw')}</div>`
+    const picker = (label, value, key, extra = '') =>
+      `<div class="row" style="flex:1;${extra}"${c(key, label + ' picker')}>${T(label, 'd', 17, 400, 'ink', LH)}<span class="sp"></span>
+        <span class="row" style="gap:4px;color:var(--brandInk)">${T(value, 'd', 17, 400, 'brand', LH)}${Y('chevron.up.chevron.down:13:medium')}</span></div>`
+    const section = (title, rows, key, first) =>
+      `<div class="igh${first ? ' first' : ''}">${T(title, 'd', 17, 600, 'var(--sysInk2)')}</div><div class="igroup"${c(key, title + ' section')}>${rows}</div>`
+    const row = (inner) => `<div class="irow">${inner}</div>`
+    const tile = (m, on) => `<div class="col cx" style="flex:1 1 0;gap:8px;padding:8px 0"${c('icon-' + m, (m === 'light' ? 'Light' : 'Dark') + ' app icon')}>
+        <span style="position:relative;display:block">${appIcon(m, 72, 16)}${on ? '<i class="iconring"></i>' : ''}</span>
+        <span class="row" style="gap:4px">${on ? `<span style="color:var(--select);display:flex">${Y('checkmark.circle.fill:12:regular')}</span>` : ''}${T(m === 'light' ? 'Light' : 'Dark', 'd', 13, 400, 'ink')}</span></div>`
+    return `${tabTitle('Settings')}
+      <div class="sx" style="top:116.95px">
+        ${section('Security', row(`${titled('App Lock', 'Require Face ID to open app')}<span class="sp"></span>${toggle(false, 'app-lock', 'App Lock switch')}`), 'security', true)}
+        ${section('Fee Estimation', row(picker('Fee Source', 'Electrum Server', 'fee-source')), 'fees')}
+        ${section('Currency Display', row(picker('Bitcoin Unit', 'sats', 'unit')) + `<i class="isep"></i>` + row(`<div class="col" style="flex:1;align-items:stretch">
+            <div class="row" style="gap:24px">${titled('Show Fiat Price', 'Display estimated fiat value alongside bitcoin amounts')}<span class="sp"></span>${toggle(true, 'fiat', 'Show Fiat Price switch')}</div>
+            ${picker('Price Source', 'Zeus', 'price-source', 'padding-top:12px')}
+            ${picker('Currency', 'USD', 'currency', 'padding-top:12px')}</div>`), 'currency')}
+        ${section('Appearance', row(picker('Theme', 'System', 'theme')), 'appearance')}
+        ${section('App Icon', row(`<div class="row" style="gap:12px;flex:1;align-items:flex-start">${tile('light', true)}${tile('dark', false)}</div>`), 'app-icon')}
+        ${section('About', row(`${T('Version', 'd', 17, 400, 'ink')}<span class="sp"></span>${T('0.23 (31)', 'd', 17, 400, 'ink2')}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
+        <div style="height:118px"></div>
+      </div>${tabbar('Settings')}`
+  }
+
+  // ---------------------------------------------------------------------------
+  // Welcome and wallet setup: the wizard full screen, as on first launch
+  // ---------------------------------------------------------------------------
+
+  /** ThemedAppIcon: the app icon artwork for the appearance, clipped to a rounded square */
+  function appIcon(mode, size, radius, inner = '') {
+    const src = (A().icon || {})[mode]
+    return `<span class="appicon" style="width:${size}px;height:${size}px;border-radius:${radius}px${src ? `;background-image:url(${src})` : ''}">${inner}</span>`
+  }
+
+  function welcome(mode) {
+    // Each icon sits in a 28pt-wide frame; the heights are the symbol frames SwiftUI lays out at 18pt
+    const feature = (icon, h, text) =>
+      `<div class="row" style="gap:14px"><span class="row" style="width:28px;height:calc(${h}px * var(--ts));justify-content:center;color:var(--brandInk)">${Y(icon)}</span>${T(text, 'd', 15, 400, 'ink')}</div>`
+    // The ground-colored stroke, blurred and clipped, fades the icon's edges into the screen
+    return `<div class="sx col" style="padding:62px 0 34px;gap:${S(32)};align-items:stretch">
+      <span class="sp"></span>
+      <div class="row" style="justify-content:center"${c('app-icon', 'App icon')}>${appIcon(mode, 120, 28, '<i class="appicon-fade"></i>')}</div>
+      <div class="col cx" style="gap:${S(12)}"${c('title', 'Welcome title')}>${T('Birch Wallet', 'r', 34, 'W', 'ink')}${T('A Bitcoin Multisig Coordinator', 'd', 17, 400, 'ink2')}</div>
+      <div class="col" style="gap:${S(16)};align-self:center;align-items:flex-start;padding:0 var(--gutter)"${c('features', 'Feature list')}>
+        ${feature('eye.fill:18:regular', 18.33, 'Watch-only — no private keys stored')}
+        ${feature('person.3.fill:18:regular', 20.33, 'Multi-signature security (M-of-N)')}
+        ${feature('qrcode.viewfinder:18:regular', 20.33, 'Airgapped QR signing device support')}
+        ${feature('server.rack:18:regular', 20.33, 'Connect to your own Electrum server')}
+        ${feature('wallet.bifold.fill:18:regular', 20.33, 'Coordinate multiple wallets')}
+      </div>
+      <span class="sp"></span>
+      <div style="padding:0 var(--gutter) ${S(32)}"><span class="pbtn"${c('primary-cta', 'Primary button: Get Started')}>Get Started</span></div>
+    </div>`
+  }
+
+  function walletSetup() {
+    const choice = (icon, title, sub, key) => `<div class="card row" style="gap:16px;padding:calc(var(--pad) + 4px)"${c(key, title)}>
+        <span style="color:var(--brandInk);display:flex">${Y(icon)}</span>
+        <div class="col" style="gap:4px;align-items:flex-start;flex:0 1 auto">${T(title, 'r', 17, 600, 'ink')}${T(sub, 'd', 13, 400, 'ink2', LH, 'tw')}</div>
+        <span class="sp" style="min-width:0"></span>
+        <span style="color:var(--ink2);display:flex">${Y('chevron.right:14:semibold')}</span></div>`
+    return `<div class="sx col" style="padding:62px 0 34px;align-items:stretch">${wizardProgress(2)}
+      <div class="col" style="flex:1 0 auto;gap:${S(24)};align-items:stretch">
+        <span class="sp"></span>
+        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Wallet Setup', 'r', 28, 'W', 'ink')}</div>
+        <div class="row" style="justify-content:center;padding:0 calc(var(--gutter) + 8px)">${T('Choose how to configure your multisig wallet', 'd', 15, 400, 'ink2', 'text-align:center', 'tw')}</div>
+        <div class="row" style="gap:6px;justify-content:center;padding:0 calc(var(--gutter) + 8px);color:var(--ink2)"${c('script-note', 'Script type note')}>${Y('info.circle:12:regular')}${T('Only BIP-67 P2WSH script type is supported', 'd', 12, 400, 'ink2')}</div>
+        <div class="col" style="gap:${S(16)};padding:0 var(--gutter);align-items:stretch">
+          ${choice('plus.circle.fill:28:regular', 'Create New Wallet', 'Setup M-of-N multisig by importing cosigner xpubs from one or more air-gapped signing devices', 'create')}
+          ${choice('square.and.arrow.down.fill:28:regular', 'Import Descriptor', 'Import an existing wallet via output descriptor from a printed backup or another coordinator', 'import')}
+        </div>
+        <span class="sp"></span>
+        <div class="row" style="justify-content:center;padding-bottom:${S(32)}"${c('back', 'Back')}>${T('Back', 'd', 16, 400, 'ink2')}</div>
+      </div>
+    </div>`
+  }
+
   const SCREENS = [
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
     { id: 'send', group: 'Send', label: 'Recipients and amount', build: send, shot: '27-SendRecipientsFilled', swift: 'SendFlowView.swift, SendAmountView.swift' },
@@ -543,6 +722,11 @@
     { id: 'review', group: 'Send', label: 'Review transaction', build: review, shot: '28-ReviewTransaction-Top', swift: 'SendReviewView.swift, PSBTVerificationBadge.swift' },
     { id: 'sign', group: 'Signing', label: 'PSBT QR', build: sign, shot: '31-PSBTQRDisplay', swift: 'PSBTDisplayView.swift' },
     { id: 'scan', group: 'Signing', label: 'Scan signed PSBT', build: scan, shot: '33-ScanSignedPSBT', swift: 'PSBTScanView.swift, URScannerSheet.swift' },
+    { id: 'utxos', group: 'UTXOs', label: 'UTXO list', build: utxos, shot: '12-UTXOs', swift: 'UTXOListView.swift' },
+    { id: 'utxo', group: 'UTXOs', label: 'UTXO detail', build: utxoDetail, shot: '13-UTXODetail', swift: 'UTXODetailView.swift' },
+    { id: 'settings', group: 'Settings', label: 'Settings', build: settings, shot: '14-Settings', swift: 'SettingsView.swift' },
+    { id: 'welcome', group: 'Setup', label: 'Welcome', build: welcome, shot: '01-Welcome', swift: 'WelcomeStepView.swift, SetupWizardView.swift' },
+    { id: 'setup', group: 'Setup', label: 'Wallet setup', build: walletSetup, shot: '02-Wallet-Setup', swift: 'WalletCreationChoiceView.swift' },
     { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift' },
     { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosigner, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift' },
     { id: 'verify', group: 'Setup', label: 'Verify wallet', build: verify, shot: '21-VerifyWallet-Top', swift: 'WalletVerifyView.swift' },
@@ -559,18 +743,28 @@
   /** Path of the screenshot a screen was rebuilt from, relative to a shot base */
   const shotPath = (screen, mode) => `${mode}/en-US/${encodeURIComponent(`iPhone 17 Pro-${screen.shot}.png`)}`
 
-  function phone(screen, mode) {
+  /**
+   * Every change the Future design makes to Today, one entry each, for the page's overview and the
+   * export: { screens: [screen ids, or none for every screen], change: 'what changes', swift: 'files' }.
+   * Builders receive the design ('today' or 'future') as their second argument, and each phone
+   * carries a d-today or d-future class, so a Future change can branch in a builder or in CSS.
+   * Empty while Future is an exact copy of Today.
+   */
+  const FUTURE_CHANGES = []
+
+  function phone(screen, mode, design = 'today') {
     // The wrapper reserves the scaled size; the phone itself is scaled with a transform, because
     // CSS zoom lets Safari bump 10pt text up to its minimum font size and break the layout
     const rel = shotPath(screen, mode)
-    return `<div class="ph-wrap"><figure class="ph m-${mode}" data-screen="${screen.id}" data-mode="${mode}">
-      <div class="ph-screen">${screen.build(mode)}${statusBar(mode)}<i class="ph-island"></i>
+    return `<div class="ph-wrap"><figure class="ph m-${mode} d-${design}" data-screen="${screen.id}" data-mode="${mode}" data-design="${design}">
+      <div class="ph-screen">${screen.build(mode, design)}${statusBar(mode)}<i class="ph-island"></i>
         <img class="ph-ref"${shotBase ? ` src="${shotBase + rel}"` : ''} data-shot="${rel}" alt="" loading="lazy" decoding="async"></div>
     </figure></div>`
   }
 
   root.BirchShipped = {
     SCREENS,
+    FUTURE_CHANGES,
     phone,
     SHOT_BASES,
     shotPath,

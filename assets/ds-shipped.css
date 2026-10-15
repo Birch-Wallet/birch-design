@@ -75,6 +75,37 @@
 .txdir { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; }
 .txchev { position: absolute; left: calc(404.2px - var(--gutter)); top: calc(50% - 0.47px); transform: translate(-50%, -50%); color: var(--chev); display: flex; }
 
+/* UTXO list rows: the plain List metrics of the transaction rows, with content-height rows */
+.urow { position: relative; padding: calc(15.17px * var(--sp)) calc(var(--gutter) + 14.2px) calc(15.17px * var(--sp)) calc(var(--gutter) - 8px); display: flex; align-items: center; background: var(--card); }
+.urow::after { content: ""; position: absolute; left: calc(var(--gutter) - 8px); right: calc(var(--gutter) - 8px); bottom: 0; height: 1px; background: var(--sep); }
+
+/* iOS 26 navigation bar: Liquid Glass back button, inline title in the system label color */
+.navbar { position: absolute; top: 62px; left: 0; right: 0; height: 44px; z-index: 6; }
+.navback { position: absolute; left: 16px; top: 0; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--sysInk); background: var(--navGlass);
+  box-shadow: inset 0 0.66px 0 var(--glassRim), inset 0 0 0 0.66px var(--glassEdge), 0 4px 14px rgba(0,0,0,0.10); }
+.navtitle { position: absolute; left: 0; right: 0; top: 11.85px; text-align: center; font: 600 17px var(--f-text); color: var(--sysInk); }
+
+/* Inset grouped List (Settings): section headers, row groups, separators, switches */
+.igh { padding: 28px calc(var(--gutter) - 8px + var(--pad)) 9.9px; }
+.igh.first { padding-top: 10.5px; }
+.igroup { margin: 0 calc(var(--gutter) - 8px); background: var(--card); border-radius: 26px; overflow: hidden; }
+.irow { display: flex; align-items: center; min-height: 52px; padding: 15px var(--pad); }
+/* The separator sits inside the bottom of the row above it, as UIKit draws it */
+.isep { display: block; position: relative; height: 1px; margin: -1px var(--pad) 0; background: var(--sep); }
+.iswitch { position: relative; flex: none; width: 63px; height: 28px; margin-right: -2px; border-radius: 14px; background: var(--switchOff); }
+.iswitch i { position: absolute; left: 2px; top: 2px; width: 37px; height: 24px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.iswitch.on { background: var(--toggle); }
+.iswitch.on i { left: 24px; }
+
+/* The app icon artwork; on Welcome a blurred ground-colored stroke fades its edges */
+.appicon { position: relative; display: block; flex: none; overflow: hidden; background: var(--nested) center / cover no-repeat; }
+.appicon-fade { position: absolute; inset: -12px; border: 24px solid var(--ground); border-radius: 40px; filter: blur(12px); }
+.iconring { position: absolute; inset: 0; border-radius: 16px; box-shadow: inset 0 0 0 1.5px var(--select); }
+/* A chunked address in a card. SwiftUI joins the mono chunks with default 17pt spaces, which
+   set a 22pt line pitch and a 20.3pt first line; the chunks sit inside that line box */
+.addr2 { font: 400 calc(17px * var(--ts)) var(--f-text); line-height: calc(22px * var(--ts)); margin-bottom: calc(-1.7px * var(--ts)); flex: 0 1 auto; }
+.addr2 > span:not(.t-sp) { font: 400 calc(12px * var(--ts)) var(--f-mono); line-height: 1; }
+
 /* Selection (birchSelected) */
 .sel { border-radius: var(--r-card); background: linear-gradient(color-mix(in srgb, var(--select) 12%, transparent), color-mix(in srgb, var(--select) 12%, transparent)), var(--card); box-shadow: inset 0 0 0 var(--ring) var(--select); }
 .sel.noring { box-shadow: none; }

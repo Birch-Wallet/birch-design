@@ -52,6 +52,8 @@ button { font: inherit; color: inherit; }
 .mark span { color: var(--x-ink2); font-size: 13px; white-space: nowrap; }
 .mark .leaf { color: var(--x-ink); }
 .tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* Presets: the designs, then the color themes */
+.presets { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .seg { display: inline-flex; background: var(--x-panel2); border-radius: 9px; padding: 3px; gap: 2px; }
 .seg button { border: 0; background: transparent; height: 28px; padding: 0 10px; border-radius: 7px; color: var(--x-ink2); font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--x-panel); color: var(--x-ink); box-shadow: 0 1px 2px rgba(0,0,0,.10), 0 0 0 .5px var(--x-line2); }
@@ -565,7 +567,7 @@ body.harness .ph-island { display: none; }
 <header class="top">
   <div class="top-in">
     <div class="mark"><svg class="ic leaf" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19.5C5 11 10.2 4.8 19.5 4.5c-.2 9.5-6.5 15-14.5 15z"/><path d="M5 19.5 13.5 11"/></svg><b>Birch</b> <span>Design System</span></div>
-    <div class="seg" id="presetSeg" role="group" aria-label="Preset"></div>
+    <div class="presets" id="presetSeg" role="group" aria-label="Preset"></div>
     <div class="tools">
       <button type="button" class="xbtn pin-on" id="commentBtn" aria-pressed="false" title="Comment mode (C)"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7.5L6 20v-4a2 2 0 0 1-2-2z"/></svg>Comment <span class="count" id="commentCount">0</span></button>
       <button type="button" class="xbtn" id="exportBtn" title="Export changes for Claude Code (E)"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5V3.5M8.5 7 12 3.5 15.5 7M8 10H6.5A1.5 1.5 0 0 0 5 11.5v7A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-7a1.5 1.5 0 0 0-1.5-1.5H16"/></svg>Export</button>
