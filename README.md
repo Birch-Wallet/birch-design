@@ -1,0 +1,106 @@
+# Birch Design
+
+The design system for [Birch](https://github.com/Birch-Wallet/birch-wallet), the watch-only Bitcoin multisig coordinator for iOS.
+
+This repo does two jobs:
+
+1. **Reference for the app as it ships.** It records Birch's current design system: colors, type, shape, components and screens. Use it when building a feature that needs new UI, so the new screens match the rest of the app.
+2. **Playground for design changes.** A browser page rebuilds the real app screens and lets you adjust every design variable, compare alternative directions, and pin comments that Claude Code can implement.
+
+## What's here
+
+| Path | What it is |
+|---|---|
+| `DESIGN-SYSTEM.md` | The written design system. Part 1 is the app as it ships. Part 2 is the exploration. Part 3 will hold the final system once a direction is chosen. |
+| `design-system.html` | The playground. Open it in a browser. There is no build step and no server. |
+| `assets/` | The page's scripts and styles. `ds-assets.js` is generated; don't edit it by hand. |
+| `tools/` | The asset generator and the end-to-end check of the page. |
+| `reviews/` | Exported reviews waiting to be implemented. |
+| `AGENTS.md` | Instructions for AI coding agents working in this repo. |
+
+## Getting it
+
+This repo is a submodule of birch-wallet, checked out at `design/`.
+
+```sh
+git clone --recurse-submodules git@github.com:Birch-Wallet/birch-wallet.git
+
+# or, in an existing clone
+git submodule update --init design
+```
+
+Use it inside birch-wallet, not as a standalone clone. Two features read files from the parent repo:
+
+- **Overlay app** lays the simulator screenshots from `../fastlane/screenshots/` over the rebuilt screens.
+- **`tools/build-assets.py`** cuts the QR codes and status bar out of the same screenshots.
+
+The screenshots aren't committed. To generate them, run `fastlane screenshots only:"iPhone 17 Pro" frame:false` in birch-wallet.
+
+## Using the playground
+
+Open `design-system.html` in Safari. Safari is the reference browser because it renders SF Pro Rounded and SF Mono the same way iOS does.
+
+The presets:
+
+| Preset | What it is |
+|---|---|
+| **Today** | The app as it ships, using the exact colors from `Theme.swift`. |
+| **Catkin** | An evolution of today's look with a refined gold. |
+| **Leaf** | A bolder direction: the leaf from the app icon becomes the brand color. |
+| **Bark** | A bolder direction: monochrome slate controls with a single autumn amber accent. |
+
+| Key | Action |
+|---|---|
+| 1 to 4 | Switch preset |
+| T | Tune: sliders for brand, surfaces, type, spacing, shape, buttons and layout |
+| C | Comment: click any element to pin a note |
+| E | Export comments and changes as Markdown and JSON |
+| O | Overlay the simulator screenshots on the screens |
+
+**Focus** shows one preset in full: tokens, type, buttons, components and the nine app screens in light and dark. **Compare** puts one screen side by side across every preset.
+
+Your tuning and comments are saved in that browser's local storage. To move them to another browser, export JSON from one and import it in the other.
+
+## From idea to app
+
+1. **Explore.** Pick a preset, tune it, and compare it against the others.
+2. **Comment.** Pin notes on the elements you want changed, and add section notes.
+3. **Export** to `reviews/`.
+4. **Implement.** Ask Claude Code to implement the review in birch-wallet.
+5. **Update this repo.** Once the app changes, bring Part 1 of `DESIGN-SYSTEM.md` and the Today preset up to date. The reference is only useful while it matches the app.
+
+## Keeping it accurate
+
+With the Today preset, the rebuilt screens match the simulator screenshots to within about a point. After changing the page, run the end-to-end check in both engines:
+
+```sh
+node tools/check-page.js webkit
+node tools/check-page.js chromium
+```
+
+The check drags every Tune control in every preset, then exercises comments, export, import, views, shortcuts and upgrades of saved settings. It needs [`playwright-core`](https://www.npmjs.com/package/playwright-core). Set `PLAYWRIGHT_CORE` to its install path if Node can't find it from here. WebKit also needs Playwright's WebKit build (`npx playwright install webkit`). Chromium uses your installed Google Chrome.
+
+After adding an SF Symbol to a screen, regenerate the assets. This needs macOS, Swift and ImageMagick:
+
+```sh
+python3 tools/build-assets.py
+```
+
+## Updating birch-wallet
+
+birch-wallet pins a specific commit of this repo. Commit and push changes here first, then record the new commit in birch-wallet:
+
+```sh
+# in birch-wallet
+git -C design pull
+git add design
+git commit -m "Update design submodule"
+```
+
+## Status
+
+| Part | Status |
+|---|---|
+| 1. Current state | Done, as of build 31. |
+| 2. Exploration | In review. |
+| 3. Final system | Not started. It will be written once a direction is chosen. |
