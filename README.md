@@ -15,7 +15,7 @@ This repo does two jobs:
 |---|---|
 | `DESIGN-SYSTEM.md` | The written design system. Part 1 is the app as it ships. Part 2 is the exploration: the Future design and the color themes. Part 3 will hold the final system once a direction is chosen. |
 | `design-system.html` | The playground. Open it in a browser. There is no build step and no server. |
-| `assets/` | The page's scripts and styles. `ds-assets.js` is generated; don't edit it by hand. |
+| `assets/` | The page's scripts and styles, and the frames of the seedling loading animation. `ds-assets.js` is generated; don't edit it by hand. |
 | `tools/` | The asset generator and the end-to-end check of the page. |
 | `.github/workflows/pages.yml` | Publishes the playground to GitHub Pages. |
 | `reviews/` | Exported change prompts, kept with the work they produced. |
@@ -48,7 +48,7 @@ The toolbar groups the presets in two. **Designs** can change layout as well as 
 | Preset | Group | What it is |
 |---|---|---|
 | **Today** | Design | The app as it ships, using the exact colors from `Theme.swift`. |
-| **Future** | Design | The next version of the app's design, built on Today. Layout, type, color and component changes are made here a few at a time. So far it reworks the setup flow. |
+| **Future** | Design | The next version of the app's design, built on Today. Layout, type, color and component changes are made here a few at a time. Its first changes, the setup flow and the Transactions loading screen, have shipped, so for now it matches Today. |
 | **A · Catkin** | Color theme | An evolution of today's look with a refined gold. |
 | **B · Leaf** | Color theme | A bolder direction: the leaf from the app icon becomes the brand color. |
 | **C · Bark** | Color theme | A bolder direction: monochrome slate controls with a single autumn amber accent. |
@@ -61,7 +61,7 @@ The toolbar groups the presets in two. **Designs** can change layout as well as 
 | E | Export a prompt for Claude Code to update the app's Swift code |
 | O | Overlay the simulator screenshots on the screens |
 
-The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-three app screens in light and dark. **Compare** puts one screen side by side across every preset.
+The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-four app screens in light and dark. **Compare** puts one screen side by side across every preset.
 
 The screens cover the wallet (Transactions with and without transactions and while loading, the wallet picker, bump fee, UTXO list, the UTXO filter sheet, UTXO detail, Settings), sending and signing (Send empty and filled, network fee, review, PSBT QR, scan), and setup (Welcome, Wallet setup, Import descriptor filled and empty, multisig configuration, cosigners empty and filled, verify).
 

@@ -95,7 +95,7 @@
 
   // Tuning panel schema: [path, label, kind, min|options, max, step, unit, flags]
   // Every control reaches the app screens unless flagged { only: 'components' }: those
-  // elements (toggles, errors, destructive buttons...) appear only in the component boards.
+  // elements (errors, destructive buttons, tertiary text...) appear only in the component boards.
   const COMP = { only: 'components' }
   const NEEDS_ACCENT = { needsAccent: true }
   const DIAL = [
@@ -116,7 +116,7 @@
       ['roles.progress', 'Progress', 'seg', [['brand', 'Brand'], ['accent', 'Accent']], 0, 0, '', NEEDS_ACCENT],
       ['roles.amountUnit', 'Amounts', 'seg', [['ink', 'Brand'], ['accent', 'Accent']], 0, 0, '', NEEDS_ACCENT],
       ['roles.tabTint', 'Active tab', 'seg', [['brand', 'Brand'], ['accent', 'Accent']], 0, 0, '', NEEDS_ACCENT],
-      ['roles.toggles', 'Toggles', 'seg', [['brand', 'Brand'], ['accent', 'Accent']], 0, 0, '', { ...COMP, needsAccent: true }],
+      ['roles.toggles', 'Toggles', 'seg', [['brand', 'Brand'], ['accent', 'Accent']], 0, 0, '', NEEDS_ACCENT],
     ] },
     { id: 'dark', name: 'Dark surfaces', color: true, mode: 'dark', sw: ['ground', 'card', 'nested'], rows: [
       ['dark.hue', 'Tint hue', 'hue', 0, 360, 1],

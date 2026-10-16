@@ -24,11 +24,16 @@ for arg in CommandLine.arguments.dropFirst() {
   let png = rep.representation(using: .png, properties: [:])!
   // ink bounds (alpha > 50%) in points
   var minX = Int.max, minY = Int.max, maxX = -1, maxY = -1
-  for y in 0..<rep.pixelsHigh { for x in 0..<rep.pixelsWide {
-    if let c = rep.colorAt(x: x, y: y), c.alphaComponent > 0.5 { minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y) }
-  } }
-  let ink: [Double] = maxX < 0 ? [0,0,0,0] : [Double(minX)/3, Double(minY)/3, Double(maxX - minX + 1)/3, Double(maxY - minY + 1)/3]
+  for y in 0 ..< rep.pixelsHigh {
+    for x in 0 ..< rep.pixelsWide {
+      if let c = rep.colorAt(x: x, y: y), c.alphaComponent > 0.5 {
+        minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+      }
+    }
+  }
+  let ink: [Double] = maxX < 0 ? [0, 0, 0, 0] : [Double(minX) / 3, Double(minY) / 3, Double(maxX - minX + 1) / 3, Double(maxY - minY + 1) / 3]
   out[arg] = ["w": Double(sz.width), "h": Double(sz.height), "ink": ink, "png": png.base64EncodedString()]
 }
+
 let data = try! JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])
 FileHandle.standardOutput.write(data)

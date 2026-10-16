@@ -227,8 +227,8 @@
     return `<div class="col cx" style="gap:${S(8)}"${c('sig-slots', 'Signature progress')}><div class="row" style="gap:8px">${h}</div>${T(`${collected} of ${required} required signatures`, 'd', 13, 400, 'ink2')}</div>`
   }
 
-  /** Setup wizard ProgressBarView: 4pt segments (six when creating a wallet), gold up to the current step */
-  function wizardProgress(done, total = 6, end = 0) {
+  /** Setup wizard ProgressBarView: 4pt segments, one per step of creating a wallet, gold up to the current step */
+  function wizardProgress(done, total = 3, end = 0) {
     return `<div class="row" style="gap:4px;padding:8px calc(var(--gutter) + ${end}px) 0 var(--gutter)"${c('wizard-progress', 'Setup progress bar')}>${Array.from(
       { length: total },
       (_, i) => `<i style="flex:1;height:4px;border-radius:2px;background:${i < done ? 'var(--progress)' : 'var(--border)'}"></i>`,
@@ -242,20 +242,16 @@
   const COMPACT_H = 'calc(var(--btn-h) - 3.96px)'
 
   /** Setup-wizard footer: Back on the left, a compact primary on the right (or stacked, from Tune).
-   *  Future draws Back as a compact secondary button the height of the primary. The primary's state:
-   *  'enabled'; 'disabled', hbBorder with white text like hbPrimaryButton(isEnabled: false); or Future's
+   *  Back is hbCompactSecondaryButton, the height of the primary. The primary is hbCompactPrimaryButton:
+   *  'enabled'; 'disabled', hbBorder with white text like hbPrimaryButton(isEnabled: false); or
    *  'outline', brand border and text with no fill, for a step that isn't finished but can still be tapped.
    *  true and false stand for 'disabled' and 'enabled'. */
-  const wizFooter = (back, next, padX = 32, design = 'today', state = 'enabled') => {
+  const wizFooter = (back, next, state = 'enabled') => {
     const st = state === true ? 'disabled' : state === false ? 'enabled' : state
     const filled = st === 'enabled'
     return `<div class="row wizfoot" style="gap:16px;padding:0 var(--gutter) ${S(32)}">
-      ${
-        design === 'future'
-          ? `<span class="row wizback sbtn" style="min-height:${COMPACT_H};padding:0 32px"${c('back', back + ' button')}>${T(back, 'r', 17, 600, 'currentColor')}</span>`
-          : `<span class="wizback"${c('back', back)}>${T(back, 'd', 16, 400, 'ink2')}</span>`
-      }<span class="sp"></span>
-      <span class="row wiznext${filled ? '' : ' is-' + st}" style="min-height:${COMPACT_H};padding:0 ${st === 'outline' ? padX - 1.5 : padX}px;border-radius:var(--r-btn)${filled ? ';background:var(--brand)' : ''}"${c('primary-cta', next + (filled ? ' button' : ` button, ${st === 'outline' ? 'outlined' : st}`))}>${T(next, 'r', 17, 600, filled ? 'on' : 'currentColor')}</span>
+      <span class="row wizback sbtn" style="min-height:${COMPACT_H};padding:0 32px"${c('back', back + ' button')}>${T(back, 'r', 17, 600, 'currentColor')}</span><span class="sp"></span>
+      <span class="row wiznext${filled ? '' : ' is-' + st}" style="min-height:${COMPACT_H};padding:0 ${st === 'outline' ? 30.5 : 32}px;border-radius:var(--r-btn)${filled ? ';background:var(--brand)' : ''}"${c('primary-cta', next + (filled ? ' button' : ` button, ${st === 'outline' ? 'outlined' : st}`))}>${T(next, 'r', 17, 600, filled ? 'on' : 'currentColor')}</span>
     </div>`
   }
 
@@ -317,18 +313,11 @@
       </div>`
   }
 
-  /** ProgressView as UIKit draws it: eight 2.4pt spokes in a 20pt box, in the tab bar's tint. It
-   *  animates; this is one frame, the brightest spoke on top */
-  function spinner() {
-    const ops = [0.85, 0.27, 0.27, 0.27, 0.27, 0.41, 0.56, 0.7]
-    const spokes = ops
-      .map((o, i) => {
-        const a = (i * Math.PI) / 4
-        const p = (r) => `${(10 + r * Math.sin(a)).toFixed(3)} ${(10 - r * Math.cos(a)).toFixed(3)}`
-        return `<path d="M${p(4.53)}L${p(8.8)}" style="stroke-opacity:${o}"/>`
-      })
-      .join('')
-    return `<svg width="20" height="20" viewBox="0 0 20 20" style="display:block;fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linecap:round"${c('spinner', 'Loading spinner')}>${spokes}</svg>`
+  /** SeedlingLoadingView: the eight frames of a birch seed growing into a tree, 120pt square and stacked
+   *  (.seedling in ds-shipped.css animates them) */
+  function seedling() {
+    const frames = [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<img src="assets/seedling/${i}.webp" alt="" decoding="async">`).join('')
+    return `<div class="seedling"${c('seedling', 'Loading: a birch seed growing into a tree')}>${frames}</div>`
   }
 
   /** SwiftUI's ContentUnavailableView in the system label colors: a 40pt symbol, then the title (20pt bold)
@@ -341,16 +330,17 @@
     </div>`
   }
 
-  /** SyncStatusDot: an 8pt dot on a 10% tint; syncing adds a 16pt halo at 30% (it pulses) in the brand color */
+  /** SyncStatusDot: an 8pt dot on a 10% tint; syncing adds a 16pt halo at 30% in the brand color, which pulses
+   *  (.sync-halo in ds-shipped.css) */
   function syncDot(syncing) {
     const col = syncing ? 'var(--brand)' : 'var(--success)'
     return `<span style="position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, ${col} 10%, transparent)"${c('sync-dot', syncing ? 'Sync status: syncing' : 'Sync status')}><i style="width:8px;height:8px;border-radius:50%;background:${col}"></i>${
-      syncing ? `<i style="position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb, ${col} 30%, transparent)"></i>` : ''
+      syncing ? `<i class="sync-halo" style="position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb, ${col} 30%, transparent)"></i>` : ''
     }</span>`
   }
 
   /** TransactionListView. `state` is 'list' (the shipped screenshot), 'loading' (a new wallet's first sync:
-   *  no transactions yet, so a spinner 150pt down) or 'empty' (synced with nothing in it: the No
+   *  no transactions yet, so the seedling 100pt down) or 'empty' (synced with nothing in it: the No
    *  Transactions view 100pt down, its symbol a further 15.67pt inside it). Both are measured from the
    *  view built in the simulator */
   function home(mode, design, picker = false, state = 'list', age = null) {
@@ -360,7 +350,7 @@
     const content = list
       ? `<div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>`
       : syncing
-        ? `<div class="row" style="justify-content:center;padding-top:150.67px">${spinner()}</div>`
+        ? `<div class="row" style="justify-content:center;padding-top:100.67px">${seedling()}</div>`
         : `<div style="padding-top:115.67px">${unavailable('bitcoinsign.circle:41:regular', 'No Transactions', 'Time to acquire the world’s best money', 'no-transactions')}</div>`
     return `<div class="sx">
       <div style="background:var(--hero);padding:${D.top + 16}px calc(${M16} + ${D.end}px) ${S(16)} ${M16};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
@@ -715,31 +705,25 @@
     return `${under}<div class="ssheet"${frame}${D.page && !full ? ' data-z="page"' : ''}>${step ? `<div style="${col}margin-right:${col ? 'auto' : '0'}">${wizardProgress(...step, end)}</div>` : ''}<div class="sx" style="position:absolute;top:${step ? 12 : 0}px;left:0;right:0;bottom:0;background:var(--ground)"><div style="${col}margin-right:${col ? 'auto' : end + 'px'}">${inner}</div><div style="height:${full || !D.page ? D.bottom : 0}px"></div></div></div>`
   }
 
-  /** Where a new-wallet step sits in the progress bar. Future drops Welcome, Wallet setup and
-   *  Name Your Wallet from it: Multisig configuration, Import cosigners and Verify are steps 1-3. */
-  const NEW_WALLET_STEP = {
-    today: { multisig: [3, 6], cosigner: [4, 6], verify: [6, 6] },
-    future: { multisig: [1, 3], cosigner: [2, 3], verify: [3, 3] },
-  }
+  /** The line an empty TextField sizes to whatever its font: the default 17pt body line */
+  const EMPTY_LH = 'line-height:calc(20px * var(--ts))'
+
+  /** Where a new-wallet step sits in the progress bar, the only flow that shows one: Multisig
+   *  configuration, Import cosigners and Verify are steps 1-3. */
+  const NEW_WALLET_STEP = { multisig: [1, 3], cosigner: [2, 3], verify: [3, 3] }
 
   function disclosureCard(label, key) {
-    return `<div class="hcard row" style="gap:8px"${c(key, label)}><span style="color:var(--ink2);display:flex">${Y('chevron.right:12:semibold')}</span>${T(label, 'd', 13, 400, 'ink2')}<span class="sp"></span></div>`
+    return `<div class="hcard row" style="gap:8px"${c(key, label)}><span style="color:var(--ink2);display:flex">${Y('chevron.right:12:semibold')}</span>${T(label, 'd', 13, 400, 'ink2', LH)}<span class="sp"></span></div>`
   }
 
-  /** SetupNetworkPicker: a card with the segmented network picker. UISegmentedControl takes a
-   *  31pt frame and draws its 32pt track 1pt past it */
-  const networkCard = () => `<div class="hcard col cx" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
-      <div class="row" style="justify-content:center">${T('Bitcoin Network', 'd', 13, 400, 'ink2', LH)}</div>
-      <div style="height:31px"><div class="seg"${c('network-seg', 'Segmented control')}><span>Mainnet</span><span class="on">Testnet4</span><span>Testnet3</span><span>Signet</span></div></div>
-    </div>`
-
-  /** Future: the optional wallet name and the network picker share one card, both labels leading like
-   *  form fields. Empty, the name shows the "My Wallet" placeholder the wallet is saved with, in the
-   *  system placeholder color */
+  /** WalletNameNetworkCard: the optional wallet name and the network picker share one card, both labels
+   *  leading like form fields. Empty, the name shows the "My Wallet" placeholder the wallet is saved with,
+   *  in the system placeholder color. UISegmentedControl takes a 31pt frame and draws its 32pt track 1pt
+   *  past it */
   const walletNameNetworkCard = () => `<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('name-network', 'Wallet name and network card')}>
       <div class="col" style="gap:${S(6)};align-items:stretch"${c('wallet-name', 'Wallet name field')}>
         ${T('Wallet Name', 'd', 13, 400, 'ink2')}
-        <div class="nest" style="padding:calc(var(--fpad) + 1px) var(--fpad)">${T('My Wallet', 'd', 16, 400, 'var(--sysInk3)')}</div>
+        <div class="nest" style="padding:calc(var(--fpad) + 1px) var(--fpad)">${T('My Wallet', 'd', 16, 400, 'var(--sysInk3)', EMPTY_LH)}</div>
       </div>
       <div class="col" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
         ${T('Bitcoin Network', 'd', 13, 400, 'ink2', LH)}
@@ -747,9 +731,8 @@
       </div>
     </div>`
 
-  function multisig(mode, design) {
-    const future = design === 'future'
-    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].multisig, `
+  function multisig() {
+    return setupSheet(NEW_WALLET_STEP.multisig, `
       <div class="col" style="gap:${S(28)};padding-top:${colTop()}px;align-items:stretch">
         <div class="row" style="justify-content:center;padding-top:${S(16)}"${c('title', 'Setup title')}>${T('Multisig Configuration', 'r', 28, 'W', 'ink', LH)}</div>
         <div class="col cx" style="gap:${S(16)}">
@@ -761,188 +744,148 @@
           </div>
         </div>
         <div class="col" style="gap:${S(24)};padding:0 var(--gutter);align-items:stretch">
-          ${future ? walletNameNetworkCard() : networkCard()}
+          ${walletNameNetworkCard()}
           ${disclosureCard('Electrum Server', 'electrum')}
           ${disclosureCard('Advanced', 'advanced')}
         </div>
-        ${wizFooter('Back', 'Next', 32, design)}
+        ${wizFooter('Back', 'Next')}
       </div>`)
   }
 
   const DESCRIPTOR =
     "wsh(sortedmulti(1,[7a13a7b1/48'/1'/0'/2']tpubDETciRzaZyqww2dSAyT2j6tWgzREyiZEY2iZDPKDtqNpSEqqFS31DZUFFTFnayx7wLUVYx3V1R2AWhhWbFrnCukKZ1kmnn83Fn2xSf7hEaH/<0;1>/*,[30a36b52/48'/1'/0'/2']tpubDF6MPv2vWsbCo8c7rk4X32BPa5yuj4niem5Pr6isrd9cSdCkYETcGUmBSFY4ekTR1CRFmjn4eoYGrwPU19FffwEpX7Tda6BBmg91aiHKpmE/<0;1>/*))"
 
-  /** The descriptor as the TextEditor wraps it: UITextView breaks after a slash or comma, and a piece longer
-   *  than a line (a key) starts a new line and breaks inside itself. A line holds as many 11pt mono
-   *  characters (6.6pt each) as the field leaves after its padding and the 5pt line-fragment insets:
-   *  42 on the iPhone. `card` is the card's width */
-  function descriptorLines(card = D.w - D.end - 48) {
-    const width = card - 32 - 34 - 10
+  /** How many 11pt mono characters (6.6pt each) a line of the descriptor field holds: what the field leaves
+   *  after its padding and the 5pt line-fragment insets, 42 on the iPhone. `card` is the card's width */
+  function descriptorMax(card = D.w - D.end - 48) {
     // The iPad's editor fits one character fewer than the advance predicts
-    const max = Math.floor(width / 6.6) - (D.chrome === 'ipad' ? 1 : 0)
-    const pieces = DESCRIPTOR.match(/[^/,]*[/,]?/g).filter(Boolean)
-    const lines = ['']
-    for (const p of pieces) {
-      const cur = lines[lines.length - 1]
-      if (cur.length + p.length <= max) lines[lines.length - 1] = cur + p
-      else if (p.length <= max) lines.push(p)
-      else {
-        if (cur) lines.push('')
-        for (let i = 0; i < p.length; i += max) {
-          if (i) lines.push('')
-          lines[lines.length - 1] = p.slice(i, i + max)
-        }
-      }
-    }
-    return lines.map(esc)
+    return Math.floor((card - 32 - 34 - 10) / 6.6) - (D.chrome === 'ipad' ? 1 : 0)
   }
 
-  /** The "Expected format" line as SwiftUI wraps it: at spaces, and after a slash unless a digit follows.
-   *  A line holds as many 10pt mono characters (6pt each) as the card leaves */
-  function formatLines(card = D.w - D.end - 48) {
-    const max = Math.floor((card - 32) / 6)
-    const pieces = 'Expected format: wsh(sortedmulti(M,[fp/path]xpub/0/*,...))'.match(/.*?(?: |\/(?!\d)|$)/g).filter(Boolean)
-    const lines = ['']
-    for (const p of pieces) {
-      const cur = lines[lines.length - 1]
-      if (cur && (cur + p).trimEnd().length > max) lines.push(p)
-      else lines[lines.length - 1] = cur + p
-    }
-    return lines.map((l) => esc(l.trimEnd()))
-  }
+  /** Keys and descriptors wrap at the character: each line fills to the edge and the next character
+   *  starts a new line, whatever it is (CharWrappingTextEditor's .byCharWrapping, or String.charWrapped
+   *  in a Text). `chars` caps a line at what the app's text area holds when it is narrower than the box
+   *  around it */
+  const charWrap = (chars) => `word-break:break-all;line-break:anywhere${chars ? `;max-width:min(100%, calc(${chars}ch + 0.5px))` : ''}`
 
-  /** In-card utilities (the button pattern): equal tonal buttons under a field, brand tint for the
+  /** HBTonalButton, the in-card utilities: equal tonal buttons under a field, brand tint for the
    *  most useful action and neutral for the rest */
   const tonal = (icon, label, neutral, key) =>
     `<span class="tbtn${neutral ? ' neutral' : ''}"${c(key, `Tonal${neutral ? ', neutral' : ''}: ${label}`)}>${Y(icon)}${T(label, 'd', 15, 600, 'currentColor')}</span>`
 
-  /** Import descriptor. Empty, the TextEditor keeps its 120pt minimum and Import is disabled until there is text.
-   *  On the open Duo the step splits in two: the step, scanning and the settings on the left with Back at
-   *  the bottom; the descriptor filling the height on the right, with Import under it */
+  /** Import descriptor. Scan QR and Paste sit in the card under the field. Empty, the field keeps its 120pt
+   *  minimum and shows the format as its placeholder, and Import is disabled until there is text.
+   *  On the open Duo the step splits in two: the step and the settings on the left with Back at the
+   *  bottom; the descriptor filling the height on the right, with Import under it */
   function descriptorImport(mode, design, empty = false) {
-    const future = design === 'future'
     const two = D.layout === 'twoColumn'
     const cardW = two ? twoCols()[1][1] - twoCols()[1][0] : Math.min(D.w - D.end, D.layout === 'column' ? 600 : Infinity) - 48
-    // Future moves Scan and Paste into the card as in-card utilities, and the format becomes the
-    // empty field's placeholder instead of a line under it
-    const header = future
-      ? T('Output Descriptor', 'd', 13, 400, 'ink2')
-      : `<div class="row">${T('Output Descriptor', 'd', 13, 400, 'ink2')}<span class="sp"></span>
-            <span class="row" style="gap:6px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'link2')}</span></div>`
     const text = empty
-      ? future
-        ? T('wsh(sortedmulti(M,[fp/path]xpub/0/*,...))', 'm', 11, 400, 'var(--sysInk3)', 'word-break:break-all;line-height:1.1945', 'tw')
-        : ''
-      : T(descriptorLines(cardW).join('<br>'), 'm', 11, 400, 'ink', 'word-break:break-all;line-height:1.1945', 'tw')
+      ? T('wsh(sortedmulti(M,[fp/path]xpub/0/*,...))', 'm', 11, 400, 'var(--sysInk3)', `${charWrap()};line-height:1.1945`, 'tw')
+      : T(esc(DESCRIPTOR), 'm', 11, 400, 'ink', `${charWrap(descriptorMax(cardW))};line-height:1.1945`, 'tw')
     const card = `<div class="hcard col" style="gap:${S(8)};align-items:stretch${two ? ';flex:1 0 auto' : ''}"${c('descriptor', 'Output descriptor')}>
-          ${header}
-          <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) calc(var(--fpad) + 9px);min-height:144px${two ? ';flex:1 0 auto' : ''}"${c('descriptor-text', 'Descriptor text editor')}>${text}</div>
-          ${future ? '' : T(formatLines(cardW).join('<br>'), 'm', 10, 400, 'ink2', 'word-break:break-all', 'tw')}
-          ${
-            future
-              ? `<div class="row" style="gap:8px;margin-top:${S(4)}"${c('descriptor-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>`
-              : ''
-          }
+          ${T('Output Descriptor', 'd', 13, 400, 'ink2')}
+          <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px);min-height:144px${two ? ';flex:1 0 auto' : ''}"${c('descriptor-text', 'Descriptor text editor')}>${text}</div>
+          <div class="row" style="gap:8px;margin-top:${S(4)}"${c('descriptor-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>
         </div>`
-    const scan = future ? '' : `<div class="row sbtn" style="gap:8px;min-height:var(--btn-h)"${c('scan', 'Secondary button: Scan Descriptor QR')}>${Y('qrcode.viewfinder:17:semibold')}${T('Scan Descriptor QR', 'r', 17, 600, 'currentColor')}</div>`
-    const settings = [future ? walletNameNetworkCard() : networkCard(), disclosureCard('Electrum Server', 'electrum'), disclosureCard('Advanced', 'advanced')]
+    const settings = [walletNameNetworkCard(), disclosureCard('Electrum Server', 'electrum'), disclosureCard('Advanced', 'advanced')]
     if (two) {
-      const st = empty ? 'disabled' : 'enabled'
-      return `${future ? '' : `<div style="position:absolute;top:${D.top}px;left:0;right:${D.end}px">${wizardProgress(3, 3).replace('padding:8px calc(var(--gutter) + 0px) 0 var(--gutter)', 'padding:8px 24px 0 32px')}</div>`}${twoColumn(
+      return twoColumn(
         `<div class="col" style="min-height:100%;gap:${S(16)};padding:${S(16)} 0;align-items:stretch">
           <div${c('title', 'Setup title')}>${T('Import Descriptor', 'r', 28, 'W', 'ink', LH)}</div>
           ${T('Paste or scan a multisig output descriptor', 'd', 15, 400, 'ink2', '', 'tw')}
-          ${scan}${settings.join('')}${SP16}
-          ${wizFooter('Back', 'Import', 32, design, st).replace(/<span class="sp"><\/span>[\s\S]*$/, '</div>').replace('padding:0 var(--gutter) ' + S(32), 'padding:0')}
+          ${settings.join('')}${SP16}
+          ${wizFooter('Back', 'Import').replace(/<span class="sp"><\/span>[\s\S]*$/, '</div>').replace('padding:0 var(--gutter) ' + S(32), 'padding:0')}
         </div>`,
         `<div class="col" style="min-height:100%;gap:${S(12)};padding:${S(16)} 0;align-items:stretch">${card}
           <span class="pbtn${empty ? ' is-disabled' : ''}"${c('primary-cta', `Primary button: Import${empty ? ', disabled' : ''}`)}>Import</span></div>`,
-        future ? D.top : D.top + 12,
-      )}`
+        D.top,
+      )
     }
     // Only the iPhone's screenshot tour reaches Import descriptor in a sheet; elsewhere it's the first-launch wizard
-    return setupSheet(future ? null : [3, 3], `
+    return setupSheet(null, `
       <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Descriptor', 'r', 28, 'W', 'ink', LH)}</div>
         <div class="row" style="justify-content:center">${T('Paste or scan a multisig output descriptor', 'd', 15, 400, 'ink2', 'text-align:center', 'tw')}</div>
         ${gutterBox(card)}
-        ${scan ? gutterBox(scan) : ''}
         ${settings.map(gutterBox).join('')}
-        ${wizFooter('Back', 'Import', 32, design, empty)}
+        ${wizFooter('Back', 'Import', empty)}
       </div>`, D.chrome !== 'iphone')
   }
 
   const descriptorImportEmpty = (mode, design) => descriptorImport(mode, design, true)
 
+  /** hbFieldError: a field that failed validation gets a 1.5pt error border on its nested fill and the
+   *  reason 6pt under it */
+  const fieldError = (msg) => (msg ? `<div class="t-ferr" style="margin-top:${S(6)}">${T(msg, 'd', 13, 400, 'danger', 'line-height:1.1934', 'tw')}</div>` : '')
+
   /** A labeled field. UITextField-backed fields sit 2pt taller than a Text with the same padding, with the
    *  font's unrounded line height. Empty, a TextField shows its placeholder in the system placeholder
-   *  color and sizes to the default 17pt body line instead of its own font */
-  function field(label, value, face, size, key, textField = true, placeholder = false) {
-    const lh = placeholder ? 'line-height:calc(20.29px * var(--ts))' : textField ? 'line-height:1.1934' : ''
+   *  color and sizes to the default 17pt body line instead of its own font (EMPTY_LH), until it has held
+   *  text: then it keeps its font's line ('held'). `error` flags it */
+  function field(label, value, face, size, key, textField = true, placeholder = false, error = null) {
+    const lh = placeholder === true ? EMPTY_LH : placeholder === 'held' ? 'line-height:calc(16.67px * var(--ts))' : textField ? 'line-height:1.1934' : ''
     return `<div class="col" style="gap:${S(6)};align-items:stretch"${c(key, label + ' field')}>${T(label, 'd', 13, 400, 'ink2')}
-      <div class="nest" style="padding:${textField ? 'calc(var(--fpad) + 1px)' : 'var(--fpad)'} var(--fpad)">${T(value, face, size, 400, placeholder ? 'var(--sysInk3)' : 'ink', lh)}</div></div>`
+      <div class="col" style="align-items:stretch"><div class="nest${error ? ' ferr' : ''}" style="padding:${textField ? 'calc(var(--fpad) + 1px)' : 'var(--fpad)'} var(--fpad)">${T(value, face, size, 400, placeholder ? 'var(--sysInk3)' : 'ink', lh)}</div>${fieldError(error)}</div></div>`
   }
 
-  /** Import cosigners, on the first cosigner. Empty: the label and path come prefilled, the fingerprint
-   *  shows its placeholder, the xpub TextEditor sits at its 80pt minimum and Next Cosigner is disabled */
-  function cosigner(mode, design, empty = false) {
-    const future = design === 'future'
-    // Future: numbered folder tabs on top of the form, the status icon and number centered together.
+  const KEY_1 = 'tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3VnVnm7EJWLdJE73ZL2MEwKTc2dLNeSudXUjexm2xJ5qboosbnEb1SEiGyJtJcqqZK'
+
+  /** Import cosigners: a folder tab per cosigner on top of the open cosigner's form, which runs Label,
+   *  Extended Public Key (with Scan QR and Paste under it), Master Fingerprint and Derivation Path. A tab
+   *  shows a check once its cosigner's fields all validate. Next is outlined until every cosigner is
+   *  complete and is never disabled. `state`: 'empty' (cosigner 1 as the step opens: the label and path
+   *  prefilled, the fingerprint showing its placeholder, the key at its 80pt minimum), 'filled' (cosigner 1
+   *  complete) or 'errors' (cosigner 1 complete, then Next on cosigner 2 left empty: Next flags its key and
+   *  fingerprint) */
+  function cosigner(state) {
+    const errors = state === 'errors'
+    const open = errors ? 2 : 1
+    const filled = state === 'filled'
     // The open tab joins the card; a check marks a finished cosigner
     const tab = (i, cur, done) =>
       `<div class="ctab${cur ? ' on' : ''}"${c('tab-' + i, `Cosigner ${i} tab${done ? ', complete' : ''}`)}>
         <span style="display:flex;flex:none;color:${done ? 'var(--success)' : cur ? 'var(--ink)' : 'var(--ink2)'}">${Y(done ? 'checkmark.circle.fill:16:regular' : 'circle:16:regular')}</span>
         ${T(String(i), 'd', 17, cur ? 600 : 400, cur ? 'ink' : 'ink2', 'font-variant-numeric:tabular-nums')}</div>`
-    const label = field('Label', 'Cosigner 1', 'd', 16, 'label')
-    const fingerprint = empty
-      ? field('Master Fingerprint (8 hex chars)', 'e.g. 73c5da0a', 'm', 14, 'fingerprint', true, true)
-      : field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')
+    const label = field('Label', `Cosigner ${open}`, 'd', 16, 'label')
+    const fingerprint = filled
+      ? field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')
+      : // On the flagged screen the field held cosigner 1's fingerprint a moment before, so it keeps the mono line
+        field('Master Fingerprint (8 hex chars)', 'e.g. 73c5da0a', 'm', 14, 'fingerprint', true, errors ? 'held' : true, errors ? 'Fingerprint is required' : null)
     const path = field('Derivation Path', "m/48'/1'/0'/2'", 'm', 14, 'path', false)
-    const toggle = `<span style="color:var(--sysGreen);display:flex${future ? '' : ';margin-right:20px'}"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>`
-    // Future puts the key right after the label, with Scan QR and Paste under it as in-card utilities
+    const toggle = `<span style="color:var(--sysGreen);display:flex"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>`
     const xpub = `<div class="col" style="gap:${S(6)};align-items:stretch"${c('xpub', 'Extended public key')}>
-            <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>${toggle}${
-              future ? '' : `<span class="row" style="gap:6px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'link2')}</span>`
-            }</div>
-            <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${empty ? '' : T('tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3VnVnm7EJWLdJE73ZL2MEwKTc2dLNeSudXUjexm2xJ5qboosbnEb1SEiGyJtJcqqZK', 'm', 12, 400, 'ink', 'word-break:break-all;line-height:1.1934', 'tw')}</div>
-            ${
-              future
-                ? `<div class="row" style="gap:8px;margin-top:${S(6)}"${c('xpub-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>`
-                : `<span class="row" style="gap:8px;color:var(--tert)"${c('scan', 'Scan QR Code')}>${Y('qrcode.viewfinder:15:regular')}${T('Scan QR Code', 'd', 15, 400, 'tert')}</span>`
-            }
+            <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>${toggle}</div>
+            <div class="col" style="align-items:stretch"><div class="nest${errors ? ' ferr' : ''}" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${filled ? T(KEY_1, 'm', 12, 400, 'ink', `${charWrap()};line-height:1.1934`, 'tw') : ''}</div>${fieldError(errors ? 'Xpub is required' : null)}</div>
+            <div class="row" style="gap:8px;margin-top:${S(6)}"${c('xpub-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>
           </div>`
-    const slot = (i, cur, done) =>
-      `<div class="col cx" style="gap:4px;flex:1">
-        <div class="${cur || done ? 'sel' + (cur ? '' : ' noring') : 'card'}" style="height:44px;width:100%;display:grid;place-items:center;color:${done ? 'var(--select)' : 'var(--ink2)'}">${Y(done ? 'lock.fill:16:regular' : 'lock.open:16:regular')}</div>
-        ${T(String(i), 'd', 11, 400, cur ? 'select' : 'ink2')}</div>`
-    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].cosigner, `
+    return setupSheet(NEW_WALLET_STEP.cosigner, `
       <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
-        ${future ? '' : `<div class="row" style="justify-content:center">${T('Cosigner 1 of 3', 'd', 15, 400, 'ink2')}</div>`}
-        ${future ? '' : `<div class="row" style="gap:8px;padding:0 var(--gutter)"${c('slots', 'Cosigner slots')}>${slot(1, true, !empty)}${slot(2, false, false)}${slot(3, false, false)}</div>`}
-        ${gutterBox(`${future ? `<div class="ctabs"${c('tabs', 'Cosigner tabs')}>${tab(1, true, !empty)}${tab(2, false, false)}${tab(3, false, false)}</div>` : ''}<div class="hcard col${future ? ' ctab-card' : ''}" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
-          ${future ? [label, xpub, fingerprint, path].join('') : [label, fingerprint, path, xpub].join('')}
+        ${gutterBox(`<div class="ctabs"${c('tabs', 'Cosigner tabs')}>${tab(1, open === 1, !(state === 'empty'))}${tab(2, open === 2, false)}${tab(3, false, false)}</div><div class="hcard col ctab-card" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
+          ${[label, xpub, fingerprint, path].join('')}
         </div>`)}
-        ${
-          // Future: one Next for the whole step, outlined until every cosigner is complete (here only the first is)
-          future ? wizFooter('Back', 'Next', 32, design, 'outline') : wizFooter('Back', 'Next Cosigner', 24, design, empty)
-        }
+        ${wizFooter('Back', 'Next', 'outline')}
       </div>`)
   }
 
-  const cosignerEmpty = (mode, design) => cosigner(mode, design, true)
+  const cosignerEmpty = () => cosigner('empty')
+  const cosignerFilled = () => cosigner('filled')
+  const cosignerErrors = () => cosigner('errors')
 
-  function verify(mode, design) {
+  /** Verify wallet: each cosigner's whole key, wrapped at the character on up to three lines. The warning
+   *  symbol takes the 22pt frame SwiftUI gives it, a point under the AppKit render's */
+  function verify() {
     const rowKV = (k, v) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'd', 15, 400, 'ink')}</div>`
     const cos = [
-      ['Cosigner 1', '07d25f0c', 'tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3Vn', 'Vnm7EJWLdJE73ZL2MEwKTc2…5qboosbnEb1SEiGyJtJcqqZK'],
-      ['Cosigner 2', 'd73869a4', 'tpubDET5GnMK8Zr7UH63ni72etKd7ZYxVq8NvtSneNBfEDJ7', 'YtnSHUmiPCaBYXzCdR6ZBKW…6z8VTpdFRJuW4VL7xjHdLFpY'],
-      ['Cosigner 3', 'e3870581', 'tpubDF3GwUrMb5WkigsDUpUWUADH55G3Ez771QujmFqeyrNE', 'PD7onkqTwCsCEjNRbSrbD9V…EX7CyMp2q5fvQzacy75bUesQ'],
+      ['Cosigner 1', '07d25f0c', KEY_1],
+      ['Cosigner 2', 'd73869a4', 'tpubDET5GnMK8Zr7UH63ni72etKd7ZYxVq8NvtSneNBfEDJ7YtnSHUmiPCaBYXzCdR6ZBKWvBMXT3urCVp7sLmG6z8VTpdFRJuW4VL7xjHdLFpY'],
+      ['Cosigner 3', 'e3870581', 'tpubDF3GwUrMb5WkigsDUpUWUADH55G3Ez771QujmFqeyrNEPD7onkqTwCsCEjNRbSrbD9VYKDfMHfg7bajem5aEX7CyMp2q5fvQzacy75bUesQ'],
     ]
     // Full-width tinted utility buttons: 14pt vertical padding at the shipped button height
     const utility = (icon, label, color, key) =>
       `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
-    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].verify, `
+    return setupSheet(NEW_WALLET_STEP.verify, `
       <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Verify Wallet', 'r', 28, 'W', 'ink', LH)}</div>
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('summary', 'Wallet summary')}>
@@ -952,15 +895,15 @@
           ${T('Cosigners', 'r', 17, 600, 'ink')}
           ${cos
             .map(
-              ([n, fp, x1, x2], i) => `<div class="nest col" style="padding:var(--fpad);gap:${S(6)};align-items:flex-start;overflow:hidden"${c('cosigner-' + i, n)}>
+              ([n, fp, key], i) => `<div class="nest col" style="padding:var(--fpad);gap:${S(6)};align-items:flex-start;overflow:hidden"${c('cosigner-' + i, n)}>
               ${T(n, 'd', 15, 400, 'ink')}
               <span class="row" style="gap:8px">${T('FP:', 'd', 13, 400, 'ink2')}${T(fp, 'm', 12, 400, 'brand')}</span>
-              ${T(x1 + '<br>' + x2, 'm', 10, 400, 'ink2')}</div>`,
+              ${T(key, 'm', 10, 400, 'ink2', `${charWrap()};align-self:stretch;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden`, 'tw')}</div>`,
             )
             .join('')}
         </div>`)}
         ${gutterBox(`<div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('backup', 'Back up your descriptor')}>
-          <div class="row" style="gap:8px"><span style="color:var(--brandInk);display:flex">${Y('exclamationmark.triangle.fill:20:regular')}</span>${T('Back Up Your Descriptor', 'r', 17, 600, 'ink')}</div>
+          <div class="row" style="gap:8px"><span style="color:var(--brandInk);display:flex;align-items:center;height:calc(22.33px * var(--ts))">${Y('exclamationmark.triangle.fill:20:regular')}</span>${T('Back Up Your Descriptor', 'r', 17, 600, 'ink')}</div>
           ${T('The output descriptor is your <b style="font-weight:700">only</b> recovery path. If you lose Birch (phone dies, app deleted, data corrupted), the descriptor is the only thing needed to rebuild the wallet in any compatible coordinator (Sparrow, Nunchuk, etc.). Without it, you’d need to re-gather all cosigner xpubs and reconstruct the exact same configuration — which may not be possible.', 'd', 13, 400, 'ink2', '', 'tw')}
           <div class="col" style="gap:${S(6)};align-items:flex-start">
             ${['Print to PDF', 'Import into Sparrow Wallet on another computer', 'Save to an encrypted drive'].map((b) => `<div class="row" style="gap:8px;align-items:flex-start">${T('•', 'd', 13, 400, 'brand')}${T(b, 'd', 13, 400, 'ink2')}</div>`).join('')}
@@ -1214,7 +1157,7 @@
     </div>`
   }
 
-  function walletSetup(mode, design) {
+  function walletSetup() {
     const choice = (icon, title, sub, key) => `<div class="card row" style="gap:16px;padding:calc(var(--pad) + 4px)"${c(key, title)}>
         <span style="color:var(--brandInk);display:flex">${Y(icon)}</span>
         <div class="col" style="gap:4px;align-items:flex-start;flex:0 1 auto">${T(title, 'r', 17, 600, 'ink')}${T(sub, 'd', 13, 400, 'ink2', LH, 'tw')}</div>
@@ -1222,10 +1165,9 @@
         <span style="color:var(--ink2);display:flex">${Y('chevron.right:14:semibold')}</span></div>`
     const cards = `${choice('plus.circle.fill:28:regular', 'Create New Wallet', 'Setup M-of-N multisig by importing cosigner xpubs from one or more air-gapped signing devices', 'create')}
           ${choice('square.and.arrow.down.fill:28:regular', 'Import Descriptor', 'Import an existing wallet via output descriptor from a printed backup or another coordinator', 'import')}`
-    // Open Duo: what this step is on the left with Back at the bottom, the two choices on the right. The
-    // progress bar spans both columns
+    // Open Duo: what this step is on the left with Back at the bottom, the two choices on the right
     if (D.layout === 'twoColumn')
-      return `${design === 'future' ? '' : `<div style="position:absolute;top:${D.top}px;left:0;right:${D.end}px">${wizardProgress(2, 6, 0).replace('padding:8px calc(var(--gutter) + 0px) 0 var(--gutter)', 'padding:8px 24px 0 32px')}</div>`}${twoColumn(
+      return twoColumn(
         `<div class="col" style="min-height:100%;gap:${S(16)};align-items:center"><div class="col" style="flex:1 0 auto;gap:${S(16)};align-items:flex-start">${SP16}
           <div${c('title', 'Setup title')}>${T('Wallet Setup', 'r', 28, 'W', 'ink')}</div>
           ${T('Choose how to configure your multisig wallet', 'd', 15, 400, 'ink2', '', 'tw')}
@@ -1233,12 +1175,11 @@
           ${SP16}
           <div style="padding-bottom:16px"${c('back', 'Back')}>${T('Back', 'd', 16, 400, 'ink2')}</div></div></div>`,
         `<div class="col" style="min-height:100%;gap:8px;align-items:stretch">${SP16}<div class="col" style="gap:${S(16)};align-items:stretch">${cards}</div>${SP16}</div>`,
-        design === 'future' ? D.top : D.top + 12,
-      )}`
+        D.top,
+      )
     // iPad: one readable column, with Back staying under the content so the group centers together
     const column = D.layout === 'column'
-    // Future drops the progress bar here; the centered content takes its 12pt
-    return `<div class="sx col" style="padding:${wizTop()}px ${D.end}px ${D.bottom}px 0;align-items:${column ? 'center' : 'stretch'}">${design === 'future' ? '' : `<div style="align-self:stretch${column ? ';width:100%;max-width:600px;align-self:center' : ''}">${wizardProgress(2)}</div>`}
+    return `<div class="sx col" style="padding:${wizTop()}px ${D.end}px ${D.bottom}px 0;align-items:${column ? 'center' : 'stretch'}">
       <div class="col" style="flex:1 0 auto;gap:${S(24)};align-items:stretch${column ? ';width:100%;max-width:600px' : ''}">
         <span class="sp"></span>
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Wallet Setup', 'r', 28, 'W', 'ink')}</div>
@@ -1258,7 +1199,7 @@
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
     { id: 'wallet-picker', group: 'Wallet', label: 'Wallet picker', build: walletPicker, shot: '05-WalletPicker', swift: 'TransactionListView.swift (walletPickerOverlay)' },
     // No simulator screenshots show the next three: they are rebuilt from the SwiftUI views
-    { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), Theme.swift (SyncStatusDot)' },
+    { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), SeedlingLoadingView.swift, Theme.swift (SyncStatusDot)' },
     { id: 'home-empty', group: 'Wallet', label: 'No transactions', build: homeEmpty, shot: null, swift: 'TransactionListView.swift (transactionContent)' },
     { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
     { id: 'send-empty', group: 'Send', label: 'Send, empty', build: sendEmpty, shot: '11-Send', swift: 'SendFlowView.swift, SendAmountView.swift' },
@@ -1273,13 +1214,14 @@
     { id: 'settings', group: 'Settings', label: 'Settings', build: settings, shot: '14-Settings', swift: 'SettingsView.swift' },
     { id: 'welcome', group: 'Setup', label: 'Welcome', build: welcome, shot: '01-Welcome', swift: 'WelcomeStepView.swift, SetupWizardView.swift' },
     { id: 'setup', group: 'Setup', label: 'Wallet setup', build: walletSetup, shot: '02-Wallet-Setup', swift: 'WalletCreationChoiceView.swift' },
-    { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift' },
+    { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), CharWrapText.swift (CharWrappingTextEditor)' },
     // No simulator screenshot shows this state: it is the Import descriptor rebuild with the field empty
-    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: null, swift: 'DescriptorImportView.swift' },
-    { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift' },
+    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: null, swift: 'DescriptorImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
+    { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard)' },
     { id: 'cosigner-empty', group: 'Setup', label: 'Import cosigners, empty', build: cosignerEmpty, shot: '17-CosignerImport-Empty', swift: 'CosignerImportView.swift' },
-    // The closed Duo's screenshot is scrolled to the bottom of the form; the open Duo's has the keyboard up
-    { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosigner, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift', scroll: { 'duo-closed': 'max' }, shotNote: { 'duo-open': 'The screenshot has the keyboard up' } },
+    { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosignerFilled, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
+    // Next scrolls the flagged key into view, which moves the form on the Duo's shorter screens
+    { id: 'cosigner-errors', group: 'Setup', label: 'Import cosigners, flagged', build: cosignerErrors, shot: '20-CosignerImport-Errors', swift: 'CosignerImportView.swift, Theme.swift (hbFieldError)', scroll: { 'duo-closed': 10.33, 'duo-open': 15 } },
     { id: 'verify', group: 'Setup', label: 'Verify wallet', build: verify, shot: '21-VerifyWallet-Top', swift: 'WalletVerifyView.swift' },
   ]
 
@@ -1300,72 +1242,7 @@
    * Builders receive the design ('today' or 'future') as their second argument, and each phone
    * carries a d-today or d-future class, so a Future change can branch in a builder or in CSS.
    */
-  const FUTURE_CHANGES = [
-    {
-      screens: ['setup', 'descriptor', 'descriptor-empty'],
-      change: 'Wallet setup and Import descriptor have no progress bar. The content moves up into its space.',
-      swift: 'SetupWizardView.swift',
-    },
-    {
-      screens: ['multisig', 'cosigner-empty', 'cosigner', 'verify'],
-      change:
-        'Creating a wallet shows a three-step progress bar: Multisig configuration is step 1, Import cosigners step 2 and Verify wallet step 3. Welcome and Wallet setup are no longer counted.',
-      swift: 'SetupWizardView.swift (ProgressBarView), SetupWizardViewModel.swift (stepCount, currentStepIndex)',
-    },
-    {
-      screens: ['multisig', 'descriptor', 'descriptor-empty'],
-      change:
-        'The Name Your Wallet step is removed from both flows. Import cosigners goes straight to Verify wallet, and Import on Import descriptor creates the wallet.',
-      swift: 'WalletNameView.swift (removed), SetupWizardViewModel.swift (goToNext, goBack), SetupWizardView.swift',
-    },
-    {
-      screens: ['multisig', 'descriptor', 'descriptor-empty'],
-      change:
-        'Wallet Name and Bitcoin Network share one card: the optional Wallet Name field first (styled like the Cosigner form fields, with the "My Wallet" placeholder), then the network picker, both labels leading-aligned. Left empty, the wallet is saved as "My Wallet".',
-      swift: 'MultisigConfigView.swift, DescriptorImportView.swift, ElectrumServerSetupSection.swift (SetupNetworkPicker)',
-    },
-    {
-      screens: ['descriptor', 'descriptor-empty'],
-      change:
-        'Scan QR and Paste sit inside the Output Descriptor card, under the field, as in-card utilities: two equal tonal buttons, Scan QR in the brand tint and Paste neutral. The separate Scan Descriptor QR button and the Paste link above the field are removed.',
-      swift: 'DescriptorImportView.swift (a tonal button style, new in Theme.swift)',
-    },
-    {
-      screens: ['descriptor', 'descriptor-empty'],
-      change:
-        'The "Expected format" line under the descriptor field is removed. Instead the empty field shows wsh(sortedmulti(M,[fp/path]xpub/0/*,...)) as placeholder text until something is typed.',
-      swift: 'DescriptorImportView.swift (TextEditor has no prompt: overlay a placeholder-colored Text while the text is empty)',
-    },
-    {
-      screens: ['cosigner-empty', 'cosigner'],
-      change:
-        'The footer button reads "Next" instead of "Next Cosigner" (or "Continue"). Until every cosigner is complete it is an outlined button: a 1.5pt brand border and brand text with no fill, the same size and radius as the primary. Tapping it then opens the first incomplete cosigner\'s tab. Once all are complete it fills in to the solid primary and moves on. The tabs are how you move between cosigners.',
-      swift: 'CosignerImportView.swift (nextTitle; a new outlined button style, strokeBorder 1.5pt in hbBitcoinOrange, used while any cosigner is incomplete, never .disabled; on tap select the first incomplete cosigner), SetupWizardViewModel.swift (goToNext, a per-cosigner complete check)',
-    },
-    {
-      screens: ['cosigner-empty', 'cosigner'],
-      change: 'The "Cosigner 1 of 3" line under the title is removed; the tabs show the position.',
-      swift: 'CosignerImportView.swift (positionLabel)',
-    },
-    {
-      screens: ['cosigner-empty', 'cosigner'],
-      change:
-        'The cosigner form reorders to Label, Extended Public Key, Master Fingerprint, Derivation Path. Scan QR and Paste sit under the key as in-card utilities, matching Import descriptor (Scan QR brand tonal, Paste neutral tonal, equal width), replacing the Scan QR Code link and the Paste link above the key. The format toggle stays beside the key\'s label.',
-      swift: 'CosignerImportView.swift (identityFields, xpubField)',
-    },
-    {
-      screens: ['cosigner-empty', 'cosigner'],
-      change:
-        'The cosigner slots become 46pt folder tabs on top of the cosigner form, one per cosigner, each a button that switches to that cosigner. A tab centers the cosigner\'s number (17pt, semibold when open) beside a status icon: an empty circle until every field is valid, then a check in the success color. Labels stay off the tabs because they often won\'t fit. The tabs have physical depth: the open tab stands 4pt taller than the others, lit from above with a sheen that fades into the card fill, joins the form (which loses its top corners) and casts a soft shadow up and onto its neighbours; the other tabs sit behind the card, halfway between card and ground, with its shadow across their base. The lock icons and the numbers under the slots are removed. Past six cosigners the tabs scroll sideways.',
-      swift: 'CosignerImportView.swift (CosignerSlot, cosignerSlots: tappable, set currentCosignerIndex; complete = the cosigner\'s fields all valid; UnevenRoundedRectangle tabs, a LinearGradient sheen and a shadow masked at the open tab\'s base)',
-    },
-    {
-      screens: ['descriptor', 'descriptor-empty', 'multisig', 'cosigner-empty', 'cosigner'],
-      change:
-        'Back is a secondary button: hbHeadline in the brand color on the card fill, the same height and corner radius as the compact Next or Import beside it.',
-      swift: 'DescriptorImportView.swift, MultisigConfigView.swift, CosignerImportView.swift',
-    },
-  ]
+  const FUTURE_CHANGES = []
 
   function phone(screen, mode, design = 'today', device = 'iphone') {
     D = deviceOf(device)

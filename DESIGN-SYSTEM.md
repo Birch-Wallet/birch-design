@@ -4,8 +4,8 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 
 | Part | Status |
 |---|---|
-| 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped (build 31). |
-| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. |
+| 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped: build 31, with the setup flow and the seedling loader from [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82). |
+| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped, so it is a copy of Today again. |
 | 3. Final system | Written once an option is chosen and refined: tokens, components, SwiftUI mapping, migration plan, voice and copy. |
 
 ## Files
@@ -16,7 +16,8 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
-| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-three app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-four app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/seedling/` | The first sync's loading animation (`SeedlingLoadingView`): eight frames of a birch seed growing into a tree, 360px WebP. |
 | `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bars (iPhone, iPhone Duo, iPad), QR modules sampled from the screenshots, and the app icon artwork. |
 | `design/assets/ds-screens.js` | Component boards (buttons, inputs, callouts and so on), built from tokens. |
 | `design/assets/ds-app.js` | Views, the tuning panel, comments, export and the screenshot harness. |
@@ -112,24 +113,29 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 
 1. **Surface roles.** ground → card → nested, with the light-mode swap. This is the backbone of the new system.
 2. **Strokeless cards.** 12pt continuous corners, edges come from the fill step, soft shadow in light mode only.
-3. **Selection.** Gold tint at 12% plus a 1.5pt gold ring (`birchSelected`). Used for fee options, cosigner slots and the wallet picker.
+3. **Selection.** Gold tint at 12% plus a 1.5pt gold ring (`birchSelected`). Used for fee options, the cosigner slots in Wallet Settings and the wallet picker.
 4. **Primary button.** Full-width, gold fill, 12pt, about 52pt tall, `hbHeadline` label. One per screen in most flows.
 5. **Sheet toolbar buttons.** `HBBarButtonStyle`: Done is a prominent gold button and Cancel uses the card fill, both 8pt corners and 34pt tall, replacing the Liquid Glass capsule.
 6. **Labels above values.** A small secondary label ("Amount", "Master Fingerprint", "Change Address") above the value, inside a card.
 7. **Address chunking.** Addresses are shown in groups of four with alternating weights, in mono, for checking by eye.
 8. **Verification chips.** `PSBTVerificationBadge`/`ChangeVerificationBadge`: icon, title and detail on an 8% tint of the state color. The four states (not checked, verified, partial, failed) map to secondary text, success, accent and error.
-9. **Progress.** The setup wizard uses a segmented gold bar. Send uses labeled steps (Recipients, Review, Sign, Broadcast).
+9. **Progress.** The setup wizard uses a segmented gold bar, only while creating a wallet: Multisig configuration, Import cosigners and Verify wallet are steps 1 to 3. Send uses labeled steps (Recipients, Review, Sign, Broadcast).
 10. **Network badge.** Capsule, 11pt semibold, 15% tint of the network color.
 11. **QR presentation.** Black on white with quiet-zone padding and a gold glow. Animated UR/BBQR frames.
 12. **Tab bar.** The native iOS 26 Liquid Glass bar, tinted with the accent.
+13. **Setup footers.** Back on the left as a compact secondary button (`hbCompactSecondaryButton`: `hbHeadline` in gold on the card fill), and the step's action on the right as a compact primary of the same size (`hbCompactPrimaryButton`). The primary is filled, disabled (white on `hbBorder`) while nothing can happen, or outlined (a 1.5pt gold border and gold text, no fill) while the step isn't finished but can still be tapped. Verify wallet and Wallet setup keep a text Back.
+14. **In-card utilities.** Actions on a field sit under it inside its card as equal tonal buttons (`HBTonalButton`): 44pt tall, 12pt corners, 15pt semibold with the symbol, gold on a 12% gold tint for the most useful action and ink on the nested fill for the rest. Scan QR and Paste on Import descriptor and Import cosigners.
+15. **Field errors.** Validation shows only after the user asks to go on. The field gets a 1.5pt `hbError` border inside its nested fill and the reason under it in `hbLabel` and `hbError` (`hbFieldError`). Editing the field clears it. Next scrolls the first flagged field into view and reads the reason out.
+16. **Folder tabs.** Import cosigners puts one tab per cosigner on top of the form card (`CosignerTabs`): the open tab stands 4pt taller and joins the card, whose top corners are square (`hbCard(squareTop:)`); a check in the success color marks a cosigner whose fields all validate. Past six cosigners the tabs scroll.
+17. **Machine data wraps at the character.** Keys and descriptors fill every line to the edge instead of breaking after slashes and commas: `CharWrappingTextEditor` (a `UITextView` set to `.byCharWrapping`) for the fields, and `String.charWrapped` in a `Text` for display.
 
 ## 1.6 Inconsistencies
 
 **Contrast**
 - White text on gold fails: 2.2:1 in dark mode and 3.3:1 in light. This affects every primary button and every filled signature slot.
-- Gold text on light surfaces fails: 2.9:1 on cards and 2.5:1 on the ground. This affects Copy Address, Add Label, value pickers ("sats", "Electrum Server") and View All Addresses.
+- Gold text on light surfaces fails: 2.9:1 on cards and 2.5:1 on the ground. This affects Copy Address, Add Label, value pickers ("sats", "Electrum Server"), View All Addresses, the setup footers' Back and outlined Next, and the Scan QR utility.
 - Olive success text on dark cards is 3.5:1. Received amounts in the transaction list are hard to read.
-- Error text on dark cards is 2.7:1.
+- Error text on dark cards is 2.7:1, which includes the field error messages on Import cosigners.
 - The light-mode fastlane screenshots show segmented controls with a near-black track (Bitcoin Network, Addresses, Protocol, QR settings). The track color is set through `UISegmentedControl.appearance()` in `ThemeManager.applyControlAppearance()`, which only affects controls created afterwards, so a control created before the light palette applies keeps the dark track. On device in light mode the track is light. It is still a latent bug: switching appearance while a screen is open leaves its segmented controls in the old color.
 - The light-mode Settings screenshot shows the menu picker values (Electrum Server, sats, Zeus, USD, System) in the dark palette's gold, `#D4A835`, instead of `#B28622`. The pickers are UIKit menus that keep the `.tint()` color they were created with, the same way the segmented track does. Toggles in the same screenshot use the light gold.
 
@@ -139,12 +145,14 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 - Signet and PDF/Print use system purple, which isn't part of either palette.
 - The wallet identicon uses a rainbow palette that doesn't fit the earthy themes.
 
-**Buttons.** There are about eight button looks and no defined secondary or tertiary.
-- **Filled gold:** Get Started, Review, Create Wallet, Next, and Scan QR on the Send screen.
-- **Card or nested fill with gold text:** Next Address, Scan Descriptor QR, Paste.
+**Buttons.** There are about ten button looks and no defined tertiary.
+- **Filled gold:** Get Started, Review, Create Wallet, Next, Import, and Scan QR on the Send screen.
+- **Outlined gold:** Next on Import cosigners until every cosigner is complete.
+- **Card fill with gold text:** Next Address, and Back on the setup footers.
+- **Tonal:** Scan QR (gold tint) and Paste (nested fill) inside the setup cards.
 - **Tinted fills in five colors:** Show Descriptor QR (gold), Copy Descriptor and Test Connection (olive), PDF/Print (purple), Full Refresh (error), Copy debug info (nested).
-- **Text buttons in three colors:** Back (secondary text), View All Addresses and Inspect PSBT (gold), Copy TXID (olive).
-- **Footers in two layouts:** full-width primary with Back below (Create Wallet, Get Started), and Back on the left with a compact primary on the right (Import, Next, Next Cosigner, Continue).
+- **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses and Inspect PSBT (gold), Copy TXID (olive).
+- **Footers in two layouts:** full-width primary with a text Back below (Create Wallet), and a compact secondary Back on the left with a compact primary on the right (Import, Next). Get Started stands alone.
 - **Disabled primary:** border fill with white text, which is 2.3:1 in light mode and reads as broken rather than inactive.
 
 **Type and numbers**
@@ -158,7 +166,7 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 
 ### In the screenshots (34 per mode)
 
-Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker · Transaction Detail · Wallet Dashboard · Receive · Addresses · Address Detail · Send (empty, filled) · Network Fee (preset, custom) · Review Transaction (top, bottom) · PSBT Inspector · PSBT QR (default, advanced) · Scan Signed PSBT · Save PSBT · UTXOs · UTXO Detail · Settings · Multisig Configuration (testnet, mainnet) · Import Cosigners (empty, filled, last) · Name Your Wallet · Verify Wallet (top, backup, verify address) · New Wallet Loading.
+Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker · Transaction Detail · Wallet Dashboard · Receive · Addresses · Address Detail · Send (empty, filled) · Network Fee (preset, custom) · Review Transaction (top, bottom) · PSBT Inspector · PSBT QR (default, advanced) · Scan Signed PSBT · Save PSBT · UTXOs · UTXO Detail · Settings · Multisig Configuration (testnet, mainnet) · Import Cosigners (empty, filled, last, flagged) · Verify Wallet (top, backup, verify address) · New Wallet Loading.
 
 ### In the code but not in the screenshots
 
@@ -171,13 +179,13 @@ Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker ·
 | Wallet Settings (`WalletInfoView`) | Edit cosigners, Electrum server, block explorer, gap limit, full refresh, privacy mode, delete wallet; descriptor QR, MP4 export, PDF |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
-| Empty states | No transactions and the first sync's spinner (both in the page), No UTXOs, no addresses |
+| Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
 | Transaction rows | Unconfirmed (clock, gold), labeled (tag), privacy mode (masked amounts), fiat display |
 | Verification | Inputs not checked, verified, partially verified, failed. Change verified, needs a look, failed |
 | Sync status | Not started, syncing (pulse), synced, error |
 | Networks | All four badges: Mainnet, Testnet4, Testnet3, Signet |
-| Validation | Invalid address prefix, amount over spendable, Max is zero, fee rate of 0, port out of range |
-| Alerts | Insecure SSL, delete wallet, reset Electrum, save changes, exit signing, edit transaction, QR settings changed, log export warning, import labels result, authentication unavailable, rename and delete PSBT, paste signed PSBT, errors |
+| Validation | Invalid address prefix, amount over spendable, Max is zero, fee rate of 0, port out of range, a missing Electrum host on Mainnet (the Host field flagged), a bad or wrong-network descriptor (the field flagged) |
+| Alerts | Insecure SSL, delete wallet, reset Electrum, save changes, exit signing, edit transaction, QR settings changed, log export warning, import labels result, authentication unavailable, rename and delete PSBT, paste signed PSBT, changing between Mainnet and a test network with keys entered, lowering the cosigner count below a filled cosigner, errors |
 | Layouts | iPad (portrait and landscape), iPhone Duo closed and open (two-column setup across the fold), short screens |
 
 ---
@@ -227,7 +235,7 @@ The presets fall into two groups, and the toolbar shows them apart:
 
 ## Future
 
-Future started as an exact copy of Today. Changes to it are made a few at a time, so each can be judged against the app as it ships, and each one is recorded so the export can describe it:
+Future started as an exact copy of Today, and becomes one again whenever its changes ship. Changes to it are made a few at a time, so each can be judged against the app as it ships, and each one is recorded so the export can describe it:
 
 - **Theme values** (colors, shape, type, spacing, buttons) go in the Future preset in `ds-tokens.js`. The export lists them with the other changes from the shipped app.
 - **Layout changes** go in the screen builders in `ds-shipped.js`. Each builder receives the design (`'today'` or `'future'`) as its second argument, and each phone carries a `d-today` or `d-future` class, so a change can branch in the builder or in CSS. Today's screens must not change.
@@ -235,25 +243,7 @@ Future started as an exact copy of Today. Changes to it are made a few at a time
 
 ### Changes so far
 
-**Setup flow** (Wallet setup, Import descriptor, Multisig configuration, Import cosigners, Verify wallet):
-
-| Change | Screens | SwiftUI |
-|---|---|---|
-| No progress bar on Wallet setup or Import descriptor. The content moves up into its space. | Wallet setup, Import descriptor | `SetupWizardView` |
-| Creating a wallet shows a three-step bar: Multisig configuration 1, Import cosigners 2, Verify wallet 3. Welcome and Wallet setup no longer count. | Multisig configuration, Import cosigners, Verify wallet | `SetupWizardView`, `SetupWizardViewModel` |
-| The Name Your Wallet step is removed from both flows. Import cosigners goes straight to Verify wallet; Import on Import descriptor creates the wallet. | Multisig configuration, Import descriptor | `WalletNameView` (removed), `SetupWizardViewModel` |
-| Wallet Name and Bitcoin Network share one card: the optional name field first, with the "My Wallet" placeholder, then the network picker, both labels leading. Left empty, the wallet is saved as "My Wallet". | Multisig configuration, Import descriptor | `MultisigConfigView`, `DescriptorImportView` |
-| Scan QR and Paste move into the Output Descriptor card under the field, as in-card utilities: equal tonal buttons, Scan QR brand-tinted and Paste neutral. The Scan Descriptor QR button and the Paste link above the field are removed. | Import descriptor | `DescriptorImportView`, a tonal button style in `Theme.swift` |
-| No "Expected format" line under the field. The empty field shows `wsh(sortedmulti(M,[fp/path]xpub/0/*,...))` as placeholder text until something is typed. | Import descriptor | `DescriptorImportView` |
-| The cosigner slots become 46pt folder tabs on top of the form, each a button that switches cosigner. A tab centers the cosigner's number (17pt) beside a status icon: an empty circle until every field is valid, then a check in the success color. Labels stay off the tabs because they often won't fit. The open tab stands 4pt taller, lit from above, joins the form card and casts a soft shadow onto its neighbours; the others sit behind the card with its shadow across their base. No lock icons. Past six cosigners the tabs scroll. | Import cosigners | `CosignerImportView` |
-| The footer button reads "Next". Until every cosigner is complete it is outlined (1.5pt brand border, brand text, no fill) and opens the first incomplete cosigner's tab when tapped; then it fills in to the solid primary. The outlined state is new: a step that isn't finished but can still be tapped. | Import cosigners | `CosignerImportView`, `SetupWizardViewModel` |
-| The "Cosigner 1 of 3" line under the title is removed; the tabs show the position. | Import cosigners | `CosignerImportView` |
-| The form reorders to Label, Extended Public Key, Master Fingerprint, Derivation Path. Scan QR and Paste sit under the key as in-card utilities, as on Import descriptor, replacing the Scan QR Code and Paste links. The format toggle stays beside the key's label. | Import cosigners | `CosignerImportView` |
-| Back is a compact secondary button (brand text on the card fill), the height and radius of the Next or Import beside it. Tune › Buttons › Secondary restyles it. | Import descriptor, Multisig configuration, Import cosigners | `DescriptorImportView`, `MultisigConfigView`, `CosignerImportView` |
-
-With these, Future's Import descriptor scrolls 37pt on the iPhone 17 Pro, against 21pt for Today; the Wallet Name field accounts for the difference.
-
-Verify wallet keeps its text Back under the full-width Create Wallet button.
+None yet. Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1), so Future is a copy of Today again.
 
 ## How a preset becomes colors
 
@@ -279,18 +269,19 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Review transaction | `SendReviewView`, `PSBTVerificationBadge` | `28-ReviewTransaction-Top` |
 | PSBT QR | `PSBTDisplayView` | `31-PSBTQRDisplay` |
 | Scan signed PSBT | `PSBTScanView`, `URScannerSheet` | `33-ScanSignedPSBT` |
-| Multisig configuration | `MultisigConfigView`, `ElectrumServerSetupSection` | `15-MultisigConfig-Testnet4` |
+| Multisig configuration | `MultisigConfigView`, `WalletNameNetworkCard` | `15-MultisigConfig-Testnet4` |
 | Import cosigners, empty | `CosignerImportView` | `17-CosignerImport-Empty` |
-| Import cosigners | `CosignerImportView` | `18-CosignerImport-Cosigner1` |
+| Import cosigners | `CosignerImportView`, `CharWrappingTextEditor` | `18-CosignerImport-Cosigner1` |
+| Import cosigners, flagged | `CosignerImportView`, `hbFieldError` | `20-CosignerImport-Errors` |
 | Verify wallet | `WalletVerifyView` | `21-VerifyWallet-Top` |
 | UTXO list | `UTXOListView` | `12-UTXOs` |
 | UTXO detail | `UTXODetailView` | `13-UTXODetail` |
 | Settings | `SettingsView` | `14-Settings` |
 | Welcome | `WelcomeStepView`, `SetupWizardView` | `01-Welcome` |
 | Wallet setup | `WalletCreationChoiceView` | `02-Wallet-Setup` |
-| Import descriptor | `DescriptorImportView`, `ElectrumServerSetupSection` | `03-DescriptorImport` |
-| Import descriptor, empty | `DescriptorImportView` | None. The Import descriptor rebuild with the field empty: the TextEditor at its 120pt minimum and Import disabled. |
-| Transactions, loading | `TransactionListView` (`transactionContent`), `SyncStatusDot` | None. A new wallet's first sync: the ProgressView 150pt under the title, the syncing dot and its message. Checked against the view built in the simulator. |
+| Import descriptor | `DescriptorImportView`, `WalletNameNetworkCard`, `CharWrappingTextEditor` | `03-DescriptorImport` |
+| Import descriptor, empty | `DescriptorImportView` | None. The Import descriptor rebuild with the field empty: the field at its 120pt minimum showing the format as its placeholder, and Import disabled. |
+| Transactions, loading | `TransactionListView` (`transactionContent`), `SeedlingLoadingView`, `SyncStatusDot` | None. A new wallet's first sync: the seedling 100pt under the title, a birch seed growing into a tree over 3s, the syncing dot with its halo pulsing, and its message. Checked against the view built in the simulator. |
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
 | UTXO filter sheet | `UTXOFilterSheet` | None. At its medium detent over the UTXO list, with the default filter. Checked in the simulator. |
@@ -300,7 +291,7 @@ Platform details that the rebuild reproduces:
 - **Symbols** are the real SF Symbols, rendered at each call site's point size and weight and used as recolorable masks.
 - **Text** uses the iOS line height (1.1934 × size), snapped up to the pixel grid: a third of a point at 3x, half a point on the 2x iPad. A wrapped paragraph is one view, so its lines keep the exact height.
 - **Chunked addresses** take a 17pt SF Pro space between groups, because the app joins them with bare `Text(" ")`.
-- **TextFields** sit 2pt taller than a `Text` with the same padding, using the font's unrounded line height. An empty TextField sizes to the default 17pt body line (20.29pt) whatever its font, so the empty fingerprint field is 3.3pt taller than a filled one. **TextEditor** (the descriptor field) keeps UITextView's insets: 8pt above and below the text, 5pt at the sides, lines 13.14pt apart at 11pt mono, and about 1pt more under the last line. The descriptor's line breaks are the ones UITextView chose on this canvas.
+- **TextFields** sit 2pt taller than a `Text` with the same padding, using the font's unrounded line height. An empty TextField sizes to the default 17pt body line (20pt) whatever its font, so the empty fingerprint and wallet name fields are 46pt tall, 3.3pt more than a filled fingerprint. Once a field has held text it keeps its own font's line: on the flagged Import cosigners screen the fingerprint field, which held cosigner 1's fingerprint a moment before, is a filled one's height with the placeholder in it. **CharWrappingTextEditor** (the descriptor and key fields) is a UITextView: 8pt above and below the text, 5pt at the sides, lines 13.14pt apart at 11pt mono. It breaks at the character, so every line is full.
 - **The Send amount field** measures 1.33pt taller holding text than showing its "0" placeholder.
 - **Card shadows in light mode** also fall on every view inside the card, because `birchCard()` applies `.shadow` without a `.compositingGroup()`: nested fields, pills and buttons inside a card carry a faint 6% shadow. The rebuild doesn't draw these inner shadows yet.
 - **The segmented control** takes a 31pt frame and draws its 32pt track 1pt past it, so the network card is 86.67pt tall.
@@ -309,7 +300,7 @@ Platform details that the rebuild reproduces:
 - **Lists** keep the iOS 26 metrics: plain lists (Transactions, UTXOs) with 16pt insets and the system chevron; the inset grouped list in Settings with 26pt section corners, 52pt minimum rows, 17pt semibold section headers in the system secondary label color, and 63 × 28pt switches. Separators are `#3C3A38` on the dark card and `#DCD9D2` on the light one. The list shapes are drawn by iOS, so Tune's radius controls don't change them.
 - **Navigation bars** have the Liquid Glass back button (44pt) and the inline title in the system label color.
 - **Sheet toolbars** use `HBBarButtonStyle`: 15pt semibold on the card fill (the prominent one on the brand fill), 34pt tall, 21pt down and 16pt in, around the inline title.
-- **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button).
+- **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button, the warning symbol on Verify wallet).
 - **The app icon** is the artwork from `Assets.xcassets`. On Welcome, a ground-colored 24pt stroke blurred by 12pt fades its edges, as in `WelcomeStepView`.
 - **The PSBT and receive QR codes** are the actual module grids sampled from the screenshots.
 - **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode. The light-mode screenshots show a near-black track that does not appear on device (see 1.6), so light segmented controls are one of two places the rebuild intentionally differs from the screenshots. The other is the light-mode Settings picker values, drawn in the light gold rather than the dark gold the screenshot kept (see 1.6).
@@ -335,20 +326,20 @@ What changes on the other devices, beyond size:
 - **Setup**: Import descriptor is full screen everywhere but the iPhone's tour; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
 - **Data** in the screenshots differs slightly per device (the fiat value, the refresh age, the iPad's build number, Touch ID on the Duo), and the builders follow it.
 - The Duo's screenshots come from iOS 27.1, which spaces wrapped address lines 1.67pt further apart than iOS 27.0; a few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
-- The open Duo's Import cosigners screenshot has the keyboard up, so its overlay doesn't line up (the page notes it).
+- The flagged Import cosigners screenshot is scrolled on the Duo, where Next brings the flagged key into view: 10.33pt closed and 15pt open. The page scrolls the screen to match.
 
 ### The harness
 
-To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T&device=<device>` at the device's size and scale (`iphone` 402 × 874 at 3x, the default; `duo-closed` 466 × 678 at 3x; `duo-open` 951 × 669 at 3x; `ipad` 1032 × 1376 at 2x). This renders the bare screen at the screenshot's pixel size. Screen ids: `home`, `wallet-picker`, `home-loading`, `home-empty`, `bump`, `send-empty`, `send`, `fee`, `review`, `sign`, `scan`, `utxos`, `utxo`, `utxo-filter`, `settings`, `welcome`, `setup`, `descriptor`, `descriptor-empty`, `multisig`, `cosigner-empty`, `cosigner`, `verify`. Use `preset=F` to see Future. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
+To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T&device=<device>` at the device's size and scale (`iphone` 402 × 874 at 3x, the default; `duo-closed` 466 × 678 at 3x; `duo-open` 951 × 669 at 3x; `ipad` 1032 × 1376 at 2x). This renders the bare screen at the screenshot's pixel size, with its animations held still (the sync dot's halo at full size, the seedling grown). Screen ids: `home`, `wallet-picker`, `home-loading`, `home-empty`, `bump`, `send-empty`, `send`, `fee`, `review`, `sign`, `scan`, `utxos`, `utxo`, `utxo-filter`, `settings`, `welcome`, `setup`, `descriptor`, `descriptor-empty`, `multisig`, `cosigner-empty`, `cosigner`, `cosigner-errors`, `verify`. Use `preset=F` to see Future. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
 
 ## Tune controls
 
-Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no toggles or errors).
+Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no error states, destructive buttons, tertiary text or Mainnet badge).
 
 | Group | Controls |
 |---|---|
 | Brand | Hue, chroma, lightness per mode, text on brand |
-| Accent and roles | Second hue on/off; with it on, the accent hue, chroma and lightness, and which elements use it: selection, progress, amounts, active tab, toggles* |
+| Accent and roles | Second hue on/off; with it on, the accent hue, chroma and lightness, and which elements use it: selection, progress, amounts, active tab, toggles (Settings, the UTXO filter sheet) |
 | Dark and light surfaces | Tint hue and amount, ground, surface step or card and field depth, secondary text, tertiary text* |
 | Semantic | Success, info, warning, danger* hues and chroma |
 | Networks | Testnet4, Signet, Testnet3, Mainnet* hues and chroma |
@@ -356,7 +347,7 @@ Each control applies to the app screens unless marked *, which means the element
 | Shape | Card, field, button, pill and sheet radius; selection ring; card stroke; light-mode shadow |
 | Type | Text size (Dynamic Type scale, symbols included), title face and weight, amount face, numbers in mono or the amount face |
 | Spacing | Screen margin, card padding, field padding, vertical spacing, button height, list row height |
-| Buttons and links | Utility button style and color, text link color, pressed style, secondary style (Scan Descriptor QR, and Future's Back), disabled style (Review on the empty Send screen, Import and Next Cosigner on the empty setup screens) |
+| Buttons and links | Utility button style and color, text link color, pressed style, secondary style (Back on the setup footers), disabled style (Review on the empty Send screen, Import on the empty Import descriptor) |
 | Layout | Setup footer split or stacked, signed amounts, received amounts in color or ink, Apply interview decisions |
 
 Today shows Theme.swift's exact colors. Editing any color switches it to a generated palette fitted to within about 0.01 ΔE of those colors, and Reset preset restores the exact values.
@@ -365,7 +356,7 @@ To re-check the page after a change, run `node design/tools/check-page.js webkit
 
 ## Using `design-system.html`
 
-1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-three app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
+1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-four app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
 2. **Compare** shows one screen across all presets side by side, with Today if you include it.
 3. **Tune** (T) opens the panel. Drag a slider or type a value and press Enter. Every change shows a dot; click the dot to reset that value, or Reset preset for all of them. "Save as preset" keeps a named copy.
 4. **Comment** (C) lets you click any element to pin a note. Each pin records the option, the mode, the screen or board, the element and its current computed styles. Section notes sit at the end of each section.
