@@ -144,19 +144,9 @@ async function firstVisit(p) {
   await p.locator('#drawerClose').click()
   await resetPreset(p)
 
-  // Future: a copy of Today that builds its screens with the Future layout
-  await selectPreset(p, 'F')
-  const fut = await p.evaluate(() => ({
-    designs: [...new Set([...document.querySelectorAll('#scope .ph')].map((f) => f.dataset.design))].join(','),
-    screens: document.querySelectorAll('#scope .ph').length,
-    notes: [...document.querySelectorAll('#scope .diffs li')].map((l) => l.textContent).join(' '),
-  }))
-  check(fut.designs === 'future' && fut.screens > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens} phones`)
-  const logged = await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)
-  check(logged > 0 && /Setup › Import descriptor/.test(fut.notes) && /Name Your Wallet/.test(fut.notes) && !/exact copy of Today/.test(fut.notes), area, 'The Future overview lists each change in the log with its screens', `${logged} changes`)
-
-  // Future's setup flow: no bar on Wallet setup or Import descriptor, steps 1-3 when creating a
-  // wallet, the wallet name above the network picker, and Back as a secondary button
+  // Today's setup flow, as shipped: no bar on Wallet setup or Import descriptor, steps 1-3 when creating a
+  // wallet, the wallet name above the network picker, Back as a secondary button, cosigner tabs, and a
+  // flagged state
   const flow = await p.evaluate(() => {
     const ph = (id) => document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
     const bar = (id) => {
@@ -172,61 +162,57 @@ async function firstVisit(p) {
     const back = (id) => !!(ph(id) && ph(id).querySelector('.wizback.sbtn'))
     const d = ph('descriptor')
     const card = d && d.querySelector('[data-c="descriptor"]')
+    const empty = ph('descriptor-empty')
+    const placeholder = empty && empty.querySelector('[data-c="descriptor-text"] .t')
+    const tabs = (id) => {
+      const t = [...ph(id).querySelectorAll('.ctab')]
+      return `${t.length} tabs, open ${t.findIndex((x) => x.classList.contains('on')) + 1}, complete ${t.filter((x) => /complete/.test(x.dataset.cl)).length}`
+    }
+    const form = ph('cosigner').querySelector('[data-c="form"]')
+    const next = (id) => {
+      const n = ph(id).querySelector('.wiznext')
+      return `${n.textContent.trim()} ${n.classList.contains('is-outline') ? 'outlined' : n.classList.contains('is-disabled') ? 'disabled' : 'filled'}`
+    }
+    const flagged = ph('cosigner-errors')
     return {
       descriptor: !!card && card.querySelectorAll('.tbtn').length === 2 && card.querySelectorAll('[data-c="paste"]').length === 1 &&
         !d.querySelector('.sbtn[data-c="scan"]') && ![...card.querySelectorAll('.t')].some((t) => /format/i.test(t.textContent)) &&
         !!d.querySelector('[data-c="name-network"] [data-c="wallet-name"] ~ [data-c="network"]'),
+      empty: !!empty && !!empty.querySelector('.wiznext.is-disabled') && !!placeholder && placeholder.textContent === 'wsh(sortedmulti(M,[fp/path]xpub/0/*,...))' && !d.querySelector('.wiznext.is-disabled'),
       bars: ['setup', 'descriptor', 'multisig', 'cosigner', 'verify'].map((id) => `${id} ${bar(id)}`).join(', '),
       names: nameAbove('multisig') && nameAbove('descriptor'),
       backs: ['descriptor', 'multisig', 'cosigner'].every(back) && !back('verify'),
+      tabs: ['cosigner-empty', 'cosigner', 'cosigner-errors'].map(tabs).join(' | '),
+      order: `${[...form.children].map((e) => e.dataset.c).join(',')}; ${form.querySelectorAll('[data-c="xpub"] .tbtn').length} tonal; ${['cosigner-empty', 'cosigner', 'cosigner-errors'].map(next).join(', ')}`,
+      flags: `${[...flagged.querySelectorAll('.ferr')].map((f) => f.closest('[data-c]').dataset.c).join(',')}: ${[...flagged.querySelectorAll('.t-ferr')].map((m) => m.textContent.trim()).join(', ')}`,
     }
   })
-  check(flow.bars === 'setup none, descriptor none, multisig 1/3, cosigner 2/3, verify 3/3', area, 'Future: setup progress bar only on the three new-wallet steps', flow.bars)
-  check(flow.names, area, 'Future: Wallet Name and the network picker share one card, name first, on Multisig configuration and Import descriptor')
-  check(flow.backs, area, 'Future: Back is a secondary button on Import descriptor, Multisig configuration and Import cosigners')
-  const futureEmpty = await p.evaluate(() => {
-    const d = document.querySelector('#scope [data-screen="descriptor-empty"][data-mode="dark"]')
-    const ph = d && d.querySelector('[data-c="descriptor-text"] .t')
-    return !!d && !!d.querySelector('.wiznext.is-disabled') && !!ph && ph.textContent === 'wsh(sortedmulti(M,[fp/path]xpub/0/*,...))' && d.querySelectorAll('.tbtn').length === 2
-  })
-  const tabs = await p.evaluate(() => {
-    const st = (id) => {
-      const d = document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
-      const t = [...d.querySelectorAll('.ctab')]
-      return `${t.length} tabs, open ${t.findIndex((x) => x.classList.contains('on')) + 1}, complete ${t.filter((x) => /complete/.test(x.dataset.cl)).length}, slots ${d.querySelectorAll('[data-c="slots"]').length}`
-    }
-    return `${st('cosigner-empty')} | ${st('cosigner')}`
-  })
-  check(tabs === '3 tabs, open 1, complete 0, slots 0 | 3 tabs, open 1, complete 1, slots 0', area, 'Future: cosigners are tabs, with a check once one is complete', tabs)
-  const order = await p.evaluate(() => {
-    const d = document.querySelector('#scope [data-screen="cosigner"][data-mode="dark"] [data-c="form"]')
-    const keys = [...d.children].map((e) => e.dataset.c).join(',')
-    const next = ['cosigner-empty', 'cosigner'].map((id) => {
-      const b = document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"] .wiznext`)
-      return `${b.textContent.trim()} ${b.classList.contains('is-outline') ? 'outlined' : b.classList.contains('is-disabled') ? 'disabled' : 'filled'}`
-    }).join(', ')
-    return `${keys}; ${d.querySelectorAll('[data-c="xpub"] .tbtn').length} tonal; ${d.querySelectorAll('[data-c="xpub"] .row [data-c="paste"]:not(.tbtn)').length} paste links; ${next}`
-  })
-  check(order === 'label,xpub,fingerprint,path; 2 tonal; 0 paste links; Next outlined, Next outlined', area, 'Future: the cosigner form runs Label, key with Scan QR and Paste, fingerprint, path; Next is outlined until every cosigner is done', order)
-  check(futureEmpty, area, 'Future: empty Import descriptor shows the format as placeholder, keeps Scan QR and Paste and disables Import')
-  check(flow.descriptor, area, 'Future: Import descriptor has Scan QR and Paste as in-card utilities, no format line, and name and network in one card')
+  check(flow.bars === 'setup none, descriptor none, multisig 1/3, cosigner 2/3, verify 3/3', area, 'Today: setup progress bar only on the three new-wallet steps', flow.bars)
+  check(flow.names, area, 'Today: Wallet Name and the network picker share one card, name first, on Multisig configuration and Import descriptor')
+  check(flow.backs, area, 'Today: Back is a secondary button on Import descriptor, Multisig configuration and Import cosigners')
+  check(flow.descriptor, area, 'Today: Import descriptor has Scan QR and Paste as in-card utilities, no format line, and name and network in one card')
+  check(flow.empty, area, 'Today: empty Import descriptor shows the format as placeholder and disables Import')
+  check(flow.tabs === '3 tabs, open 1, complete 0 | 3 tabs, open 1, complete 1 | 3 tabs, open 2, complete 1', area, 'Today: cosigners are tabs, with a check once one is complete', flow.tabs)
+  check(flow.order === 'label,xpub,fingerprint,path; 2 tonal; Next outlined, Next outlined, Next outlined', area, 'Today: the cosigner form runs Label, key with Scan QR and Paste, fingerprint, path; Next is outlined until every cosigner is done', flow.order)
+  check(flow.flags === 'xpub-text,fingerprint: Xpub is required, Fingerprint is required', area, 'Today: Next on an empty cosigner flags its key and fingerprint with the reason under each', flow.flags)
+
+  // Future: a copy of Today that builds its screens with the Future layout
+  const todayScreens = await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].map((f) => f.querySelector('.ph-screen').innerHTML))
+  await selectPreset(p, 'F')
+  const fut = await p.evaluate(() => ({
+    designs: [...new Set([...document.querySelectorAll('#scope .ph')].map((f) => f.dataset.design))].join(','),
+    screens: [...document.querySelectorAll('#scope .ph')].map((f) => f.querySelector('.ph-screen').innerHTML),
+    notes: [...document.querySelectorAll('#scope .diffs li')].map((l) => l.textContent).join(' '),
+  }))
+  check(fut.designs === 'future' && fut.screens.length > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens.length} phones`)
+  check(/exact copy of Today/.test(fut.notes) && (await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)) === 0, area, 'Future starts as an exact copy of Today', fut.notes)
+  check(fut.screens.length === todayScreens.length && fut.screens.every((h, i) => h === todayScreens[i]), area, 'Future’s screens are built exactly as Today’s')
   await p.locator('#exportBtn').click()
   md = await p.locator('#expPre').textContent()
-  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('Name Your Wallet') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
+  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
   await p.locator('#drawerClose').click()
   await selectPreset(p, 'T')
   check(await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].every((f) => f.dataset.design === 'today')), area, 'Switching back to Today rebuilds the screens with the Today layout')
-  const today = await p.evaluate(() => {
-    const ph = (id) => document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
-    return {
-      bars: ['setup', 'descriptor', 'multisig'].map((id) => ph(id).querySelectorAll('[data-c="wizard-progress"] i').length).join(','),
-      extras: document.querySelectorAll('#scope [data-c="wallet-name"], #scope .wizback.sbtn, #scope .tbtn').length,
-      scan: !!ph('descriptor').querySelector('.sbtn[data-c="scan"]'),
-      empty: ['descriptor-empty', 'cosigner-empty'].every((id) => !!ph(id).querySelector('.wiznext.is-disabled')) && !ph('descriptor').querySelector('.wiznext.is-disabled') && !ph('cosigner').querySelector('.wiznext.is-disabled'),
-    }
-  })
-  check(today.empty, area, 'Today: Import and Next Cosigner are disabled only on the empty screens')
-  check(today.bars === '6,3,6' && today.extras === 0 && today.scan, area, 'Today keeps the shipped progress bars, text Back, Scan Descriptor QR button and no wallet name field', `bars ${today.bars}, Future-only elements ${today.extras}`)
 }
 
 async function tuneAudit(p) {
@@ -518,7 +504,9 @@ async function comments(p) {
   check(md.includes('Brand gold should be warmer.') && md.includes('Resolved comments (1)') && md.includes('Dark ground feels too warm.') && md.includes('Take Catkin forward.'), area, 'Markdown export holds comments, notes and overall notes')
   check(md.includes('SendReviewView.swift') && md.includes('| `brand` |'), area, 'Markdown export names Swift files and the token table')
   check(md.includes('**Selected preset:** Catkin') && md.includes('| Type › Title weight (`type.titleWeight`) | Medium | Semibold |') && md.includes('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |'), area, 'Exporting another preset lists its differences from the shipped app')
-  check(md.includes('a color theme on the Future design') && md.includes('### Design') && md.includes('Name Your Wallet'), area, 'A color theme’s export includes Future’s design changes')
+  // Future's change log, or the line saying it has none yet
+  const logged = await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)
+  check(md.includes('a color theme on the Future design') && md.includes('### Design') && logged > 0 !== md.includes('None yet. The layout and components match the shipped app.'), area, 'A color theme’s export includes Future’s design changes', `${logged} changes`)
   await p.locator('#drawer [data-fmt="json"]').click()
   const json = JSON.parse(await p.locator('#expPre').textContent())
   check(json.preset.design === 'future' && json.changesFromShipped.design.length === (await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)), area, 'A color theme’s JSON export carries Future’s design changes')
@@ -593,8 +581,8 @@ async function views(p) {
   await settle(p, 100)
   const shots = await p.locator('#scope .shot').count()
   const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
-  check(shots === 23 && listed.split(',').length === 23, area, 'Focus shows all twenty-three screens', listed)
-  for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty']) {
+  check(shots === 24 && listed.split(',').length === 24, area, 'Focus shows all twenty-four screens', listed)
+  for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty', 'cosigner-errors']) {
     const n = await p.locator(`#scope [data-screen="${id}"] .ph-screen`).count()
     const blank = await p.evaluate((id) => [...document.querySelectorAll(`#scope [data-screen="${id}"] .ph-screen`)].some((s) => s.innerText.trim().length < 20), id)
     check(n === 2 && !blank, area, `Screen ${id} renders in both modes`)
@@ -683,6 +671,8 @@ async function views(p) {
 }
 
 async function devices(p) {
+  // Each screen rebuilt from a screenshot overlays it, in both modes
+  const shotScreens = await p.evaluate(() => window.BirchShipped.SCREENS.filter((s) => s.shot).length)
   const area = 'Devices'
   await p.locator('#viewSeg [data-view="focus"]').click()
   await settle(p, 100)
@@ -710,7 +700,7 @@ async function devices(p) {
       },
       [dev, name],
     )
-    check(st.n === 46 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 23 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
+    check(st.n === 48 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 24 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
     const loads = await p.evaluate(
       ([pw, ph]) =>
         Promise.all(
@@ -726,7 +716,7 @@ async function devices(p) {
         ).then((all) => all.filter(Boolean).length + '/' + all.length),
       [pw, ph],
     )
-    check(st.named && loads === `${st.refs}/${st.refs}` && st.refs === 36, area, `${name}: the overlay uses that device's screenshots`, `${loads} load at ${pw} × ${ph}`)
+    check(st.named && loads === `${st.refs}/${st.refs}` && st.refs === 2 * shotScreens, area, `${name}: the overlay uses that device's screenshots`, `${loads} load at ${pw} × ${ph}`)
   }
   // The device sticks (saving is debounced), and Compare builds its columns for it
   await settle(p, 450)

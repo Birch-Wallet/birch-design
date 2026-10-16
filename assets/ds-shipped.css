@@ -42,13 +42,13 @@
 .pbtn:active, .wiznext:active { background: var(--brandPressed); }
 /* hbPrimaryButton(isEnabled: false) and the setup steps' disabled Next/Import: white on hbBorder. Tune › Buttons › Disabled restyles them */
 .pbtn.is-disabled, .pbtn.is-disabled:active, .wiznext.is-disabled, .wiznext.is-disabled:active { background: var(--disabledFill); color: var(--disabledInk); cursor: default; }
-/* Future: an outlined primary for a step that isn't finished but can still be tapped. It fills in once the step is complete.
+/* hbCompactPrimaryButton(.outlined): a step that isn't finished but can still be tapped. It fills in once the step is complete.
    A real border (its padding 1.5pt less, so the size matches the filled button), because an inset shadow comes out
    uneven from side to side once the phone is scaled down on the page */
 .wiznext.is-outline { background: transparent; color: var(--brandInk); border: 1.5px solid var(--brand); }
 .wiznext.is-outline:active { background: var(--brandTint); }
 .wiznext { justify-content: center; cursor: pointer; transition: transform .12s ease, background-color .12s ease; }
-/* Future: cosigner folder tabs, with physical depth. Inactive tabs sit behind the card: shorter, between
+/* Cosigner folder tabs (CosignerTabs), with physical depth. Inactive tabs sit behind the card: shorter, between
    card and ground, with the card's shadow falling across their base. The open tab stands 4pt taller,
    lit from above with a sheen that fades into the card it joins, and casts a soft shadow up and onto
    its neighbours (clipped at its base so the card below stays clean) */
@@ -60,9 +60,12 @@
 .m-dark .ctab { --tabShade: rgba(0, 0, 0, 0.55); --tabLift: rgba(0, 0, 0, 0.5); --tabSheen: color-mix(in srgb, var(--card) 90%, #fff); }
 .m-light .ctab { --tabShade: rgba(70, 55, 30, 0.16); --tabLift: rgba(70, 55, 30, 0.16); --tabSheen: color-mix(in srgb, var(--card) 45%, #fff); }
 .ctab-card { border-top-left-radius: 0; border-top-right-radius: 0; }
-/* Tonal buttons (the In-card utilities pattern, used by Future): brand tint for the most useful action, neutral for the rest */
+/* HBTonalButton (the In-card utilities pattern): brand tint for the most useful action, neutral for the rest */
 .tbtn { flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border-radius: var(--r-btn); background: var(--brandTint); color: var(--brandInk); cursor: pointer; }
 .tbtn.neutral { background: var(--nested); color: var(--ink); }
+/* hbFieldError: a 1.5pt error border inside the field's nested fill; the reason sits under it */
+.ferr { position: relative; }
+.ferr::after { content: ""; position: absolute; inset: 0; border: 1.5px solid var(--danger); border-radius: inherit; pointer-events: none; }
 /* hbSecondaryButton: hbHeadline in the brand color on the card fill. Tune › Buttons › Secondary restyles it */
 .sbtn { justify-content: center; border-radius: var(--r-btn); background: var(--card); color: var(--brandInk); box-shadow: var(--cardShadow); cursor: pointer; transition: transform .12s ease; }
 
@@ -235,6 +238,38 @@
    lines only, so the extra half-leading above the first line and below the last is taken back) */
 .dev-duo-closed .t-sp, .dev-duo-open .t-sp { line-height: calc(22px * var(--ts)); }
 .dev-duo-closed .t:has(> .t-sp), .dev-duo-open .t:has(> .t-sp) { margin: calc(-0.835px * var(--ts)) 0; }
+
+/* SyncStatusDot's halo while syncing pulses as Theme.swift asks (.easeInOut(duration: 1).repeatForever(autoreverses:
+   true)): it shrinks into the 8pt dot over a second and grows back. Held still (Reduce Motion, the harness) it's
+   the full 16pt */
+.sync-halo { animation: halo 1s ease-in-out infinite alternate; }
+@keyframes halo { to { transform: scale(0.5); } }
+body.harness .sync-halo { animation: none; }
+
+/* SeedlingLoadingView, the first sync's loading view: a birch seed grows into a tree. The eight frames (assets/seedling, 360px WebP from
+   the 1254px artwork) are stacked; each fades in over the one before it in 150ms, and that one fades out
+   once covered. A cycle is 3s: the seed 0.4s, six growing frames 0.3s each, the tree 0.8s, then
+   straight back to the seed. Held still (Reduce Motion, the harness) it shows the grown tree */
+.seedling { position: relative; width: 120px; height: 120px; }
+.seedling img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: 3s ease-in-out infinite; }
+.seedling img:last-child { opacity: 1; }
+.seedling img:nth-child(1) { animation-name: seed1; }
+.seedling img:nth-child(2) { animation-name: seed2; }
+.seedling img:nth-child(3) { animation-name: seed3; }
+.seedling img:nth-child(4) { animation-name: seed4; }
+.seedling img:nth-child(5) { animation-name: seed5; }
+.seedling img:nth-child(6) { animation-name: seed6; }
+.seedling img:nth-child(7) { animation-name: seed7; }
+.seedling img:nth-child(8) { animation-name: seed8; }
+@keyframes seed1 { 0%, 18.333% { opacity: 1; } 23.333%, 90% { opacity: 0; } 95%, 100% { opacity: 1; } }
+@keyframes seed2 { 0%, 13.333% { opacity: 0; } 18.333%, 28.333% { opacity: 1; } 33.333%, 100% { opacity: 0; } }
+@keyframes seed3 { 0%, 23.333% { opacity: 0; } 28.333%, 38.333% { opacity: 1; } 43.333%, 100% { opacity: 0; } }
+@keyframes seed4 { 0%, 33.333% { opacity: 0; } 38.333%, 48.333% { opacity: 1; } 53.333%, 100% { opacity: 0; } }
+@keyframes seed5 { 0%, 43.333% { opacity: 0; } 48.333%, 58.333% { opacity: 1; } 63.333%, 100% { opacity: 0; } }
+@keyframes seed6 { 0%, 53.333% { opacity: 0; } 58.333%, 68.333% { opacity: 1; } 73.333%, 100% { opacity: 0; } }
+@keyframes seed7 { 0%, 63.333% { opacity: 0; } 68.333%, 78.333% { opacity: 1; } 83.333%, 100% { opacity: 0; } }
+@keyframes seed8 { 0%, 73.333% { opacity: 0; } 78.333%, 95% { opacity: 1; } 100% { opacity: 0; } }
+body.harness .seedling img { animation: none; }
 
 /* Frame details for the page (hidden in the harness) */
 .ph-screen .ph-island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 124px; height: 36px; border-radius: 20px; background: #000; z-index: 60; }
