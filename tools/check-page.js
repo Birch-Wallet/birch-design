@@ -152,13 +152,81 @@ async function firstVisit(p) {
     notes: [...document.querySelectorAll('#scope .diffs li')].map((l) => l.textContent).join(' '),
   }))
   check(fut.designs === 'future' && fut.screens > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens} phones`)
-  check(/exact copy of Today/.test(fut.notes), area, 'Future starts as an exact copy of Today', fut.notes)
+  const logged = await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)
+  check(logged > 0 && /Setup › Import descriptor/.test(fut.notes) && /Name Your Wallet/.test(fut.notes) && !/exact copy of Today/.test(fut.notes), area, 'The Future overview lists each change in the log with its screens', `${logged} changes`)
+
+  // Future's setup flow: no bar on Wallet setup or Import descriptor, steps 1-3 when creating a
+  // wallet, the wallet name above the network picker, and Back as a secondary button
+  const flow = await p.evaluate(() => {
+    const ph = (id) => document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
+    const bar = (id) => {
+      const b = ph(id) && ph(id).querySelector('[data-c="wizard-progress"]')
+      return b ? `${[...b.children].filter((i) => i.style.background.includes('progress')).length}/${b.children.length}` : 'none'
+    }
+    const nameAbove = (id) => {
+      const name = ph(id) && ph(id).querySelector('[data-c="wallet-name"]')
+      const net = ph(id) && ph(id).querySelector('[data-c="network"]')
+      const card = name && name.closest('[data-c="name-network"]')
+      return !!(name && net && card && card === net.closest('[data-c="name-network"]') && name.getBoundingClientRect().bottom <= net.getBoundingClientRect().top)
+    }
+    const back = (id) => !!(ph(id) && ph(id).querySelector('.wizback.sbtn'))
+    const d = ph('descriptor')
+    const card = d && d.querySelector('[data-c="descriptor"]')
+    return {
+      descriptor: !!card && card.querySelectorAll('.tbtn').length === 2 && card.querySelectorAll('[data-c="paste"]').length === 1 &&
+        !d.querySelector('.sbtn[data-c="scan"]') && ![...card.querySelectorAll('.t')].some((t) => /format/i.test(t.textContent)) &&
+        !!d.querySelector('[data-c="name-network"] [data-c="wallet-name"] ~ [data-c="network"]'),
+      bars: ['setup', 'descriptor', 'multisig', 'cosigner', 'verify'].map((id) => `${id} ${bar(id)}`).join(', '),
+      names: nameAbove('multisig') && nameAbove('descriptor'),
+      backs: ['descriptor', 'multisig', 'cosigner'].every(back) && !back('verify'),
+    }
+  })
+  check(flow.bars === 'setup none, descriptor none, multisig 1/3, cosigner 2/3, verify 3/3', area, 'Future: setup progress bar only on the three new-wallet steps', flow.bars)
+  check(flow.names, area, 'Future: Wallet Name and the network picker share one card, name first, on Multisig configuration and Import descriptor')
+  check(flow.backs, area, 'Future: Back is a secondary button on Import descriptor, Multisig configuration and Import cosigners')
+  const futureEmpty = await p.evaluate(() => {
+    const d = document.querySelector('#scope [data-screen="descriptor-empty"][data-mode="dark"]')
+    const ph = d && d.querySelector('[data-c="descriptor-text"] .t')
+    return !!d && !!d.querySelector('.wiznext.is-disabled') && !!ph && ph.textContent === 'wsh(sortedmulti(M,[fp/path]xpub/0/*,...))' && d.querySelectorAll('.tbtn').length === 2
+  })
+  const tabs = await p.evaluate(() => {
+    const st = (id) => {
+      const d = document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
+      const t = [...d.querySelectorAll('.ctab')]
+      return `${t.length} tabs, open ${t.findIndex((x) => x.classList.contains('on')) + 1}, complete ${t.filter((x) => /complete/.test(x.dataset.cl)).length}, slots ${d.querySelectorAll('[data-c="slots"]').length}`
+    }
+    return `${st('cosigner-empty')} | ${st('cosigner')}`
+  })
+  check(tabs === '3 tabs, open 1, complete 0, slots 0 | 3 tabs, open 1, complete 1, slots 0', area, 'Future: cosigners are tabs, with a check once one is complete', tabs)
+  const order = await p.evaluate(() => {
+    const d = document.querySelector('#scope [data-screen="cosigner"][data-mode="dark"] [data-c="form"]')
+    const keys = [...d.children].map((e) => e.dataset.c).join(',')
+    const next = ['cosigner-empty', 'cosigner'].map((id) => {
+      const b = document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"] .wiznext`)
+      return `${b.textContent.trim()} ${b.classList.contains('is-outline') ? 'outlined' : b.classList.contains('is-disabled') ? 'disabled' : 'filled'}`
+    }).join(', ')
+    return `${keys}; ${d.querySelectorAll('[data-c="xpub"] .tbtn').length} tonal; ${d.querySelectorAll('[data-c="xpub"] .row [data-c="paste"]:not(.tbtn)').length} paste links; ${next}`
+  })
+  check(order === 'label,xpub,fingerprint,path; 2 tonal; 0 paste links; Next outlined, Next outlined', area, 'Future: the cosigner form runs Label, key with Scan QR and Paste, fingerprint, path; Next is outlined until every cosigner is done', order)
+  check(futureEmpty, area, 'Future: empty Import descriptor shows the format as placeholder, keeps Scan QR and Paste and disables Import')
+  check(flow.descriptor, area, 'Future: Import descriptor has Scan QR and Paste as in-card utilities, no format line, and name and network in one card')
   await p.locator('#exportBtn').click()
   md = await p.locator('#expPre').textContent()
-  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
+  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('Name Your Wallet') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
   await p.locator('#drawerClose').click()
   await selectPreset(p, 'T')
   check(await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].every((f) => f.dataset.design === 'today')), area, 'Switching back to Today rebuilds the screens with the Today layout')
+  const today = await p.evaluate(() => {
+    const ph = (id) => document.querySelector(`#scope [data-screen="${id}"][data-mode="dark"]`)
+    return {
+      bars: ['setup', 'descriptor', 'multisig'].map((id) => ph(id).querySelectorAll('[data-c="wizard-progress"] i').length).join(','),
+      extras: document.querySelectorAll('#scope [data-c="wallet-name"], #scope .wizback.sbtn, #scope .tbtn').length,
+      scan: !!ph('descriptor').querySelector('.sbtn[data-c="scan"]'),
+      empty: ['descriptor-empty', 'cosigner-empty'].every((id) => !!ph(id).querySelector('.wiznext.is-disabled')) && !ph('descriptor').querySelector('.wiznext.is-disabled') && !ph('cosigner').querySelector('.wiznext.is-disabled'),
+    }
+  })
+  check(today.empty, area, 'Today: Import and Next Cosigner are disabled only on the empty screens')
+  check(today.bars === '6,3,6' && today.extras === 0 && today.scan, area, 'Today keeps the shipped progress bars, text Back, Scan Descriptor QR button and no wallet name field', `bars ${today.bars}, Future-only elements ${today.extras}`)
 }
 
 async function tuneAudit(p) {
@@ -251,7 +319,9 @@ async function tuneAudit(p) {
         if (row.pressed) {
           // Held-down state on a real app-screen button: Scale shrinks it, Dim does not
           const btn = p.locator('#scope [data-screen="send"][data-mode="dark"] .pbtn')
-          await btn.scrollIntoViewIfNeeded()
+          // Center it: "if needed" can leave it under the sticky toolbar, which then takes the press
+          await btn.evaluate((e) => e.scrollIntoView({ block: 'center' }))
+          await settle(p, 40)
           const box = await btn.boundingBox()
           const held = async () => {
             await p.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
@@ -448,8 +518,10 @@ async function comments(p) {
   check(md.includes('Brand gold should be warmer.') && md.includes('Resolved comments (1)') && md.includes('Dark ground feels too warm.') && md.includes('Take Catkin forward.'), area, 'Markdown export holds comments, notes and overall notes')
   check(md.includes('SendReviewView.swift') && md.includes('| `brand` |'), area, 'Markdown export names Swift files and the token table')
   check(md.includes('**Selected preset:** Catkin') && md.includes('| Type › Title weight (`type.titleWeight`) | Medium | Semibold |') && md.includes('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |'), area, 'Exporting another preset lists its differences from the shipped app')
+  check(md.includes('a color theme on the Future design') && md.includes('### Design') && md.includes('Name Your Wallet'), area, 'A color theme’s export includes Future’s design changes')
   await p.locator('#drawer [data-fmt="json"]').click()
   const json = JSON.parse(await p.locator('#expPre').textContent())
+  check(json.preset.design === 'future' && json.changesFromShipped.design.length === (await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)), area, 'A color theme’s JSON export carries Future’s design changes')
   check(json.schema === 'birch-design-changes/1' && json.comments.length === 3 && json.layout && json.layout.spacing && json.instructions.length > 0 && json.changesFromShipped.settings.length > 0 && json.changesFromShipped.colors.length > 0, area, 'JSON export parses and includes instructions, changes and layout values')
 
   const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 5000 }).catch(() => null), p.locator('#expDl').click()])
@@ -505,6 +577,8 @@ async function views(p) {
   await settle(p, 100)
   check((await p.locator('.cmp-grid .ph').count()) === 10, area, 'Compare shows five presets in both modes', `${await p.locator('.cmp-grid .ph').count()} phones`)
   check((await p.locator('.cmp-grid .opt-F .ph[data-design="future"]').count()) === 2, area, 'Compare builds the Future column with the Future layout')
+  const themeDesigns = await p.evaluate(() => ['A', 'B', 'C'].map((id) => [...document.querySelectorAll(`.cmp-grid .opt-${id} .ph`)].map((f) => f.dataset.design).join('+')).join(' '))
+  check(themeDesigns === 'future+future future+future future+future', area, 'Compare builds the color themes with the Future layout', themeDesigns)
   await p.locator('#incToday').uncheck()
   await settle(p, 60)
   check((await p.locator('.cmp-grid .ph').count()) === 8, area, 'Include Today toggles the Today column')
@@ -519,8 +593,8 @@ async function views(p) {
   await settle(p, 100)
   const shots = await p.locator('#scope .shot').count()
   const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
-  check(shots === 14 && listed.split(',').length === 14, area, 'Focus shows all fourteen screens', listed)
-  for (const id of ['utxos', 'utxo', 'settings', 'welcome', 'setup']) {
+  check(shots === 23 && listed.split(',').length === 23, area, 'Focus shows all twenty-three screens', listed)
+  for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty']) {
     const n = await p.locator(`#scope [data-screen="${id}"] .ph-screen`).count()
     const blank = await p.evaluate((id) => [...document.querySelectorAll(`#scope [data-screen="${id}"] .ph-screen`)].some((s) => s.innerText.trim().length < 20), id)
     check(n === 2 && !blank, area, `Screen ${id} renders in both modes`)
@@ -608,6 +682,84 @@ async function views(p) {
   check(/Copied|Copy failed/.test(await p.locator('#toast').textContent()), area, 'Clicking a token value copies it (or explains why not)')
 }
 
+async function devices(p) {
+  const area = 'Devices'
+  await p.locator('#viewSeg [data-view="focus"]').click()
+  await settle(p, 100)
+  const listed = await p.evaluate(() => [...document.querySelectorAll('#main .dev-bar [data-device]')].map((b) => b.dataset.device).join(','))
+  check(listed === 'iphone,duo-closed,duo-open,ipad', area, 'The Screens section offers the four devices', listed)
+  // Each device rebuilds every screen at its own size, with its own screenshots behind the overlay
+  const DEVS = { 'duo-closed': [466, 678, 1398, 2034, 'iPhone Duo (Closed)'], 'duo-open': [951, 669, 2853, 2007, 'iPhone Duo (Open)'], ipad: [1032, 1376, 2064, 2752, 'iPad Pro 13-inch (M5)'] }
+  for (const [dev, [w, h, pw, ph, name]] of Object.entries(DEVS)) {
+    await p.locator(`#main .dev-bar [data-device="${dev}"]`).click()
+    await settle(p, 120)
+    const st = await p.evaluate(
+      ([dev, name]) => {
+        const phones = [...document.querySelectorAll('#scope .ph')]
+        const s = document.querySelector('#scope .ph-screen')
+        const refs = [...document.querySelectorAll('#scope .ph-ref')]
+        return {
+          n: phones.length,
+          all: phones.every((f) => f.dataset.device === dev),
+          w: s.offsetWidth,
+          h: s.offsetHeight,
+          refs: refs.length,
+          named: refs.every((i) => decodeURIComponent(i.dataset.shot).includes(name + '-')),
+          blank: [...document.querySelectorAll('#scope .ph-screen')].filter((x) => x.innerText.trim().length < 20).length,
+        }
+      },
+      [dev, name],
+    )
+    check(st.n === 46 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 23 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
+    const loads = await p.evaluate(
+      ([pw, ph]) =>
+        Promise.all(
+          [...document.querySelectorAll('#scope .ph-ref')].map(
+            (el) =>
+              new Promise((resolve) => {
+                const img = new Image()
+                img.onload = () => resolve(img.naturalWidth === pw && img.naturalHeight === ph)
+                img.onerror = () => resolve(false)
+                img.src = el.src || el.dataset.shot
+              }),
+          ),
+        ).then((all) => all.filter(Boolean).length + '/' + all.length),
+      [pw, ph],
+    )
+    check(st.named && loads === `${st.refs}/${st.refs}` && st.refs === 36, area, `${name}: the overlay uses that device's screenshots`, `${loads} load at ${pw} × ${ph}`)
+  }
+  // The device sticks (saving is debounced), and Compare builds its columns for it
+  await settle(p, 450)
+  const saved = await p.evaluate(() => {
+    try {
+      return JSON.parse(localStorage.getItem('birch-ds-v1')).device
+    } catch (e) {
+      return null
+    }
+  })
+  await p.locator('#viewSeg [data-view="compare"]').click()
+  await settle(p, 100)
+  const cmp = await p.evaluate(() => [...new Set([...document.querySelectorAll('.cmp-grid .ph')].map((f) => f.dataset.device))].join(','))
+  check(cmp === 'ipad' && (await p.locator('#main .dev-bar [data-device="ipad"][aria-pressed="true"]').count()) === 1, area, 'Compare builds its phones for the chosen device', cmp)
+  await p.locator('#main .dev-bar [data-device="iphone"]').click()
+  await settle(p, 100)
+  await p.locator('#viewSeg [data-view="focus"]').click()
+  await settle(p, 100)
+  const back = await p.evaluate(() => [...new Set([...document.querySelectorAll('#scope .ph')].map((f) => f.dataset.device))].join(','))
+  check(saved === 'ipad' && back === 'iphone', area, 'The choice is saved, and the iPhone comes back', `saved ${saved}, now ${back}`)
+  // The harness renders any device at its size
+  const h = await p.context().newPage()
+  await h.setViewportSize({ width: 951, height: 669 })
+  await h.goto(PAGE + '?harness=descriptor&mode=dark&preset=T&device=duo-open')
+  await h.waitForSelector('.ph-screen')
+  const hs = await h.evaluate(() => {
+    const s = document.querySelector('.ph-screen')
+    return `${s.offsetWidth}x${s.offsetHeight} ${document.querySelector('.ph').dataset.device} ${document.querySelectorAll('.ph-screen > .sx').length}`
+  })
+  await h.close()
+  check(hs === '951x669 duo-open 2', area, 'The harness takes device= (the open Duo splits Import descriptor in two)', hs)
+}
+
 async function migration(p) {
   const area = 'Saved state'
   const v1 = await p.evaluate(() => {
@@ -618,6 +770,8 @@ async function migration(p) {
       delete x.layout
       delete x.chrome
       x.density = { gutter: 16, cardPad: 16, buttonH: 52, rowH: 58, gap: 12 }
+      // Saved before the color themes moved to the Future layout
+      x.design = 'today'
       x.type.body = 16
       x.shape.chip = 12
       params[id] = x
@@ -636,6 +790,7 @@ async function migration(p) {
   const margin = await p.evaluate(() => getComputedStyle(document.querySelector('#scope [data-screen="review"][data-mode="dark"] .pbtn').parentElement).paddingLeft)
   check(st.v === 3 && st.current === 'T' && st.view === 'focus' && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
   check(st.params.F && st.params.F.design === 'future' && (await p.locator('#presetSeg [data-preset="F"]').count()) === 1, area, 'Saved state from before Future gains the Future preset')
+  check(['A', 'B', 'C'].every((id) => st.params[id].design === 'future') && st.params.T.design === 'today', area, 'Color themes saved with the Today layout move to the Future layout', ['A', 'B', 'C', 'T'].map((id) => `${id} ${st.params[id].design}`).join(', '))
 }
 
 ;(async () => {
@@ -648,7 +803,7 @@ async function migration(p) {
   p.on('console', (m) => (m.type() === 'error' || /Missing SF Symbol/.test(m.text())) && errors.push(m.text()))
   const t0 = Date.now()
   await open(p)
-  for (const [name, fn] of [['first visit', firstVisit], ['tune audit', SKIP_TUNE ? null : tuneAudit], ['tune features', tuneFeatures], ['comments', comments], ['views', views], ['migration', migration]]) {
+  for (const [name, fn] of [['first visit', firstVisit], ['tune audit', SKIP_TUNE ? null : tuneAudit], ['tune features', tuneFeatures], ['comments', comments], ['views', views], ['devices', devices], ['migration', migration]]) {
     if (!fn) continue
     try {
       await fn(p)

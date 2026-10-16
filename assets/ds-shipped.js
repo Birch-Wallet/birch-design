@@ -49,7 +49,12 @@
   const F = (face, size, weight = 400) => `font:${weight === 'W' ? 'var(--w-title)' : weight} calc(${size}px * var(--ts)) ${FACE[face]}`
   /** One SwiftUI Text: face r(ounded) a(mount) d(efault) m(ono), size, weight, color */
   const T = (text, face, size, weight, color, extra = '', cls = '') =>
-    `<span class="t ${cls}" style="${F(face, size, weight)};color:${COLOR[color] || color};${extra}">${text}</span>`
+    `<span class="t ${cls}" style="${F(face, size, weight)};color:${COLOR[color] || color};${/line-height/.test(extra) ? '' : /\btw\b/.test(cls) ? 'line-height:1.1934;' : D.chrome === 'ipad' ? IPAD_LH : ''}${extra}">${text}</span>`
+  /** A wrapped paragraph ('tw') is one view, so its lines keep the font's exact height. A single line rounds up
+   *  to the device pixel: on the 2x iPad to a half point; the 3x screens match WebKit's 'normal' */
+  const IPAD_LH = 'line-height:round(up, 1.1934em, 0.5px);'
+  /** The system's grouped lists keep WebKit's line height on every device (their spacing is matched around it) */
+  const NLH = 'line-height:normal'
 
   /** String.chunkedAddressText: groups of four, alternating primary/secondary */
   function addr(s) {
@@ -62,9 +67,52 @@
   // System chrome
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // Devices
+  // ---------------------------------------------------------------------------
+
+  /**
+   * The devices the screens are built for, in points, each matching its own simulator screenshots.
+   * top, end and bottom are the safe-area insets the app lays out inside: the iPhone's status bar and
+   * home indicator; the Duo's trailing column, which holds the clock and a vertical tab bar (the Duo
+   * has no top inset, open or closed); the iPad's status bar and floating tab bar. `layout` is the
+   * setup wizard's SetupLayout there: compact (one full-width column), column (a centered 600pt
+   * column) or twoColumn (split at the fold). tabClear is the space a tab's scroll view keeps clear at
+   * the bottom for the tab bar, fixBottom the space a screen that doesn't scroll keeps clear there, and
+   * navTop where a pushed screen's navigation bar starts. fold is the open Duo's fold: [center, width].
+   * sendFiat is the amount being sent in fiat at that price.
+   * page is a page sheet that doesn't span the screen: its width, centered, and its top and bottom insets.
+   * wizTop is the full-screen setup wizard's top inset where it differs from top (the iPad has no tab bar there).
+   * form is the iPad's form sheet, centered on the screen. version is the build its screenshots show. fiat and age are
+   * the balance's fiat value and the refresh age each device's screenshots show. Builders read
+   * the device being built from D.
+   */
+  const DEVICES = [
+    { id: 'iphone', label: 'iPhone 17 Pro', w: 402, h: 874, scale: 3, radius: 51, shot: 'iPhone 17 Pro', top: 62, end: 0, bottom: 34, tabClear: 83, fixBottom: 83, navTop: 62, scanSide: 279.4, biometry: 'Face ID', medium: 469.7, chrome: 'iphone', layout: 'compact' },
+    { id: 'duo-closed', label: 'iPhone Duo, closed', w: 466, h: 678, scale: 3, radius: 36, shot: 'iPhone Duo (Closed)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 190, biometry: 'Touch ID', medium: 390, chrome: 'duo', layout: 'compact', status: [396.667, 85.667], tabs: 392 },
+    { id: 'duo-open', label: 'iPhone Duo, open', w: 951, h: 669, scale: 3, radius: 36, shot: 'iPhone Duo (Open)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 181, biometry: 'Touch ID', medium: 385, fiat: '$ 167.90', sendFiat: '$ 61.69', age: '2s', chrome: 'duo', layout: 'twoColumn', fold: [475.67, 40], homeIndicator: true, page: { w: 653, top: 8, bottom: 0 }, status: [881.667, 33], tabs: 383 },
+    { id: 'ipad', label: 'iPad Pro 13-inch, portrait', w: 1032, h: 1376, scale: 2, radius: 18, shot: 'iPad Pro 13-inch (M5)', top: 86, end: 0, bottom: 20, tabClear: 20, fixBottom: 20, navTop: 86, scanSide: 500, biometry: 'Face ID', medium: 741.5, fiat: '$ 167.90', sendFiat: '$ 61.69', age: '2s', page: { w: 928, top: 32, bottom: 32 }, form: { w: 580, h: 660 }, wizTop: 32, version: '0.23 (29)', chrome: 'ipad', layout: 'column' },
+  ]
+  /** How far a floating sheet's content keeps in from its trailing edge beyond the margin: on the Duo the
+   *  sheet spans the side column but its content stops at the safe area */
+  const sheetEnd = () => (D.chrome === 'duo' && !D.page ? D.end - 8 : 0)
+  const deviceOf = (id) => DEVICES.find((d) => d.id === id) || DEVICES[0]
+  let D = DEVICES[0]
+
   function statusBar(mode) {
     const a = A()
-    return `<div class="sb"><i class="sb-glyphs" style="-webkit-mask-image:url(${a.status});mask-image:url(${a.status})"></i><i class="sb-batt" style="background-image:url(${mode === 'dark' ? a.battDark : a.battLight})"></i></div>`
+    const mask = (url) => `-webkit-mask-image:url(${url});mask-image:url(${url})`
+    // The Duo's status sits in its side column: the clock, Wi-Fi and signal in the label color, the
+    // battery ring in system green and the charging bolt in the label color at 50%
+    if (D.chrome === 'duo') {
+      const d = a.duo || {}
+      return `<div class="sb-duo" style="left:${D.status[0]}px;top:${D.status[1]}px"><i style="${mask(d.ring)};background:#34C759"></i><i style="${mask(d.bolt)};background:var(--sysInk);opacity:.5"></i><i style="${mask(d.ink)};background:var(--sysInk)"></i></div>`
+    }
+    if (D.chrome === 'ipad') {
+      const p = a.ipad || {}
+      return `<div class="sb sb-ipad"><i class="sb-glyphs" style="${mask(p.mask)}"></i><i class="sb-batt" style="background-image:url(${p[mode]})"></i></div><i class="ipad-grip" style="${mask(p.grip)}"></i>`
+    }
+    return `<div class="sb"><i class="sb-glyphs" style="${mask(a.status)}"></i><i class="sb-batt" style="background-image:url(${mode === 'dark' ? a.battDark : a.battLight})"></i></div>`
   }
 
   // Tab centers and selected-pill widths measured from the simulator (pt, bar-relative)
@@ -76,6 +124,8 @@
     ['Settings', 'gearshape.fill:24:regular', 314.8, 80],
   ]
   function tabbar(active) {
+    if (D.chrome === 'duo') return sideTabbar(active)
+    if (D.chrome === 'ipad') return topTabbar(active)
     const on = TABS.find((t) => t[0] === active)
     const pill = on ? `<i class="tabpill" style="left:${on[2] - on[3] / 2}px;width:${on[3]}px"></i>` : ''
     const items = TABS.map(([label, sym, cx]) => {
@@ -84,6 +134,24 @@
         <i class="sy ${A().cls(sym)}" style="left:${-s.w / 2}px;top:${24 - s.h / 2}px"></i><span style="transform:translateX(-50%)">${label}</span></span>`
     }).join('')
     return `<nav class="tabbar"${c('tabbar', 'Tab bar')}>${pill}${items}</nav>`
+  }
+
+  /** The Duo's tab bar: a vertical Liquid Glass capsule in the side column, icons only, 50pt apart, the
+   *  selected tab in a recessed capsule */
+  function sideTabbar(active) {
+    const on = TABS.findIndex((t) => t[0] === active)
+    const items = TABS.map(([label, sym], i) => {
+      const s = A().size(sym)
+      return `<span class="vtab${i === on ? ' on' : ''}" style="top:${30.83 + 50 * i}px"><i class="sy ${A().cls(sym)}" style="left:${-s.w / 2}px;top:${-s.h / 2}px"></i></span>`
+    }).join('')
+    const pill = on >= 0 ? `<i class="vtabpill" style="top:${30.83 + 50 * on - 29.5}px"></i>` : ''
+    return `<nav class="vtabbar" style="left:${D.w - D.end + 11.67}px;top:${D.tabs}px"${c('tabbar', 'Tab bar')}>${pill}${items}</nav>`
+  }
+
+  /** The iPad's tab bar: a floating Liquid Glass capsule centered under the status bar, labels only, the
+   *  selected tab in an inner capsule */
+  function topTabbar(active) {
+    return `<nav class="htabbar"${c('tabbar', 'Tab bar')}>${TABS.map(([label]) => `<span class="htab${label === active ? ' on' : ''}">${label}</span>`).join('')}</nav>`
   }
 
   /** WalletIdenticon: 4x4 cells, palette slot + opacity, sampled from the shipped wallet */
@@ -123,9 +191,9 @@
 
   /** SendFlowView: the header stays put and each step scrolls beneath it, down to the tab bar */
   function sendScreen(withMenu, body, after = '') {
-    const top = 62 + (withMenu ? 56 : 54.95)
-    return `<div class="sx-head" style="position:absolute;top:62px;left:0;right:0;z-index:5;background:var(--ground)">${sendHeader(withMenu)}</div>
-      <div class="sx" style="top:${top}px">${body}<div style="height:83px"></div></div>${tabbar('Send')}${after}`
+    const top = D.top + (withMenu ? 56 : 54.95)
+    return `<div class="sx-head" style="position:absolute;top:${D.top}px;left:0;right:${D.end}px;z-index:5;background:var(--ground)">${sendHeader(withMenu)}</div>
+      <div class="sx" style="top:${top}px;right:${D.end}px">${body}<div style="height:${D.tabClear}px"></div></div>${tabbar('Send')}${after}`
   }
 
   /** SendStepIndicator: four 3pt bars with 9pt labels */
@@ -159,10 +227,10 @@
     return `<div class="col cx" style="gap:${S(8)}"${c('sig-slots', 'Signature progress')}><div class="row" style="gap:8px">${h}</div>${T(`${collected} of ${required} required signatures`, 'd', 13, 400, 'ink2')}</div>`
   }
 
-  /** Setup wizard ProgressBarView: six 4pt segments, gold up to the current step */
-  function wizardProgress(done) {
-    return `<div class="row" style="gap:4px;padding:8px var(--gutter) 0"${c('wizard-progress', 'Setup progress bar')}>${Array.from(
-      { length: 6 },
+  /** Setup wizard ProgressBarView: 4pt segments (six when creating a wallet), gold up to the current step */
+  function wizardProgress(done, total = 6, end = 0) {
+    return `<div class="row" style="gap:4px;padding:8px calc(var(--gutter) + ${end}px) 0 var(--gutter)"${c('wizard-progress', 'Setup progress bar')}>${Array.from(
+      { length: total },
       (_, i) => `<i style="flex:1;height:4px;border-radius:2px;background:${i < done ? 'var(--progress)' : 'var(--border)'}"></i>`,
     ).join('')}</div>`
   }
@@ -170,11 +238,26 @@
   /** Icon + label text link (SwiftUI Label in a plain Button) */
   const link = (icon, label, color, key) => `<span class="row" style="gap:7px;color:${COLOR[color]}"${c(key, label)}>${Y(icon)}${T(label, 'd', 14, 400, color)}</span>`
 
-  /** Setup-wizard footer: Back on the left, a compact primary on the right (or stacked, from Tune) */
-  const wizFooter = (back, next, padX = 32) => `<div class="row wizfoot" style="gap:16px;padding:0 var(--gutter) ${S(32)}">
-      <span class="wizback"${c('back', back)}>${T(back, 'd', 16, 400, 'ink2')}</span><span class="sp"></span>
-      <span class="row wiznext" style="min-height:calc(var(--btn-h) - 3.96px);padding:0 ${padX}px;border-radius:var(--r-btn);background:var(--brand)"${c('primary-cta', next + ' button')}>${T(next, 'r', 17, 600, 'on')}</span>
+  /** Compact button height: hbHeadline with 14pt vertical padding, 4pt under the full-width primary */
+  const COMPACT_H = 'calc(var(--btn-h) - 3.96px)'
+
+  /** Setup-wizard footer: Back on the left, a compact primary on the right (or stacked, from Tune).
+   *  Future draws Back as a compact secondary button the height of the primary. The primary's state:
+   *  'enabled'; 'disabled', hbBorder with white text like hbPrimaryButton(isEnabled: false); or Future's
+   *  'outline', brand border and text with no fill, for a step that isn't finished but can still be tapped.
+   *  true and false stand for 'disabled' and 'enabled'. */
+  const wizFooter = (back, next, padX = 32, design = 'today', state = 'enabled') => {
+    const st = state === true ? 'disabled' : state === false ? 'enabled' : state
+    const filled = st === 'enabled'
+    return `<div class="row wizfoot" style="gap:16px;padding:0 var(--gutter) ${S(32)}">
+      ${
+        design === 'future'
+          ? `<span class="row wizback sbtn" style="min-height:${COMPACT_H};padding:0 32px"${c('back', back + ' button')}>${T(back, 'r', 17, 600, 'currentColor')}</span>`
+          : `<span class="wizback"${c('back', back)}>${T(back, 'd', 16, 400, 'ink2')}</span>`
+      }<span class="sp"></span>
+      <span class="row wiznext${filled ? '' : ' is-' + st}" style="min-height:${COMPACT_H};padding:0 ${st === 'outline' ? padX - 1.5 : padX}px;border-radius:var(--r-btn)${filled ? ';background:var(--brand)' : ''}"${c('primary-cta', next + (filled ? ' button' : ` button, ${st === 'outline' ? 'outlined' : st}`))}>${T(next, 'r', 17, 600, filled ? 'on' : 'currentColor')}</span>
     </div>`
+  }
 
   // ---------------------------------------------------------------------------
   // Screens
@@ -188,7 +271,15 @@
     ['out', 'Sent', 'March 20, 2026 at 12:23 AM', '5,455'],
     ['out', 'Sent', 'March 20, 2026 at 12:23 AM', '5,971'],
     ['in', 'Received', 'March 20, 2026 at 12:23 AM', '5,436'],
-    ['in', 'Received', 'March 18, 2026 at 9:10 AM', '6,613'],
+    ['out', 'Sent', 'March 20, 2026 at 12:23 AM', '2,613'],
+    // The rest show on the taller screens
+    ['out', 'Sent', 'March 20, 2026 at 12:23 AM', '5,702'],
+    ['out', 'Sent', 'March 19, 2026 at 3:44 PM', '6,863'],
+    ['out', 'Sent', 'March 19, 2026 at 2:19 PM', '5,456'],
+    ['out', 'Sent', 'March 15, 2026 at 10:18 PM', '35,923'],
+    ['out', 'Sent', 'March 15, 2026 at 8:21 AM', '25,819'],
+    ['in', 'Received', 'March 12, 2026 at 4:07 PM', '141,265'],
+    ['out', 'Sent', 'March 11, 2026 at 6:52 PM', '3,217'],
   ]
 
   function txRow([dir, title, date, amt], i) {
@@ -204,39 +295,159 @@
         ${T(`<span class="sgn">${sign}</span>${amt} sats`, 'm', 14, 400, amtColor, '', `amt${isIn ? ' in' : ''}`)}
         <span class="row" style="gap:4px"><span style="color:var(--success);display:flex">${Y('checkmark.circle.fill:10:regular')}</span>${T('6+ conf', 'd', 10, 400, 'ink2')}</span>
       </div>
-      <span class="txchev">${Y('chevron.right:15:semibold')}</span>
+      <span class="txchev">${Y(D.chrome !== 'iphone' ? 'chevron.right:13.5:semibold' : 'chevron.right:15:semibold')}</span>
     </div>`
   }
 
-  function home(mode) {
+  /** The wallet picker as TransactionListView opens it: a 35% black scrim over the screen (the tab bar
+   *  stays clear) and a floating panel 60pt below the safe area, 35pt in from each side, its list capped
+   *  at 310pt. The active wallet's row takes a 12% brand tint */
+  function walletPickerPanel() {
+    return `<div style="position:absolute;inset:0;background:rgba(0, 0, 0, 0.35);z-index:30"></div>
+      <div class="col" style="position:absolute;left:35px;right:${35 + D.end}px;top:${D.top + 60}px;z-index:35;border-radius:var(--r-card);background:var(--floating);box-shadow:0 4px 24px rgba(0, 0, 0, 0.25);overflow:hidden;align-items:stretch"${c('wallet-picker-panel', 'Wallet picker')}>
+        <div class="row" style="padding:12px 14px">${T('Edit', 'd', 15, 400, 'ink2')}<span class="sp"></span>${T('Wallets', 'r', 17, 600, 'ink', LH)}<span class="sp"></span>${T('Add', 'd', 15, 400, 'brand')}</div>
+        <div class="divider"></div>
+        <div style="height:310px">
+          <div class="row" style="gap:12px;padding:15px 14px;background:color-mix(in srgb, var(--brand) 12%, transparent)"${c('wallet-row', 'Wallet row: Birch, active')}>
+            ${identicon(32)}
+            <div class="col cx" style="gap:4px;flex:none"><span class="nbadge" style="--nb:var(--net_testnet4)">Testnet4</span>${T('1-of-2', 'd', 13, 400, 'ink2')}</div>
+            ${T('Birch', 'd', 16, 400, 'ink')}
+          </div>
+        </div>
+      </div>`
+  }
+
+  /** ProgressView as UIKit draws it: eight 2.4pt spokes in a 20pt box, in the tab bar's tint. It
+   *  animates; this is one frame, the brightest spoke on top */
+  function spinner() {
+    const ops = [0.85, 0.27, 0.27, 0.27, 0.27, 0.41, 0.56, 0.7]
+    const spokes = ops
+      .map((o, i) => {
+        const a = (i * Math.PI) / 4
+        const p = (r) => `${(10 + r * Math.sin(a)).toFixed(3)} ${(10 - r * Math.cos(a)).toFixed(3)}`
+        return `<path d="M${p(4.53)}L${p(8.8)}" style="stroke-opacity:${o}"/>`
+      })
+      .join('')
+    return `<svg width="20" height="20" viewBox="0 0 20 20" style="display:block;fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linecap:round"${c('spinner', 'Loading spinner')}>${spokes}</svg>`
+  }
+
+  /** SwiftUI's ContentUnavailableView in the system label colors: a 40pt symbol, then the title (20pt bold)
+   *  and the description (20pt), which wraps inside the view's own margins */
+  function unavailable(icon, title, description, key) {
+    return `<div class="col cx" style="align-items:center"${c(key, title)}>
+      <span style="color:var(--sysInk2);display:flex">${Y(icon)}</span>
+      ${T(title, 'd', 20, 700, 'var(--sysInk)', 'line-height:calc(25px * var(--ts));margin-top:17.67px')}
+      ${T(description, 'd', 20, 400, 'var(--sysInk2)', `line-height:calc(25px * var(--ts));max-width:${D.layout === 'compact' ? 'calc(258px * var(--ts))' : 'none'};margin-top:2px`, 'tw')}
+    </div>`
+  }
+
+  /** SyncStatusDot: an 8pt dot on a 10% tint; syncing adds a 16pt halo at 30% (it pulses) in the brand color */
+  function syncDot(syncing) {
+    const col = syncing ? 'var(--brand)' : 'var(--success)'
+    return `<span style="position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, ${col} 10%, transparent)"${c('sync-dot', syncing ? 'Sync status: syncing' : 'Sync status')}><i style="width:8px;height:8px;border-radius:50%;background:${col}"></i>${
+      syncing ? `<i style="position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb, ${col} 30%, transparent)"></i>` : ''
+    }</span>`
+  }
+
+  /** TransactionListView. `state` is 'list' (the shipped screenshot), 'loading' (a new wallet's first sync:
+   *  no transactions yet, so a spinner 150pt down) or 'empty' (synced with nothing in it: the No
+   *  Transactions view 100pt down, its symbol a further 15.67pt inside it). Both are measured from the
+   *  view built in the simulator */
+  function home(mode, design, picker = false, state = 'list', age = null) {
+    const list = state === 'list'
+    const syncing = state === 'loading'
+    const status = syncing ? 'Scanning addresses…' : `Last refreshed ${age || D.age || (mode === 'light' && list ? '2s' : '1s')} ago`
+    const content = list
+      ? `<div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>`
+      : syncing
+        ? `<div class="row" style="justify-content:center;padding-top:150.67px">${spinner()}</div>`
+        : `<div style="padding-top:115.67px">${unavailable('bitcoinsign.circle:41:regular', 'No Transactions', 'Time to acquire the world’s best money', 'no-transactions')}</div>`
     return `<div class="sx">
-      <div style="background:var(--hero);padding:78px ${M16} ${S(16)};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
+      <div style="background:var(--hero);padding:${D.top + 16}px calc(${M16} + ${D.end}px) ${S(16)} ${M16};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
         <div class="row" style="height:44px">
           <span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)"${c('wallet-menu', 'Wallet menu')}>${Y('ellipsis:20:regular')}</span>
           <span class="sp"></span>
           <span class="row" style="gap:8px;padding:8px 12px;border-radius:calc(var(--r-chip) * 1.375);background:color-mix(in srgb, var(--ink) 8%, transparent)"${c('wallet-picker', 'Wallet picker')}>
-            ${identicon(24)}${T('Birch', 'r', 17, 600, 'ink')}<span style="color:var(--ink2);display:flex">${Y('chevron.down:12:semibold')}</span></span>
+            ${identicon(24)}${T('Birch', 'r', 17, 600, 'ink')}<span style="color:var(--ink2);display:flex">${Y(picker ? 'chevron.up:12:semibold' : 'chevron.down:12:semibold')}</span></span>
           <span class="sp"></span>
-          <span style="width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, var(--success) 10%, transparent)"${c('sync-dot', 'Sync status')}><i style="width:8px;height:8px;border-radius:50%;background:var(--success)"></i></span>
+          ${syncDot(syncing)}
         </div>
-        <div class="col cx" style="gap:2px"${c('balance', 'Balance')}>${T('193,885 sats', 'a', 36, 700, 'ink')}${T('$ 167.85', 'd', 14, 400, 'ink2')}</div>
+        <div class="col cx" style="gap:2px"${c('balance', 'Balance')}>${T(list ? '193,885 sats' : '0 sats', 'a', 36, 700, 'ink')}${T(list ? D.fiat || '$ 167.85' : '$ 0.00', 'd', 14, 400, 'ink2')}</div>
         <div class="row">
           <span class="nbadge" style="--nb:var(--net_testnet4)"${c('network-badge', 'Network badge')}>Testnet4</span><span class="sp"></span>
-          ${T(`Last refreshed ${mode === 'light' ? '2s' : '1s'} ago`, 'd', 11, 400, 'ink2')}
+          ${T(status, 'd', 11, 400, 'ink2', '', '')}
         </div>
       </div>
-      <div style="padding:${S(12)} ${M16} ${S(4)}">${T('Transactions', 'r', 17, 600, 'ink')}</div>
-      <div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>
-    </div>${tabbar('Transactions')}`
+      <div style="padding:${S(12)} calc(${M16} + ${D.end}px) ${S(4)} ${M16}">${T('Transactions', 'r', 17, 600, 'ink')}</div>
+      <div style="margin-right:${D.end}px">${content}</div>
+    </div>${picker ? walletPickerPanel() : ''}${tabbar('Transactions')}`
   }
 
-  function sendBody() {
-    return `
-      <div style="padding-bottom:4px">${steps(0)}</div>
-      <div class="card col" style="padding:var(--pad);gap:${S(12)};align-items:stretch"${c('recipient-card', 'Recipient card')}>
+  const homeLoading = (mode, design) => home(mode, design, false, 'loading')
+  const homeEmpty = (mode, design) => home(mode, design, false, 'empty')
+
+  /** A sheet's toolbar as the app draws it: HBBarButtonStyle buttons 21pt down and 16pt in (the
+   *  prominent one in the brand fill) around the inline title in the system label color. The sheet's
+   *  content starts 70pt down */
+  function sheetNav(title, leading, trailing) {
+    const btn = (b, side) => (b ? `<span class="barbtn${b.prominent ? ' on' : ''}" style="${side}:${D.form ? 10 : 16}px"${c(b.key, `Bar button: ${b.label}`)}>${b.label}</span>` : '')
+    // The Duo sets the title beside the leading button, 2pt lower, and the trailing button against the safe area
+    if (D.chrome === 'duo' && !D.page)
+      return `<div class="snav lead" style="right:${sheetEnd()}px">${btn(leading, 'left')}<span class="t snavtitle"${c('nav-title', 'Navigation title')}>${title}</span>${trailing ? btn(trailing, 'right').replace('right:16px', 'margin-left:auto') : ''}</div>`
+    // A Duo page sheet centers the title, with the Duo's offsets
+    return `<div class="snav${D.chrome === 'duo' ? ' low' : ''}">${btn(leading, 'left')}<span class="t snavtitle"${c('nav-title', 'Navigation title')}>${title}</span>${btn(trailing, 'right')}</div>`
+  }
+
+  /** A full-height sheet's frame: under the iPhone's status bar; 8pt in from the Duo's top and sides; or a
+   *  page sheet centered on the screen */
+  const sheetFrame = () =>
+    D.page
+      ? ` style="top:${D.page.top}px;bottom:${D.page.bottom}px;left:${(D.w - D.page.w) / 2}px;right:auto;width:${D.page.w}px${D.page.bottom ? ';border-radius:var(--r-sheet)' : ''}"`
+      : D.chrome === 'duo' ? ' style="top:8px;left:8px;right:8px"' : ''
+
+  /** The full-screen wizard's top inset, and the 40pt the steps add on top in the iPad's readable column */
+  const wizTop = () => D.wizTop ?? D.top
+  const colTop = () => (D.layout === 'column' ? 40 : 0)
+
+  /** Where a sheet's content starts under its toolbar */
+  const sheetTop = () => (D.chrome === 'duo' ? 74 : D.form ? 64 : 70)
+
+  /** BumpFeeView on its first step, a full-height sheet over the transaction: the original fee, the new
+   *  rate card (open, as it starts, with Custom prefilled at the minimum) and Create Replacement */
+  function bumpFee() {
+    const detail = (k, v, color) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'm', 14, 400, color, '', 'amt')}</div>`
+    const radio = (on) => `<span style="color:${on ? 'var(--brandInk)' : 'var(--border)'};display:flex">${Y(on ? 'checkmark.circle.fill:18:regular' : 'circle:18:regular')}</span>`
+    const preset = (name, rate) =>
+      `<div class="row" style="gap:10px;min-height:44px"${c('preset-' + name.toLowerCase(), `Fee preset: ${name}`)}>${radio(false)}${T(name, 'd', 14, 400, 'ink')}<span class="sp"></span>${T(rate, 'm', 13, 400, 'ink', '', 'amt')}</div>`
+    // Behind a page sheet, the transaction's screen and the tab bar show dimmed
+    const under = D.page ? `<div class="under-dim"><div class="sx"></div>${tabbar('Transactions')}</div><div class="scrim"></div>` : '<div class="sx setup-under" style="background:var(--ground)"></div>'
+    // The iPad shows it as a form sheet in the middle of the screen
+    const frame = D.form ? ` style="top:${(D.h - D.form.h) / 2}px;bottom:auto;height:${D.form.h}px;left:${(D.w - D.form.w) / 2}px;right:auto;width:${D.form.w}px;border-radius:var(--r-sheet)"` : sheetFrame()
+    return `${under}<div class="ssheet${D.form ? ' form' : ''}"${frame}${D.page ? ' data-z="page"' : ''}>${sheetNav('Bump Fee', { label: 'Cancel', key: 'cancel' })}
+      <div class="sx" style="top:${sheetTop()}px"><div class="col" style="gap:${S(20)};padding:${S(16)} calc(${M16} + ${sheetEnd()}px) ${S(16)} ${M16};align-items:stretch">
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('original-fee', 'Original fee card')}>
+          ${detail('Original Fee', '159 sats', 'ink')}${detail('Original Fee Rate', '0.5 sat/vB', 'ink')}${detail('Minimum to Bump', '1.51 sat/vB', 'brand')}
+        </div>
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('new-rate', 'New fee rate card')}>
+          <div class="row" style="gap:8px">${T('New Fee Rate', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T('1.51 sat/vB', 'm', 14, 400, 'ink', '', 'amt')}
+            <span class="row" style="gap:4px;color:var(--brandInk)"${c('rate-menu', 'Fee preset menu')}>${T('Custom', 'd', 14, 400, 'brand')}${Y('chevron.down:10:semibold')}</span></div>
+          <div class="divider"></div>
+          <div class="col" style="gap:${S(10)};align-items:stretch">
+            ${preset('Fast', '0.1 sat/vB')}${preset('Medium', '0.1 sat/vB')}${preset('Slow', '0.1 sat/vB')}
+            <div class="row" style="gap:10px;min-height:44px"${c('preset-custom', 'Fee preset: Custom, selected')}>${radio(true)}${T('Custom', 'd', 14, 400, 'ink')}<span class="sp"></span>
+              <span class="nest" style="width:76px;padding:7px 8px;display:flex;justify-content:flex-end"${c('custom-rate', 'Custom rate field')}>${T('1.51', 'm', 14, 400, 'ink', 'line-height:1.1934', 'amt')}</span>${T('sat/vB', 'd', 13, 400, 'ink2')}</div>
+          </div>
+        </div>
+        <div style="padding:0 24px"><span class="pbtn"${c('primary-cta', 'Primary button: Create Replacement')}>Create Replacement</span></div>
+      </div></div></div>`
+  }
+
+  /** RecipientCard, filled: the label as the card's title, the network chip and the elided address */
+  function recipientFilled() {
+    return `<div class="card col" style="padding:var(--pad);gap:${S(12)};align-items:stretch"${c('recipient-card', 'Recipient card')}>
         <div class="row" style="gap:9px">
-          <div class="col" style="gap:4px;align-items:flex-start">${T('Label · optional', 'd', 11, 400, 'ink2')}
-            <span style="position:relative;display:block">${T('Test Transaction', 'd', 16, 600, 'ink')}<i style="position:absolute;left:0;right:0;bottom:-4px;height:1px;background:var(--border)"></i></span></div>
+          <div class="col" style="gap:4px;align-items:flex-start">${T('Label · optional', 'd', 11, 400, 'ink2', LH)}
+            <span style="position:relative;display:block">${T('Test Transaction', 'd', 16, 600, 'ink', LH)}<i style="position:absolute;left:0;right:0;bottom:-4px;height:1px;background:var(--border)"></i></span></div>
           <span class="sp" style="min-width:8px"></span>
           <span class="t" style="${F('d', 11, 600)};color:var(--net_testnet4);padding:5px 9px;border-radius:var(--r-chip);background:color-mix(in srgb, var(--net_testnet4) 15%, transparent)"${c('network-chip', 'Network chip')}>Testnet4</span>
         </div>
@@ -247,40 +458,98 @@
             <span class="ub" style="--uc:var(--u-brand);--ua:15%;width:40px;height:40px;border-radius:var(--r-nested);display:grid;place-items:center"${c('scan-address', 'Scan address')}>${Y('qrcode.viewfinder:17:semibold')}</span>
           </div>
         </div>
-      </div>
-      <div class="card col" style="padding:calc(var(--pad) + 4px);gap:${S(14)};align-items:stretch"${c('amount-card', 'Amount card')}>
+      </div>`
+  }
+
+  /** RecipientCard, empty: "Send to" with the Add label link, Scan QR and Paste, and the
+   *  "or type an address" button that opens the address field */
+  function recipientEmpty() {
+    return `<div class="card col" style="padding:var(--pad);gap:${S(12)};align-items:stretch"${c('recipient-card', 'Recipient card')}>
+        <div class="row" style="gap:9px">${T('Send to', 'd', 13, 400, 'ink2', LH)}<span class="sp" style="min-width:8px"></span>
+          <span style="position:relative;display:block"${c('add-label', 'Add label')}>${T('Add label', 'd', 13, 400, 'ink2', LH)}<i style="position:absolute;left:0;right:0;bottom:-4px;height:1px;background:var(--border)"></i></span></div>
+        <div class="col" style="gap:${S(12)};align-items:stretch">
+          <div class="row" style="gap:10px">
+            <span class="row" style="flex:1 1 0;gap:10px;justify-content:center;min-height:56px;border-radius:var(--r-nested);background:var(--brand);color:var(--onBrand)"${c('scan-qr', 'Scan QR button')}>${Y('qrcode.viewfinder:18:semibold')}${T('Scan QR', 'd', 16, 700, 'on')}</span>
+            <span class="row nest" style="flex:1 1 0;justify-content:center;min-height:56px"${c('paste-address', 'Paste button')}>${T('Paste', 'd', 16, 700, 'link2')}</span>
+          </div>
+          <div class="row" style="justify-content:center;min-height:28px"${c('type-address', 'Type an address')}>${T('or type an address', 'd', 13, 400, 'ink2')}</div>
+        </div>
+      </div>`
+  }
+
+  /** AmountHeroCard. Empty, the TextField shows its "0" placeholder and there is no conversion line.
+   *  Holding text, the field measures 1.33pt taller than with only its placeholder (from the screenshots) */
+  function amountCard(amount, conversion, spendable) {
+    return `<div class="card col" style="padding:calc(var(--pad) + 4px);gap:${S(14)};align-items:stretch"${c('amount-card', 'Amount card')}>
         <div class="row">${T('Amount', 'd', 13, 400, 'ink2')}<span class="sp"></span>
           <div class="row" style="gap:8px">
             <span class="t ub" style="--uc:var(--u-brand);--ua:15%;${F('m', 12, 700)};padding:9px 14px;border-radius:var(--r-chip)"${c('max', 'MAX pill')}>MAX</span>
             <span class="row nest" style="gap:4px;padding:8px 12px;border-radius:var(--r-chip);color:var(--ink)"${c('unit', 'Unit pill')}>${T('sats', 'd', 12, 600, 'ink')}${Y('chevron.up.chevron.down:9:bold')}</span>
           </div></div>
-        <div class="row" style="gap:10px;align-items:baseline"${c('amount-field', 'Amount field')}>${T('71234', 'm', 40, 400, 'ink', '', 'amt')}<span class="sp"></span>${T('sats', 'm', 18, 400, 'ink2', '', 'amt')}</div>
-        <div class="row" style="gap:10px">${T('0.00071234 BTC', 'm', 13, 400, 'ink2', '', 'amt')}<i style="width:3px;height:3px;border-radius:50%;background:var(--border)"></i>${T('≈ $ 61.67', 'm', 13, 400, 'ink2', '', 'amt')}</div>
+        <div class="row" style="gap:10px;align-items:baseline${amount ? ';padding-bottom:1.33px' : ''}"${c('amount-field', 'Amount field')}>${amount ? T(amount, 'm', 40, 400, 'ink', '', 'amt') : T('0', 'm', 40, 400, 'var(--sysInk3)', '', 'amt')}<span class="sp"></span>${T('sats', 'm', 18, 400, 'ink2', '', 'amt')}</div>
+        ${conversion ? `<div class="row" style="gap:10px">${T(conversion[0], 'm', 13, 400, 'ink2', '', 'amt')}<i style="width:3px;height:3px;border-radius:50%;background:var(--border)"></i>${T(conversion[1], 'm', 13, 400, 'ink2', '', 'amt')}</div>` : ''}
         <div class="divider"></div>
-        <div class="row">${T('Spendable', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T('115,823 sats', 'm', 13, 400, 'ink', '', 'amt')}</div>
-      </div>
-      <div class="card col" style="align-items:stretch"${c('decisions', 'Fee and coins card')}>
+        <div class="row">${T('Spendable', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(spendable, 'm', 13, 400, 'ink', '', 'amt')}</div>
+      </div>`
+  }
+
+  /** DecisionStack: the Fee row (with the fee preset's badge unless it's custom) and the Coins row */
+  function decisionsCard(feeSubtitle, feeBadge) {
+    const badge = feeBadge
+      ? `<span class="t ub" style="--uc:var(--u-brand);--ua:15%;${F('d', 13, 600)};padding:8px 12px;border-radius:var(--r-chip)"${c('fee-badge', 'Fee preset badge')}>${feeBadge}</span>`
+      : ''
+    return `<div class="card col" style="align-items:stretch"${c('decisions', 'Fee and coins card')}>
         <div class="row" style="gap:12px;padding:var(--pad) calc(var(--pad) + 2px);min-height:calc(var(--pad) * 4)"${c('fee-row', 'Fee row')}>
-          <div class="col" style="gap:4px;flex:1;align-items:flex-start">${T('Fee', 'd', 15, 600, 'ink')}${T('0.51 sat/vB · 252 sats', 'm', 12, 400, 'ink2', '', 'amt')}</div>
-          <span style="color:var(--ink2);display:flex">${Y('chevron.right:13:semibold')}</span></div>
+          <div class="col" style="gap:4px;flex:1;align-items:flex-start">${T('Fee', 'd', 15, 600, 'ink', LH)}${T(feeSubtitle, 'm', 12, 400, 'ink2', LH, 'amt')}</div>
+          ${badge}<span style="color:var(--ink2);display:flex">${Y('chevron.right:13:semibold')}</span></div>
         <div class="divider"></div>
         <div class="row" style="gap:12px;padding:var(--pad) calc(var(--pad) + 2px);min-height:calc(var(--pad) * 4)"${c('coins-row', 'Coins row')}>
-          <div class="col" style="gap:4px;flex:1;align-items:flex-start">${T('Coins', 'd', 15, 600, 'ink')}${T('Automatic — optimal UTXOs', 'm', 12, 400, 'ink2', '', 'amt')}</div>
+          <div class="col" style="gap:4px;flex:1;align-items:flex-start">${T('Coins', 'd', 15, 600, 'ink', LH)}${T('Automatic — optimal UTXOs', 'm', 12, 400, 'ink2', LH, 'amt')}</div>
           <span style="color:var(--ink2);display:flex">${Y('chevron.right:13:semibold')}</span></div>
+      </div>`
+  }
+
+  /** SendFooter: the total (once there is an amount), Review, and what comes next or what is missing.
+   *  Reset appears once anything has been entered. */
+  function sendFooter(total, reason) {
+    return `<div class="col" style="gap:${S(10)};padding-top:4px;align-items:stretch">
+        ${total ? `<div class="row" style="padding:0 4px"${c('total', 'Total with fee')}>${T('Total with fee', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(total, 'm', 15, 700, 'ink', '', 'amt')}</div>` : ''}
+        <span class="pbtn${total ? '' : ' is-disabled'}"${c('primary-cta', total ? 'Primary button: Review' : 'Primary button: Review, disabled')}>Review</span>
+        <div class="row" style="justify-content:center">${T(reason, 'd', 12, 400, 'ink2')}</div>
       </div>
-      <div class="col" style="gap:${S(10)};padding-top:4px;align-items:stretch">
-        <div class="row" style="padding:0 4px"${c('total', 'Total with fee')}>${T('Total with fee', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T('71,486 sats', 'm', 15, 700, 'ink', '', 'amt')}</div>
-        <span class="pbtn"${c('primary-cta', 'Primary button: Review')}>Review</span>
-        <div class="row" style="justify-content:center">${T('Next: Review Transaction', 'd', 12, 400, 'ink2')}</div>
-      </div>
-      <div class="row" style="justify-content:center;padding-top:4px">${T('Reset', 'd', 14, 400, 'ink2')}</div>
+      ${total ? `<div class="row" style="justify-content:center;padding-top:4px">${T('Reset', 'd', 14, 400, 'ink2')}</div>` : ''}
       <div style="height:8px"></div>`
+  }
+
+  const walletPicker = (mode, design) => home(mode, design, true)
+
+  function sendBody() {
+    return `
+      <div style="padding-bottom:4px">${steps(0)}</div>
+      ${recipientFilled()}
+      ${amountCard('71234', ['0.00071234 BTC', '≈ $ 61.67'], '115,823 sats')}
+      ${decisionsCard('0.51 sat/vB · 252 sats')}
+      ${sendFooter('71,486 sats', 'Next: Review Transaction')}`
+  }
+
+  /** The Send tab before anything is entered (SendAmountView with an empty recipient) */
+  function sendEmptyBody() {
+    return `
+      <div style="padding-bottom:4px">${steps(0)}</div>
+      ${recipientEmpty()}
+      ${amountCard(null, null, '193,885 sats')}
+      ${decisionsCard('0.1 sat/vB', 'Medium')}
+      ${sendFooter(null, 'Enter an address and amount to continue')}`
   }
 
   const sendStack = (body) => `<div class="col" style="gap:${S(14)};padding:${S(12)} var(--gutter) 0;align-items:stretch">${body}</div>`
 
   function send() {
     return sendScreen(true, sendStack(sendBody()))
+  }
+
+  function sendEmpty() {
+    return sendScreen(true, sendStack(sendEmptyBody()))
   }
 
   function feeOption(name, rate) {
@@ -292,9 +561,9 @@
   function fee() {
     return sendScreen(true, sendStack(sendBody().replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')), `
     <div class="scrim"></div>
-    <div class="fsheet"${c('fee-sheet', 'Fee sheet')}>
+    <div class="fsheet fee"${c('fee-sheet', 'Fee sheet')}>
       <i class="grabber"></i>
-      <div class="col" style="gap:${S(16)};padding:${S(24)} var(--gutter);align-items:stretch">
+      <div class="col" style="gap:${S(16)};padding:${S(24)} calc(var(--gutter) + ${sheetEnd()}px) ${S(24)} var(--gutter);align-items:stretch">
         <div class="row" style="align-items:baseline"${c('sheet-title', 'Sheet title')}>${T('Network Fee', 'r', 22, 'W', 'ink')}<span class="sp"></span>${T('~496 vB tx', 'm', 12, 400, 'ink2', '', 'amt')}</div>
         <div class="col" style="gap:${S(10)};align-items:stretch">
           ${feeOption('Fast', '0.1 sat/vB')}${feeOption('Medium', '0.1 sat/vB')}${feeOption('Slow', '0.1 sat/vB')}
@@ -354,7 +623,7 @@
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('review-card', 'Review card')}>
           ${reviewItem('To', `<span class="t tw" style="${F('m', 12)};line-height:normal">${addr(TO)}</span>`, 'to')}
           ${reviewItem('Label', `<span class="row" style="gap:4px"><span style="color:var(--info);display:flex">${Y('tag.fill:10:regular')}</span>${T('Test Transaction', 'd', 16, 400, 'ink')}</span>`, 'label')}
-          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T('$ 61.67', 'd', 13, 400, 'ink2')}</span>`, 'amount')}
+          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T(D.sendFiat || '$ 61.67', 'd', 13, 400, 'ink2')}</span>`, 'amount')}
           ${reviewItem('Change', T('4,443 sats', 'm', 14, 400, 'ink', '', 'amt'), 'change')}
           ${reviewItem('Change Address', `<span class="t tw" style="${F('m', 12)}">${addr(CHANGE)}</span>`, 'change-address')}
           ${reviewItem('Change Derivation Path', T("m/48'/1'/0'/2'/1/2", 'm', 12, 400, 'ink'), 'change-path')}
@@ -375,10 +644,15 @@
 
   function sign(mode) {
     const bits = A().qr && A().qr['psbt_' + mode]
+    // PSBTDisplayView: the QR square fills the width, capped at 700pt and at the visible height under the
+    // 71.5pt signature progress (less 40pt); beside the Duo's side column it keeps 16pt from each edge
+    const qrInset = D.end > 0 ? 16 : 0
+    const viewport = D.h - D.top - 54.95 - D.fixBottom
+    const side = Math.min(D.w - D.end - 2 * qrInset, 700, Math.max(200, viewport - 71.5 - 40))
     return sendScreen(false, `
       <div class="col" style="gap:${S(16)};padding-top:${S(8)};align-items:stretch">
         ${sigSlots(0, 2)}
-        <div class="qrbox" style="width:402px;height:402px;padding:5px"${c('psbt-qr', 'Animated PSBT QR')}><div class="qr" style="width:392px;height:392px">${qrSVG(bits)}</div></div>
+        <div class="row" style="justify-content:center;padding:0 ${qrInset}px"><div class="qrbox" style="width:${side}px;height:${side}px;padding:5px"${c('psbt-qr', 'Animated PSBT QR')}><div class="qr" style="width:${side - 10}px;height:${side - 10}px">${qrSVG(bits)}</div></div></div>
         <div class="row" style="justify-content:center">${T('Scan this QR code with your signing device', 'd', 14, 400, 'ink2')}</div>
         <div class="row" style="padding:0 var(--gutter);min-height:24.33px"${c('advanced', 'Advanced disclosure')}>${T('Advanced', 'd', 14, 400, 'ink2')}<span class="sp"></span><span style="color:var(--ink);display:flex">${Y('chevron.right:17:semibold')}</span></div>
         ${gutterBox(`<span class="pbtn"${c('primary-cta', 'Primary button: Scan Signed PSBT')}>Scan Signed PSBT</span>`)}
@@ -387,23 +661,30 @@
           ${link('tray.and.arrow.down.fill:14:regular', 'Save PSBT', 'tert', 'save')}
         </div>
         <div class="row" style="justify-content:center">${link('doc.on.doc:14:regular', 'Copy Base64', 'link2', 'copy-b64')}</div>
-        ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch">
+        ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('psbt-summary', 'Transaction summary')}>
           ${reviewItem('To', `<span class="t tw" style="${F('m', 12)}">${addr(TO)}</span>`)}
-          ${reviewItem('Amount', T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt'))}
+          ${reviewItem('Label', `<span class="row" style="gap:4px"><span style="color:var(--info);display:flex">${Y('tag.fill:10:regular')}</span>${T('Test Transaction', 'd', 16, 400, 'ink')}</span>`)}
+          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T(D.sendFiat || '$ 61.67', 'd', 13, 400, 'ink2')}</span>`)}
+          ${reviewItem('Fee Rate', T('0.51 sat/vB', 'm', 14, 400, 'ink', '', 'amt'))}
+          ${reviewItem('Total Fee', `<span class="row" style="gap:6px">${T('159 sats', 'm', 14, 400, 'ink', '', 'amt')}${T('$ 0.14', 'd', 13, 400, 'ink2')}</span>`)}
+          ${reviewItem('Inputs', T('2 UTXOs', 'm', 14, 400, 'ink', '', 'amt'))}
+          ${reviewItem('Inputs Amount', T('75,836 sats', 'm', 16, 700, 'ink', '', 'amt'))}
+          ${reviewItem('Change', T('4,443 sats', 'm', 14, 400, 'ink', '', 'amt'))}
+          ${reviewItem('Signatures Required', T('2', 'm', 14, 400, 'ink', '', 'amt'))}
         </div>`)}
       </div>`)
   }
 
   function scan() {
     // URScannerSheet: corners at 70% of its side, 24pt arms, 3pt gold strokes. The scanner is
-    // flexible; on this screen height it settles at 279.4pt rather than the 354pt width
-    const side = 279.4
+    // flexible and shares the leftover height with the spacer under it; its side is measured per device
+    const side = D.scanSide
     const s = side * 0.7
     const o = (side - s) / 2
     const L = 24
     const d = `M${o} ${o + L}V${o}H${o + L}M${o + s - L} ${o}H${o + s}V${o + L}M${o + s} ${o + s - L}V${o + s}H${o + s - L}M${o + L} ${o + s}H${o}V${o + s - L}`
-    return `<div class="sx-head" style="position:absolute;top:62px;left:0;right:0;z-index:5;background:var(--ground)">${sendHeader(false)}</div>
-    <div class="sx" style="top:116.95px;display:flex;flex-direction:column">
+    return `<div class="sx-head" style="position:absolute;top:${D.top}px;left:0;right:${D.end}px;z-index:5;background:var(--ground)">${sendHeader(false)}</div>
+    <div class="sx" style="top:${D.top + 54.95}px;right:${D.end}px;display:flex;flex-direction:column">
       <div class="col" style="gap:${S(24)};padding-top:${S(16)};align-items:stretch;flex:1">
         ${gutterBox(steps(2))}
         <div class="row" style="justify-content:center"${c('title', 'Screen title')}>${T('Scan Signed PSBT', 'r', 22, 'W', 'ink')}</div>
@@ -415,78 +696,243 @@
         <span class="sp"></span>
         <div class="row" style="justify-content:center;padding-bottom:${S(32)}"${c('back', 'Back to QR Display')}>${T('Back to QR Display', 'd', 16, 400, 'ink2')}</div>
       </div>
-      <div style="height:83px;flex:none"></div>
+      <div style="height:${D.fixBottom}px;flex:none"></div>
     </div>${tabbar('Send')}`
   }
 
-  /** Setup screens sit in a sheet over the dimmed welcome screen. SetupWizardView pins the
-   *  progress bar above the step's ScrollView, so only the step content scrolls. */
-  function setupSheet(done, inner) {
-    // ScrollView content keeps the 34pt home-indicator inset at the bottom
-    return `<div class="sx setup-under"></div><div class="ssheet">${wizardProgress(done)}<div class="sx" style="position:absolute;top:12px;left:0;right:0;bottom:0;background:var(--ground)">${inner}<div style="height:34px"></div></div></div>`
+  /** Setup screens sit in a sheet over the dimmed wallet. SetupWizardView pins the progress bar above the
+   *  step's ScrollView, so only the step content scrolls. `step` is [done, total], or null for a step
+   *  without the bar. On the iPhone the sheet starts under the status bar; the Duo floats it 8pt in from
+   *  the top and sides, under the side column, with its content stopping at the safe area. `full` fills
+   *  the screen instead, as the wizard does on first launch. */
+  function setupSheet(step, inner, full = false) {
+    const end = full ? D.end : D.page ? 0 : D.chrome === 'duo' ? D.end - 8 : 0
+    const frame = full ? ` style="top:${wizTop()}px;border-radius:0"` : sheetFrame()
+    // ScrollView content keeps the home-indicator inset at the bottom
+    const under = full ? '' : D.page ? `<div class="under-dim">${home('dark', 'today', false, 'list', '1m').replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')}</div><div class="scrim"></div>` : '<div class="sx setup-under"></div>'
+    // The iPad keeps the step, its progress bar included, to one centered 600pt readable column
+    const col = D.layout === 'column' ? 'max-width:600px;margin-left:auto;' : ''
+    return `${under}<div class="ssheet"${frame}${D.page && !full ? ' data-z="page"' : ''}>${step ? `<div style="${col}margin-right:${col ? 'auto' : '0'}">${wizardProgress(...step, end)}</div>` : ''}<div class="sx" style="position:absolute;top:${step ? 12 : 0}px;left:0;right:0;bottom:0;background:var(--ground)"><div style="${col}margin-right:${col ? 'auto' : end + 'px'}">${inner}</div><div style="height:${full || !D.page ? D.bottom : 0}px"></div></div></div>`
+  }
+
+  /** Where a new-wallet step sits in the progress bar. Future drops Welcome, Wallet setup and
+   *  Name Your Wallet from it: Multisig configuration, Import cosigners and Verify are steps 1-3. */
+  const NEW_WALLET_STEP = {
+    today: { multisig: [3, 6], cosigner: [4, 6], verify: [6, 6] },
+    future: { multisig: [1, 3], cosigner: [2, 3], verify: [3, 3] },
   }
 
   function disclosureCard(label, key) {
     return `<div class="hcard row" style="gap:8px"${c(key, label)}><span style="color:var(--ink2);display:flex">${Y('chevron.right:12:semibold')}</span>${T(label, 'd', 13, 400, 'ink2')}<span class="sp"></span></div>`
   }
 
-  function multisig() {
-    return setupSheet(3, `
-      <div class="col" style="gap:${S(28)};align-items:stretch">
-        <div class="row" style="justify-content:center;padding-top:${S(16)}"${c('title', 'Setup title')}>${T('Multisig Configuration', 'r', 28, 'W', 'ink')}</div>
+  /** SetupNetworkPicker: a card with the segmented network picker. UISegmentedControl takes a
+   *  31pt frame and draws its 32pt track 1pt past it */
+  const networkCard = () => `<div class="hcard col cx" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
+      <div class="row" style="justify-content:center">${T('Bitcoin Network', 'd', 13, 400, 'ink2', LH)}</div>
+      <div style="height:31px"><div class="seg"${c('network-seg', 'Segmented control')}><span>Mainnet</span><span class="on">Testnet4</span><span>Testnet3</span><span>Signet</span></div></div>
+    </div>`
+
+  /** Future: the optional wallet name and the network picker share one card, both labels leading like
+   *  form fields. Empty, the name shows the "My Wallet" placeholder the wallet is saved with, in the
+   *  system placeholder color */
+  const walletNameNetworkCard = () => `<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('name-network', 'Wallet name and network card')}>
+      <div class="col" style="gap:${S(6)};align-items:stretch"${c('wallet-name', 'Wallet name field')}>
+        ${T('Wallet Name', 'd', 13, 400, 'ink2')}
+        <div class="nest" style="padding:calc(var(--fpad) + 1px) var(--fpad)">${T('My Wallet', 'd', 16, 400, 'var(--sysInk3)')}</div>
+      </div>
+      <div class="col" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
+        ${T('Bitcoin Network', 'd', 13, 400, 'ink2', LH)}
+        <div style="height:31px"><div class="seg"${c('network-seg', 'Segmented control')}><span>Mainnet</span><span class="on">Testnet4</span><span>Testnet3</span><span>Signet</span></div></div>
+      </div>
+    </div>`
+
+  function multisig(mode, design) {
+    const future = design === 'future'
+    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].multisig, `
+      <div class="col" style="gap:${S(28)};padding-top:${colTop()}px;align-items:stretch">
+        <div class="row" style="justify-content:center;padding-top:${S(16)}"${c('title', 'Setup title')}>${T('Multisig Configuration', 'r', 28, 'W', 'ink', LH)}</div>
         <div class="col cx" style="gap:${S(16)}">
           ${T('How many signatures are required?', 'd', 15, 400, 'ink2')}
           <div class="row" style="gap:12px"${c('quorum', 'M-of-N picker')}>
-            <span class="row" style="gap:4px"><span style="color:color-mix(in srgb, var(--brandInk) 70%, transparent);display:flex">${Y('chevron.up.chevron.down:14:bold')}</span>${T('2', 'r', 48, 'W', 'brand')}</span>
+            <span class="row" style="gap:4px"><span style="color:color-mix(in srgb, var(--brandInk) 70%, transparent);display:flex">${Y('chevron.up.chevron.down:14:bold')}</span>${T('2', 'r', 48, 'W', 'brand', LH)}</span>
             ${T('of', 'd', 20, 400, 'ink2')}
-            <span class="row" style="gap:4px">${T('3', 'r', 48, 'W', 'ink')}<span style="color:var(--ink2);display:flex">${Y('chevron.up.chevron.down:14:bold')}</span></span>
+            <span class="row" style="gap:4px">${T('3', 'r', 48, 'W', 'ink', LH)}<span style="color:var(--ink2);display:flex">${Y('chevron.up.chevron.down:14:bold')}</span></span>
           </div>
         </div>
         <div class="col" style="gap:${S(24)};padding:0 var(--gutter);align-items:stretch">
-          <div class="hcard col cx" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
-            <div class="row" style="justify-content:center">${T('Bitcoin Network', 'd', 13, 400, 'ink2')}</div>
-            <div class="seg"${c('network-seg', 'Segmented control')}><span>Mainnet</span><span class="on">Testnet4</span><span>Testnet3</span><span>Signet</span></div>
-          </div>
+          ${future ? walletNameNetworkCard() : networkCard()}
           ${disclosureCard('Electrum Server', 'electrum')}
           ${disclosureCard('Advanced', 'advanced')}
         </div>
-        ${wizFooter('Back', 'Next', 32)}
+        ${wizFooter('Back', 'Next', 32, design)}
       </div>`)
   }
 
-  /** A labeled field. UITextField-backed fields sit 2pt taller than a Text with the same padding */
-  function field(label, value, face, size, key, textField = true) {
-    return `<div class="col" style="gap:${S(6)};align-items:stretch"${c(key, label + ' field')}>${T(label, 'd', 13, 400, 'ink2')}
-      <div class="nest" style="padding:${textField ? 'calc(var(--fpad) + 1px)' : 'var(--fpad)'} var(--fpad)">${T(value, face, size, 400, 'ink')}</div></div>`
+  const DESCRIPTOR =
+    "wsh(sortedmulti(1,[7a13a7b1/48'/1'/0'/2']tpubDETciRzaZyqww2dSAyT2j6tWgzREyiZEY2iZDPKDtqNpSEqqFS31DZUFFTFnayx7wLUVYx3V1R2AWhhWbFrnCukKZ1kmnn83Fn2xSf7hEaH/<0;1>/*,[30a36b52/48'/1'/0'/2']tpubDF6MPv2vWsbCo8c7rk4X32BPa5yuj4niem5Pr6isrd9cSdCkYETcGUmBSFY4ekTR1CRFmjn4eoYGrwPU19FffwEpX7Tda6BBmg91aiHKpmE/<0;1>/*))"
+
+  /** The descriptor as the TextEditor wraps it: UITextView breaks after a slash or comma, and a piece longer
+   *  than a line (a key) starts a new line and breaks inside itself. A line holds as many 11pt mono
+   *  characters (6.6pt each) as the field leaves after its padding and the 5pt line-fragment insets:
+   *  42 on the iPhone. `card` is the card's width */
+  function descriptorLines(card = D.w - D.end - 48) {
+    const width = card - 32 - 34 - 10
+    // The iPad's editor fits one character fewer than the advance predicts
+    const max = Math.floor(width / 6.6) - (D.chrome === 'ipad' ? 1 : 0)
+    const pieces = DESCRIPTOR.match(/[^/,]*[/,]?/g).filter(Boolean)
+    const lines = ['']
+    for (const p of pieces) {
+      const cur = lines[lines.length - 1]
+      if (cur.length + p.length <= max) lines[lines.length - 1] = cur + p
+      else if (p.length <= max) lines.push(p)
+      else {
+        if (cur) lines.push('')
+        for (let i = 0; i < p.length; i += max) {
+          if (i) lines.push('')
+          lines[lines.length - 1] = p.slice(i, i + max)
+        }
+      }
+    }
+    return lines.map(esc)
   }
 
-  function cosigner() {
+  /** The "Expected format" line as SwiftUI wraps it: at spaces, and after a slash unless a digit follows.
+   *  A line holds as many 10pt mono characters (6pt each) as the card leaves */
+  function formatLines(card = D.w - D.end - 48) {
+    const max = Math.floor((card - 32) / 6)
+    const pieces = 'Expected format: wsh(sortedmulti(M,[fp/path]xpub/0/*,...))'.match(/.*?(?: |\/(?!\d)|$)/g).filter(Boolean)
+    const lines = ['']
+    for (const p of pieces) {
+      const cur = lines[lines.length - 1]
+      if (cur && (cur + p).trimEnd().length > max) lines.push(p)
+      else lines[lines.length - 1] = cur + p
+    }
+    return lines.map((l) => esc(l.trimEnd()))
+  }
+
+  /** In-card utilities (the button pattern): equal tonal buttons under a field, brand tint for the
+   *  most useful action and neutral for the rest */
+  const tonal = (icon, label, neutral, key) =>
+    `<span class="tbtn${neutral ? ' neutral' : ''}"${c(key, `Tonal${neutral ? ', neutral' : ''}: ${label}`)}>${Y(icon)}${T(label, 'd', 15, 600, 'currentColor')}</span>`
+
+  /** Import descriptor. Empty, the TextEditor keeps its 120pt minimum and Import is disabled until there is text.
+   *  On the open Duo the step splits in two: the step, scanning and the settings on the left with Back at
+   *  the bottom; the descriptor filling the height on the right, with Import under it */
+  function descriptorImport(mode, design, empty = false) {
+    const future = design === 'future'
+    const two = D.layout === 'twoColumn'
+    const cardW = two ? twoCols()[1][1] - twoCols()[1][0] : Math.min(D.w - D.end, D.layout === 'column' ? 600 : Infinity) - 48
+    // Future moves Scan and Paste into the card as in-card utilities, and the format becomes the
+    // empty field's placeholder instead of a line under it
+    const header = future
+      ? T('Output Descriptor', 'd', 13, 400, 'ink2')
+      : `<div class="row">${T('Output Descriptor', 'd', 13, 400, 'ink2')}<span class="sp"></span>
+            <span class="row" style="gap:6px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'link2')}</span></div>`
+    const text = empty
+      ? future
+        ? T('wsh(sortedmulti(M,[fp/path]xpub/0/*,...))', 'm', 11, 400, 'var(--sysInk3)', 'word-break:break-all;line-height:1.1945', 'tw')
+        : ''
+      : T(descriptorLines(cardW).join('<br>'), 'm', 11, 400, 'ink', 'word-break:break-all;line-height:1.1945', 'tw')
+    const card = `<div class="hcard col" style="gap:${S(8)};align-items:stretch${two ? ';flex:1 0 auto' : ''}"${c('descriptor', 'Output descriptor')}>
+          ${header}
+          <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) calc(var(--fpad) + 9px);min-height:144px${two ? ';flex:1 0 auto' : ''}"${c('descriptor-text', 'Descriptor text editor')}>${text}</div>
+          ${future ? '' : T(formatLines(cardW).join('<br>'), 'm', 10, 400, 'ink2', 'word-break:break-all', 'tw')}
+          ${
+            future
+              ? `<div class="row" style="gap:8px;margin-top:${S(4)}"${c('descriptor-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>`
+              : ''
+          }
+        </div>`
+    const scan = future ? '' : `<div class="row sbtn" style="gap:8px;min-height:var(--btn-h)"${c('scan', 'Secondary button: Scan Descriptor QR')}>${Y('qrcode.viewfinder:17:semibold')}${T('Scan Descriptor QR', 'r', 17, 600, 'currentColor')}</div>`
+    const settings = [future ? walletNameNetworkCard() : networkCard(), disclosureCard('Electrum Server', 'electrum'), disclosureCard('Advanced', 'advanced')]
+    if (two) {
+      const st = empty ? 'disabled' : 'enabled'
+      return `${future ? '' : `<div style="position:absolute;top:${D.top}px;left:0;right:${D.end}px">${wizardProgress(3, 3).replace('padding:8px calc(var(--gutter) + 0px) 0 var(--gutter)', 'padding:8px 24px 0 32px')}</div>`}${twoColumn(
+        `<div class="col" style="min-height:100%;gap:${S(16)};padding:${S(16)} 0;align-items:stretch">
+          <div${c('title', 'Setup title')}>${T('Import Descriptor', 'r', 28, 'W', 'ink', LH)}</div>
+          ${T('Paste or scan a multisig output descriptor', 'd', 15, 400, 'ink2', '', 'tw')}
+          ${scan}${settings.join('')}${SP16}
+          ${wizFooter('Back', 'Import', 32, design, st).replace(/<span class="sp"><\/span>[\s\S]*$/, '</div>').replace('padding:0 var(--gutter) ' + S(32), 'padding:0')}
+        </div>`,
+        `<div class="col" style="min-height:100%;gap:${S(12)};padding:${S(16)} 0;align-items:stretch">${card}
+          <span class="pbtn${empty ? ' is-disabled' : ''}"${c('primary-cta', `Primary button: Import${empty ? ', disabled' : ''}`)}>Import</span></div>`,
+        future ? D.top : D.top + 12,
+      )}`
+    }
+    // Only the iPhone's screenshot tour reaches Import descriptor in a sheet; elsewhere it's the first-launch wizard
+    return setupSheet(future ? null : [3, 3], `
+      <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
+        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Descriptor', 'r', 28, 'W', 'ink', LH)}</div>
+        <div class="row" style="justify-content:center">${T('Paste or scan a multisig output descriptor', 'd', 15, 400, 'ink2', 'text-align:center', 'tw')}</div>
+        ${gutterBox(card)}
+        ${scan ? gutterBox(scan) : ''}
+        ${settings.map(gutterBox).join('')}
+        ${wizFooter('Back', 'Import', 32, design, empty)}
+      </div>`, D.chrome !== 'iphone')
+  }
+
+  const descriptorImportEmpty = (mode, design) => descriptorImport(mode, design, true)
+
+  /** A labeled field. UITextField-backed fields sit 2pt taller than a Text with the same padding, with the
+   *  font's unrounded line height. Empty, a TextField shows its placeholder in the system placeholder
+   *  color and sizes to the default 17pt body line instead of its own font */
+  function field(label, value, face, size, key, textField = true, placeholder = false) {
+    const lh = placeholder ? 'line-height:calc(20.29px * var(--ts))' : textField ? 'line-height:1.1934' : ''
+    return `<div class="col" style="gap:${S(6)};align-items:stretch"${c(key, label + ' field')}>${T(label, 'd', 13, 400, 'ink2')}
+      <div class="nest" style="padding:${textField ? 'calc(var(--fpad) + 1px)' : 'var(--fpad)'} var(--fpad)">${T(value, face, size, 400, placeholder ? 'var(--sysInk3)' : 'ink', lh)}</div></div>`
+  }
+
+  /** Import cosigners, on the first cosigner. Empty: the label and path come prefilled, the fingerprint
+   *  shows its placeholder, the xpub TextEditor sits at its 80pt minimum and Next Cosigner is disabled */
+  function cosigner(mode, design, empty = false) {
+    const future = design === 'future'
+    // Future: numbered folder tabs on top of the form, the status icon and number centered together.
+    // The open tab joins the card; a check marks a finished cosigner
+    const tab = (i, cur, done) =>
+      `<div class="ctab${cur ? ' on' : ''}"${c('tab-' + i, `Cosigner ${i} tab${done ? ', complete' : ''}`)}>
+        <span style="display:flex;flex:none;color:${done ? 'var(--success)' : cur ? 'var(--ink)' : 'var(--ink2)'}">${Y(done ? 'checkmark.circle.fill:16:regular' : 'circle:16:regular')}</span>
+        ${T(String(i), 'd', 17, cur ? 600 : 400, cur ? 'ink' : 'ink2', 'font-variant-numeric:tabular-nums')}</div>`
+    const label = field('Label', 'Cosigner 1', 'd', 16, 'label')
+    const fingerprint = empty
+      ? field('Master Fingerprint (8 hex chars)', 'e.g. 73c5da0a', 'm', 14, 'fingerprint', true, true)
+      : field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')
+    const path = field('Derivation Path', "m/48'/1'/0'/2'", 'm', 14, 'path', false)
+    const toggle = `<span style="color:var(--sysGreen);display:flex${future ? '' : ';margin-right:20px'}"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>`
+    // Future puts the key right after the label, with Scan QR and Paste under it as in-card utilities
+    const xpub = `<div class="col" style="gap:${S(6)};align-items:stretch"${c('xpub', 'Extended public key')}>
+            <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>${toggle}${
+              future ? '' : `<span class="row" style="gap:6px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'link2')}</span>`
+            }</div>
+            <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${empty ? '' : T('tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3VnVnm7EJWLdJE73ZL2MEwKTc2dLNeSudXUjexm2xJ5qboosbnEb1SEiGyJtJcqqZK', 'm', 12, 400, 'ink', 'word-break:break-all;line-height:1.1934', 'tw')}</div>
+            ${
+              future
+                ? `<div class="row" style="gap:8px;margin-top:${S(6)}"${c('xpub-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>`
+                : `<span class="row" style="gap:8px;color:var(--tert)"${c('scan', 'Scan QR Code')}>${Y('qrcode.viewfinder:15:regular')}${T('Scan QR Code', 'd', 15, 400, 'tert')}</span>`
+            }
+          </div>`
     const slot = (i, cur, done) =>
       `<div class="col cx" style="gap:4px;flex:1">
         <div class="${cur || done ? 'sel' + (cur ? '' : ' noring') : 'card'}" style="height:44px;width:100%;display:grid;place-items:center;color:${done ? 'var(--select)' : 'var(--ink2)'}">${Y(done ? 'lock.fill:16:regular' : 'lock.open:16:regular')}</div>
         ${T(String(i), 'd', 11, 400, cur ? 'select' : 'ink2')}</div>`
-    return setupSheet(4, `
-      <div class="col" style="gap:${S(24)};padding-top:${S(16)};align-items:stretch">
-        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Cosigners', 'r', 28, 'W', 'ink')}</div>
-        <div class="row" style="justify-content:center">${T('Cosigner 1 of 3', 'd', 15, 400, 'ink2')}</div>
-        <div class="row" style="gap:8px;padding:0 var(--gutter)"${c('slots', 'Cosigner slots')}>${slot(1, true, true)}${slot(2, false, false)}${slot(3, false, false)}</div>
-        ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
-          ${field('Label', 'Cosigner 1', 'd', 16, 'label')}
-          ${field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')}
-          ${field('Derivation Path', "m/48'/1'/0'/2'", 'm', 14, 'path', false)}
-          <div class="col" style="gap:${S(6)};align-items:stretch"${c('xpub', 'Extended public key')}>
-            <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>
-              <span style="color:var(--sysGreen);display:flex;margin-right:20px"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>
-              <span class="row" style="gap:6px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'link2')}</span></div>
-            <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px">${T('tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3VnVnm7EJWLdJE73ZL2MEwKTc2dLNeSudXUjexm2xJ5qboosbnEb1SEiGyJtJcqqZK', 'm', 12, 400, 'ink', 'word-break:break-all', 'tw')}</div>
-            <span class="row" style="gap:8px;color:var(--tert)"${c('scan', 'Scan QR Code')}>${Y('qrcode.viewfinder:15:regular')}${T('Scan QR Code', 'd', 15, 400, 'tert')}</span>
-          </div>
+    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].cosigner, `
+      <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
+        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
+        ${future ? '' : `<div class="row" style="justify-content:center">${T('Cosigner 1 of 3', 'd', 15, 400, 'ink2')}</div>`}
+        ${future ? '' : `<div class="row" style="gap:8px;padding:0 var(--gutter)"${c('slots', 'Cosigner slots')}>${slot(1, true, !empty)}${slot(2, false, false)}${slot(3, false, false)}</div>`}
+        ${gutterBox(`${future ? `<div class="ctabs"${c('tabs', 'Cosigner tabs')}>${tab(1, true, !empty)}${tab(2, false, false)}${tab(3, false, false)}</div>` : ''}<div class="hcard col${future ? ' ctab-card' : ''}" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
+          ${future ? [label, xpub, fingerprint, path].join('') : [label, fingerprint, path, xpub].join('')}
         </div>`)}
-        ${wizFooter('Back', 'Next Cosigner', 24)}
+        ${
+          // Future: one Next for the whole step, outlined until every cosigner is complete (here only the first is)
+          future ? wizFooter('Back', 'Next', 32, design, 'outline') : wizFooter('Back', 'Next Cosigner', 24, design, empty)
+        }
       </div>`)
   }
 
-  function verify() {
+  const cosignerEmpty = (mode, design) => cosigner(mode, design, true)
+
+  function verify(mode, design) {
     const rowKV = (k, v) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'd', 15, 400, 'ink')}</div>`
     const cos = [
       ['Cosigner 1', '07d25f0c', 'tpubDE2gU1F6b1GXDg2bFjeq6RUnBmAe2moTNG7x47Cga3Vn', 'Vnm7EJWLdJE73ZL2MEwKTc2…5qboosbnEb1SEiGyJtJcqqZK'],
@@ -496,9 +942,9 @@
     // Full-width tinted utility buttons: 14pt vertical padding at the shipped button height
     const utility = (icon, label, color, key) =>
       `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
-    return setupSheet(6, `
-      <div class="col" style="gap:${S(24)};padding-top:${S(16)};align-items:stretch">
-        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Verify Wallet', 'r', 28, 'W', 'ink')}</div>
+    return setupSheet(NEW_WALLET_STEP[design === 'future' ? 'future' : 'today'].verify, `
+      <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
+        <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Verify Wallet', 'r', 28, 'W', 'ink', LH)}</div>
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('summary', 'Wallet summary')}>
           ${rowKV('Name', 'My New Wallet')}${rowKV('Type', '2-of-3 Multisig')}${rowKV('Network', 'Testnet4')}${rowKV('Script', 'P2WSH (Native Segwit)')}
         </div>`)}
@@ -517,7 +963,7 @@
           <div class="row" style="gap:8px"><span style="color:var(--brandInk);display:flex">${Y('exclamationmark.triangle.fill:20:regular')}</span>${T('Back Up Your Descriptor', 'r', 17, 600, 'ink')}</div>
           ${T('The output descriptor is your <b style="font-weight:700">only</b> recovery path. If you lose Birch (phone dies, app deleted, data corrupted), the descriptor is the only thing needed to rebuild the wallet in any compatible coordinator (Sparrow, Nunchuk, etc.). Without it, you’d need to re-gather all cosigner xpubs and reconstruct the exact same configuration — which may not be possible.', 'd', 13, 400, 'ink2', '', 'tw')}
           <div class="col" style="gap:${S(6)};align-items:flex-start">
-            ${['Print to PDF', 'Import into Sparrow Wallet on another computer', 'Save to an encrypted drive'].map((b) => `<div class="row" style="gap:8px">${T('•', 'd', 12, 400, 'ink2')}${T(b, 'd', 12, 400, 'ink2')}</div>`).join('')}
+            ${['Print to PDF', 'Import into Sparrow Wallet on another computer', 'Save to an encrypted drive'].map((b) => `<div class="row" style="gap:8px;align-items:flex-start">${T('•', 'd', 13, 400, 'brand')}${T(b, 'd', 13, 400, 'ink2')}</div>`).join('')}
           </div>
           ${utility('doc.richtext:15:regular', 'PDF/Print Output Descriptor', 'var(--u-purple)', 'pdf')}
           ${utility('qrcode.viewfinder:15:regular', 'Show Descriptor QR', 'var(--u-brand)', 'show-qr')}
@@ -541,7 +987,8 @@
   // ---------------------------------------------------------------------------
 
   /** Wrapping text at the iOS line height (T()'s font shorthand leaves WebKit's whole-pixel 'normal') */
-  const LH = 'line-height:1.1934;line-height:round(up, 1.1934em, 0.33333px)'
+  // Rounded to the device's pixel: set per device in phone()
+  let LH = 'line-height:1.1934;line-height:round(up, 1.1934em, 0.33333px)'
 
   /** A tinted capsule, as in UTXOListView.statusCapsule and the UTXO detail header */
   const capsule = (text, color, size, key) =>
@@ -549,7 +996,7 @@
 
   /** A tab's title row: hbAmountLarge with the screen's own padding, above a plain List */
   function tabTitle(title, after = '') {
-    return `<div class="sx-head" style="position:absolute;top:62px;left:0;right:0;z-index:5;background:var(--ground)">
+    return `<div class="sx-head" style="position:absolute;top:${D.top}px;left:0;right:${D.end}px;z-index:5;background:var(--ground)">
       <div class="row" style="padding:8px ${M16} 4px;height:${after ? 56 : 54.95}px;align-items:center"${c('title', 'Screen title')}>${T(title, 'a', 36, 700, 'ink')}<span class="sp"></span>${after}</div></div>`
   }
 
@@ -569,19 +1016,58 @@
         <div class="row">${T(address, 'm', 11, 400, 'ink2')}<span class="sp"></span>${T(date, 'd', 11, 400, 'ink2')}</div>
         <div class="row">${T(kind, 'd', 10, 400, 'ink2')}</div>
       </div>
-      <span class="txchev">${Y('chevron.right:15:semibold')}</span>
+      <span class="txchev">${Y(D.chrome !== 'iphone' ? 'chevron.right:13.5:semibold' : 'chevron.right:15:semibold')}</span>
     </div>`
   }
 
   function utxos() {
     const filter = `<span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink)"${c('filter', 'Filter button')}>${Y('line.3.horizontal.decrease:20:semibold')}</span>`
     return `${tabTitle('UTXOs', filter)}
-      <div class="sx" style="top:118px"><div${c('utxo-list', 'UTXO list')}>${UTXOS.map(utxoRow).join('')}</div><div style="height:83px"></div></div>${tabbar('UTXOs')}`
+      <div class="sx" style="top:${D.top + 56}px;right:${D.end}px"><div${c('utxo-list', 'UTXO list')}>${UTXOS.map(utxoRow).join('')}</div><div style="height:${D.tabClear}px"></div></div>${tabbar('UTXOs')}`
+  }
+
+  /** UTXOFilterSheet at its medium detent over the UTXO list: Show and Type switches with captions, then
+   *  Sort By (a checked row per key and the direction picker), which scrolls into view */
+  function utxoFilter() {
+    const toggle = (title, caption, on, key) =>
+      `<div class="row" style="gap:8px"${c(key, `${title} switch`)}><div class="col" style="gap:2px;flex:1;align-items:flex-start">${T(title, 'd', 16, 400, 'ink', LH)}${T(caption, 'd', 12, 400, 'ink2', LH, 'tw')}</div><span class="iswitch${on ? ' on' : ''}"><i></i></span></div>`
+    const section = (title, rows, key) =>
+      `<div class="col" style="gap:${S(8)};align-items:stretch"><div style="padding:0 4px">${T(title, 'd', 13, 400, 'ink2', 'line-height:1.1934')}</div><div class="hcard col" style="gap:${S(12)};align-items:stretch"${c(key, `${title} section`)}>${rows}</div></div>`
+    const sortRow = (k, on) =>
+      `<div class="row"${c('sort-' + k.toLowerCase(), `Sort by ${k}${on ? ', selected' : ''}`)}>${T(k, 'd', 16, 400, 'ink', LH)}<span class="sp"></span>${on ? `<span style="color:var(--brandInk);display:flex">${Y('checkmark:14:semibold')}</span>` : ''}</div><div class="divider"></div>`
+    // The medium detent: on the iPhone the sheet is drawn at 386/402 scale from the bottom, so 469.7pt of
+    // layout fills its 451pt; the Duo's sheet isn't scaled
+    return `${utxos().replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')}<div class="scrim"></div>
+    <div class="fsheet" style="height:${D.medium}px;padding-bottom:0;box-sizing:border-box"${c('filter-sheet', 'Filter sheet')}>
+      <i class="grabber"></i>${sheetNav('Filter', { label: 'Reset', key: 'reset' }, { label: 'Done', key: 'done', prominent: true })}
+      <div class="sx" style="top:${sheetTop() + (D.form ? 2.67 : 0)}px"><div class="col" style="gap:${S(20)};padding:${S(16)} calc(${M16} + ${sheetEnd()}px) ${S(16)} ${M16};align-items:stretch">
+        ${section(
+          'Show',
+          [
+            toggle('Spendable', 'Unspent outputs available to send', true, 'show-spendable'),
+            toggle('Frozen', 'Unspent outputs excluded from coin selection', true, 'show-frozen'),
+            toggle('Spent', 'Outputs this wallet has already spent', false, 'show-spent'),
+          ].join('<div class="divider"></div>'),
+          'show',
+        )}
+        ${section('Type', toggle('Change Outputs', 'Hide to see only receive outputs', true, 'show-change'), 'type')}
+        ${section(
+          'Sort By',
+          `${sortRow('Age', true)}${sortRow('Amount', false)}${sortRow('Label', false)}
+          <div style="height:31px;margin-top:4px"><div class="seg"${c('sort-order', 'Sort order')}><span class="on">Newest First</span><span>Oldest First</span></div></div>`,
+          'sort',
+        )}
+      </div></div>
+    </div>`
   }
 
   /** iOS 26 navigation bar: a Liquid Glass back button and the inline title */
   function navBar(title) {
-    return `<div class="navbar"><span class="navback"${c('nav-back', 'Back button')}>${Y('chevron.left:22:semibold')}</span>
+    // The Duo leads with the title at the top and moves the back button into the side column, under the clock
+    if (D.chrome === 'duo')
+      return `<div class="navbar" style="top:0;right:${D.end}px"><span class="t navtitle lead"${c('nav-title', 'Navigation title')}>${title}</span></div>
+      <span class="navback duo" style="left:${D.w - D.end + 12}px;top:${D.status[1] + 84.33}px"${c('nav-back', 'Back button')}>${Y('chevron.left:20:medium')}</span>`
+    return `<div class="navbar" style="top:${D.top}px;right:${D.end}px"><span class="navback"${c('nav-back', 'Back button')}>${Y('chevron.left:22:semibold')}</span>
       <span class="t navtitle"${c('nav-title', 'Navigation title')}>${title}</span></div>`
   }
 
@@ -593,7 +1079,7 @@
       `<span class="row" style="flex:none;gap:8px;align-items:flex-start;color:var(--u-info)"${c(key, 'Copy and open in explorer')}><span class="row" style="width:calc(17px * var(--ts));justify-content:center">${Y('doc.on.doc:14:regular')}</span><span class="row" style="width:calc(15px * var(--ts));justify-content:center">${Y('arrow.up.right.square:14:regular')}</span></span>`
     const detail = (k, v, amt) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'm', 14, 400, 'ink', '', amt ? 'amt' : '')}</div>`
     return `${navBar('UTXO Detail')}
-      <div class="sx" style="padding-top:116px">
+      <div class="sx" style="padding-top:${D.navTop + 54}px;right:${D.end}px">
         <div class="col" style="gap:${S(16)};padding:${S(16)} ${M16};align-items:stretch">
           <div class="col cx" style="gap:${S(8)};padding-top:${S(8)}"${c('utxo-amount', 'UTXO amount')}>
             <span style="color:var(--brandInk);display:flex">${Y('bitcoinsign.circle.fill:44:regular')}</span>
@@ -627,7 +1113,7 @@
             <div class="row ub" style="--uc:var(--u-info);gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.29px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))">${Y('snowflake:17:regular')}${T('Freeze UTXO', 'd', 15, 400, 'currentColor')}</div>
           </div>
         </div>
-        <div style="height:83px"></div>
+        <div style="height:${D.tabClear}px"></div>
       </div>${tabbar('UTXOs')}`
   }
 
@@ -642,23 +1128,23 @@
       `<div class="row" style="flex:1;${extra}"${c(key, label + ' picker')}>${T(label, 'd', 17, 400, 'ink', LH)}<span class="sp"></span>
         <span class="row" style="gap:4px;color:var(--brandInk)">${T(value, 'd', 17, 400, 'brand', LH)}${Y('chevron.up.chevron.down:13:medium')}</span></div>`
     const section = (title, rows, key, first) =>
-      `<div class="igh${first ? ' first' : ''}">${T(title, 'd', 17, 600, 'var(--sysInk2)')}</div><div class="igroup"${c(key, title + ' section')}>${rows}</div>`
+      `<div class="igh${first ? ' first' : ''}">${T(title, 'd', 17, 600, 'var(--sysInk2)', NLH)}</div><div class="igroup"${c(key, title + ' section')}>${rows}</div>`
     const row = (inner) => `<div class="irow">${inner}</div>`
     const tile = (m, on) => `<div class="col cx" style="flex:1 1 0;gap:8px;padding:8px 0"${c('icon-' + m, (m === 'light' ? 'Light' : 'Dark') + ' app icon')}>
         <span style="position:relative;display:block">${appIcon(m, 72, 16)}${on ? '<i class="iconring"></i>' : ''}</span>
-        <span class="row" style="gap:4px">${on ? `<span style="color:var(--select);display:flex">${Y('checkmark.circle.fill:12:regular')}</span>` : ''}${T(m === 'light' ? 'Light' : 'Dark', 'd', 13, 400, 'ink')}</span></div>`
+        <span class="row" style="gap:4px">${on ? `<span style="color:var(--select);display:flex">${Y('checkmark.circle.fill:12:regular')}</span>` : ''}${T(m === 'light' ? 'Light' : 'Dark', 'd', 13, 400, 'ink', NLH)}</span></div>`
     return `${tabTitle('Settings')}
-      <div class="sx" style="top:116.95px">
-        ${section('Security', row(`${titled('App Lock', 'Require Face ID to open app')}<span class="sp"></span>${toggle(false, 'app-lock', 'App Lock switch')}`), 'security', true)}
+      <div class="sx" style="top:${D.top + 54.95}px;right:${D.end}px">
+        ${section('Security', row(`${titled('App Lock', `Require ${D.biometry} to open app`)}<span class="sp"></span>${toggle(false, 'app-lock', 'App Lock switch')}`), 'security', true)}
         ${section('Fee Estimation', row(picker('Fee Source', 'Electrum Server', 'fee-source')), 'fees')}
         ${section('Currency Display', row(picker('Bitcoin Unit', 'sats', 'unit')) + `<i class="isep"></i>` + row(`<div class="col" style="flex:1;align-items:stretch">
-            <div class="row" style="gap:24px">${titled('Show Fiat Price', 'Display estimated fiat value alongside bitcoin amounts')}<span class="sp"></span>${toggle(true, 'fiat', 'Show Fiat Price switch')}</div>
+            <div class="row" style="gap:${D.chrome === 'duo' ? 20 : 24}px">${titled('Show Fiat Price', 'Display estimated fiat value alongside bitcoin amounts')}<span class="sp"></span>${toggle(true, 'fiat', 'Show Fiat Price switch')}</div>
             ${picker('Price Source', 'Zeus', 'price-source', 'padding-top:12px')}
             ${picker('Currency', 'USD', 'currency', 'padding-top:12px')}</div>`), 'currency')}
         ${section('Appearance', row(picker('Theme', 'System', 'theme')), 'appearance')}
         ${section('App Icon', row(`<div class="row" style="gap:12px;flex:1;align-items:flex-start">${tile('light', true)}${tile('dark', false)}</div>`), 'app-icon')}
-        ${section('About', row(`${T('Version', 'd', 17, 400, 'ink')}<span class="sp"></span>${T('0.23 (31)', 'd', 17, 400, 'ink2')}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
-        <div style="height:118px"></div>
+        ${section('About', row(`${T('Version', 'd', 17, 400, 'ink', NLH)}<span class="sp"></span>${T(D.version || '0.23 (31)', 'd', 17, 400, 'ink2', NLH)}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
+        <div style="height:${D.tabClear + 35}px"></div>
       </div>${tabbar('Settings')}`
   }
 
@@ -672,51 +1158,110 @@
     return `<span class="appicon" style="width:${size}px;height:${size}px;border-radius:${radius}px${src ? `;background-image:url(${src})` : ''}">${inner}</span>`
   }
 
-  function welcome(mode) {
-    // Each icon sits in a 28pt-wide frame; the heights are the symbol frames SwiftUI lays out at 18pt
+  /** SetupTwoColumn: two independently scrolling columns, split on the fold by a gap the fold's width plus
+   *  24pt (48pt at least), from 32pt in on the leading side to 24pt in on the trailing side. Each column is
+   *  at least the step's height, so its spacers can center the content or push the last item down.
+   *  `top` is where the step starts under the progress bar. */
+  function twoCols() {
+    const width = D.w - D.end
+    const [center, foldW] = D.fold || [width / 2, 0]
+    const gap = Math.max(48, foldW + 24)
+    return [[32, Math.max(32, center - gap / 2)], [Math.min(width - 24, center + gap / 2), width - 24]]
+  }
+  function twoColumn(lead, trail, top = 0) {
+    const cols = twoCols()
+    const col = ([a, b], inner) => `<div class="sx" style="left:${a}px;right:auto;width:${b - a}px;top:${top}px;bottom:${D.bottom}px;background:none">${inner}</div>`
+    return col(cols[0], lead) + col(cols[1], trail)
+  }
+
+  /** Spacer(minLength: 16) in a column that fills its height */
+  const SP16 = '<span class="sp" style="min-height:16px"></span>'
+
+  /** The Welcome feature list: each icon sits in a 28pt-wide frame; the heights are the symbol frames SwiftUI lays out at 18pt */
+  function featureList(extra = '') {
     const feature = (icon, h, text) =>
       `<div class="row" style="gap:14px"><span class="row" style="width:28px;height:calc(${h}px * var(--ts));justify-content:center;color:var(--brandInk)">${Y(icon)}</span>${T(text, 'd', 15, 400, 'ink')}</div>`
-    // The ground-colored stroke, blurred and clipped, fades the icon's edges into the screen
-    return `<div class="sx col" style="padding:62px 0 34px;gap:${S(32)};align-items:stretch">
-      <span class="sp"></span>
-      <div class="row" style="justify-content:center"${c('app-icon', 'App icon')}>${appIcon(mode, 120, 28, '<i class="appicon-fade"></i>')}</div>
-      <div class="col cx" style="gap:${S(12)}"${c('title', 'Welcome title')}>${T('Birch Wallet', 'r', 34, 'W', 'ink')}${T('A Bitcoin Multisig Coordinator', 'd', 17, 400, 'ink2')}</div>
-      <div class="col" style="gap:${S(16)};align-self:center;align-items:flex-start;padding:0 var(--gutter)"${c('features', 'Feature list')}>
+    return `<div class="col" style="gap:${S(16)};align-items:flex-start;${extra}"${c('features', 'Feature list')}>
         ${feature('eye.fill:18:regular', 18.33, 'Watch-only — no private keys stored')}
         ${feature('person.3.fill:18:regular', 20.33, 'Multi-signature security (M-of-N)')}
         ${feature('qrcode.viewfinder:18:regular', 20.33, 'Airgapped QR signing device support')}
         ${feature('server.rack:18:regular', 20.33, 'Connect to your own Electrum server')}
         ${feature('wallet.bifold.fill:18:regular', 20.33, 'Coordinate multiple wallets')}
-      </div>
+      </div>`
+  }
+
+  function welcome(mode) {
+    // The ground-colored stroke, blurred and clipped, fades the icon's edges into the screen
+    const icon = `<div class="row" style="justify-content:center"${c('app-icon', 'App icon')}>${appIcon(mode, 120, 28, '<i class="appicon-fade"></i>')}</div>`
+    const title = `<div class="col cx" style="gap:${S(12)}"${c('title', 'Welcome title')}>${T('Birch Wallet', 'r', 34, 'W', 'ink')}${T('A Bitcoin Multisig Coordinator', 'd', 17, 400, 'ink2')}</div>`
+    const start = `<span class="pbtn"${c('primary-cta', 'Primary button: Get Started')}>Get Started</span>`
+    // Open Duo: the brand on the left, what the app does and the way in on the right
+    if (D.layout === 'twoColumn')
+      return twoColumn(
+        `<div class="col" style="min-height:100%;gap:${S(32)};align-items:center">${SP16}${icon}${title}${SP16}</div>`,
+        `<div class="col" style="min-height:100%;gap:${S(40)};align-items:stretch">${SP16}${featureList('align-self:flex-start')}${start}${SP16}</div>`,
+      ) + (D.homeIndicator ? '<i class="homebar"></i>' : '')
+    // iPad: one readable column, and the button stays with the content so the group centers together
+    const column = D.layout === 'column'
+    return `<div class="sx col" style="padding:${wizTop()}px ${D.end}px ${D.bottom}px 0;gap:${S(32)};align-items:stretch">
       <span class="sp"></span>
-      <div style="padding:0 var(--gutter) ${S(32)}"><span class="pbtn"${c('primary-cta', 'Primary button: Get Started')}>Get Started</span></div>
+      ${icon}
+      ${title}
+      ${featureList('align-self:center;padding:0 var(--gutter)')}
+      ${column ? '<div style="height:24px"></div>' : '<span class="sp"></span>'}
+      <div style="padding:0 var(--gutter) ${S(32)}${column ? ';width:100%;max-width:600px;align-self:center' : ''}">${start}</div>
+      ${column ? '<span class="sp"></span>' : ''}
     </div>`
   }
 
-  function walletSetup() {
+  function walletSetup(mode, design) {
     const choice = (icon, title, sub, key) => `<div class="card row" style="gap:16px;padding:calc(var(--pad) + 4px)"${c(key, title)}>
         <span style="color:var(--brandInk);display:flex">${Y(icon)}</span>
         <div class="col" style="gap:4px;align-items:flex-start;flex:0 1 auto">${T(title, 'r', 17, 600, 'ink')}${T(sub, 'd', 13, 400, 'ink2', LH, 'tw')}</div>
         <span class="sp" style="min-width:0"></span>
         <span style="color:var(--ink2);display:flex">${Y('chevron.right:14:semibold')}</span></div>`
-    return `<div class="sx col" style="padding:62px 0 34px;align-items:stretch">${wizardProgress(2)}
-      <div class="col" style="flex:1 0 auto;gap:${S(24)};align-items:stretch">
+    const cards = `${choice('plus.circle.fill:28:regular', 'Create New Wallet', 'Setup M-of-N multisig by importing cosigner xpubs from one or more air-gapped signing devices', 'create')}
+          ${choice('square.and.arrow.down.fill:28:regular', 'Import Descriptor', 'Import an existing wallet via output descriptor from a printed backup or another coordinator', 'import')}`
+    // Open Duo: what this step is on the left with Back at the bottom, the two choices on the right. The
+    // progress bar spans both columns
+    if (D.layout === 'twoColumn')
+      return `${design === 'future' ? '' : `<div style="position:absolute;top:${D.top}px;left:0;right:${D.end}px">${wizardProgress(2, 6, 0).replace('padding:8px calc(var(--gutter) + 0px) 0 var(--gutter)', 'padding:8px 24px 0 32px')}</div>`}${twoColumn(
+        `<div class="col" style="min-height:100%;gap:${S(16)};align-items:center"><div class="col" style="flex:1 0 auto;gap:${S(16)};align-items:flex-start">${SP16}
+          <div${c('title', 'Setup title')}>${T('Wallet Setup', 'r', 28, 'W', 'ink')}</div>
+          ${T('Choose how to configure your multisig wallet', 'd', 15, 400, 'ink2', '', 'tw')}
+          <div class="row" style="gap:6px;color:var(--ink2)"${c('script-note', 'Script type note')}>${Y('info.circle:12:regular')}${T('Only BIP-67 P2WSH script type is supported', 'd', 12, 400, 'ink2')}</div>
+          ${SP16}
+          <div style="padding-bottom:16px"${c('back', 'Back')}>${T('Back', 'd', 16, 400, 'ink2')}</div></div></div>`,
+        `<div class="col" style="min-height:100%;gap:8px;align-items:stretch">${SP16}<div class="col" style="gap:${S(16)};align-items:stretch">${cards}</div>${SP16}</div>`,
+        design === 'future' ? D.top : D.top + 12,
+      )}`
+    // iPad: one readable column, with Back staying under the content so the group centers together
+    const column = D.layout === 'column'
+    // Future drops the progress bar here; the centered content takes its 12pt
+    return `<div class="sx col" style="padding:${wizTop()}px ${D.end}px ${D.bottom}px 0;align-items:${column ? 'center' : 'stretch'}">${design === 'future' ? '' : `<div style="align-self:stretch${column ? ';width:100%;max-width:600px;align-self:center' : ''}">${wizardProgress(2)}</div>`}
+      <div class="col" style="flex:1 0 auto;gap:${S(24)};align-items:stretch${column ? ';width:100%;max-width:600px' : ''}">
         <span class="sp"></span>
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Wallet Setup', 'r', 28, 'W', 'ink')}</div>
         <div class="row" style="justify-content:center;padding:0 calc(var(--gutter) + 8px)">${T('Choose how to configure your multisig wallet', 'd', 15, 400, 'ink2', 'text-align:center', 'tw')}</div>
         <div class="row" style="gap:6px;justify-content:center;padding:0 calc(var(--gutter) + 8px);color:var(--ink2)"${c('script-note', 'Script type note')}>${Y('info.circle:12:regular')}${T('Only BIP-67 P2WSH script type is supported', 'd', 12, 400, 'ink2')}</div>
         <div class="col" style="gap:${S(16)};padding:0 var(--gutter);align-items:stretch">
-          ${choice('plus.circle.fill:28:regular', 'Create New Wallet', 'Setup M-of-N multisig by importing cosigner xpubs from one or more air-gapped signing devices', 'create')}
-          ${choice('square.and.arrow.down.fill:28:regular', 'Import Descriptor', 'Import an existing wallet via output descriptor from a printed backup or another coordinator', 'import')}
+          ${cards}
         </div>
-        <span class="sp"></span>
+        ${column ? '<div style="height:24px"></div>' : '<span class="sp"></span>'}
         <div class="row" style="justify-content:center;padding-bottom:${S(32)}"${c('back', 'Back')}>${T('Back', 'd', 16, 400, 'ink2')}</div>
+        ${column ? '<span class="sp"></span>' : ''}
       </div>
     </div>`
   }
 
   const SCREENS = [
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
+    { id: 'wallet-picker', group: 'Wallet', label: 'Wallet picker', build: walletPicker, shot: '05-WalletPicker', swift: 'TransactionListView.swift (walletPickerOverlay)' },
+    // No simulator screenshots show the next three: they are rebuilt from the SwiftUI views
+    { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), Theme.swift (SyncStatusDot)' },
+    { id: 'home-empty', group: 'Wallet', label: 'No transactions', build: homeEmpty, shot: null, swift: 'TransactionListView.swift (transactionContent)' },
+    { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
+    { id: 'send-empty', group: 'Send', label: 'Send, empty', build: sendEmpty, shot: '11-Send', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'send', group: 'Send', label: 'Recipients and amount', build: send, shot: '27-SendRecipientsFilled', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'fee', group: 'Send', label: 'Network fee sheet', build: fee, shot: '26-NetworkFee-Custom', swift: 'SendFeeSheetView.swift' },
     { id: 'review', group: 'Send', label: 'Review transaction', build: review, shot: '28-ReviewTransaction-Top', swift: 'SendReviewView.swift, PSBTVerificationBadge.swift' },
@@ -724,11 +1269,17 @@
     { id: 'scan', group: 'Signing', label: 'Scan signed PSBT', build: scan, shot: '33-ScanSignedPSBT', swift: 'PSBTScanView.swift, URScannerSheet.swift' },
     { id: 'utxos', group: 'UTXOs', label: 'UTXO list', build: utxos, shot: '12-UTXOs', swift: 'UTXOListView.swift' },
     { id: 'utxo', group: 'UTXOs', label: 'UTXO detail', build: utxoDetail, shot: '13-UTXODetail', swift: 'UTXODetailView.swift' },
+    { id: 'utxo-filter', group: 'UTXOs', label: 'UTXO filter sheet', build: utxoFilter, shot: null, swift: 'UTXOFilterSheet.swift, UTXOFilter.swift' },
     { id: 'settings', group: 'Settings', label: 'Settings', build: settings, shot: '14-Settings', swift: 'SettingsView.swift' },
     { id: 'welcome', group: 'Setup', label: 'Welcome', build: welcome, shot: '01-Welcome', swift: 'WelcomeStepView.swift, SetupWizardView.swift' },
     { id: 'setup', group: 'Setup', label: 'Wallet setup', build: walletSetup, shot: '02-Wallet-Setup', swift: 'WalletCreationChoiceView.swift' },
+    { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift' },
+    // No simulator screenshot shows this state: it is the Import descriptor rebuild with the field empty
+    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: null, swift: 'DescriptorImportView.swift' },
     { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift' },
-    { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosigner, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift' },
+    { id: 'cosigner-empty', group: 'Setup', label: 'Import cosigners, empty', build: cosignerEmpty, shot: '17-CosignerImport-Empty', swift: 'CosignerImportView.swift' },
+    // The closed Duo's screenshot is scrolled to the bottom of the form; the open Duo's has the keyboard up
+    { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosigner, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift', scroll: { 'duo-closed': 'max' }, shotNote: { 'duo-open': 'The screenshot has the keyboard up' } },
     { id: 'verify', group: 'Setup', label: 'Verify wallet', build: verify, shot: '21-VerifyWallet-Top', swift: 'WalletVerifyView.swift' },
   ]
 
@@ -741,33 +1292,107 @@
   const SHOT_BASES = root.location && root.location.protocol === 'file:' ? ['../fastlane/screenshots/', 'screenshots/'] : ['screenshots/', '../fastlane/screenshots/']
   let shotBase = null
   /** Path of the screenshot a screen was rebuilt from, relative to a shot base */
-  const shotPath = (screen, mode) => `${mode}/en-US/${encodeURIComponent(`iPhone 17 Pro-${screen.shot}.png`)}`
+  const shotPath = (screen, mode, device = 'iphone') => `${mode}/en-US/${encodeURIComponent(`${deviceOf(device).shot}-${screen.shot}.png`)}`
 
   /**
    * Every change the Future design makes to Today, one entry each, for the page's overview and the
    * export: { screens: [screen ids, or none for every screen], change: 'what changes', swift: 'files' }.
    * Builders receive the design ('today' or 'future') as their second argument, and each phone
    * carries a d-today or d-future class, so a Future change can branch in a builder or in CSS.
-   * Empty while Future is an exact copy of Today.
    */
-  const FUTURE_CHANGES = []
+  const FUTURE_CHANGES = [
+    {
+      screens: ['setup', 'descriptor', 'descriptor-empty'],
+      change: 'Wallet setup and Import descriptor have no progress bar. The content moves up into its space.',
+      swift: 'SetupWizardView.swift',
+    },
+    {
+      screens: ['multisig', 'cosigner-empty', 'cosigner', 'verify'],
+      change:
+        'Creating a wallet shows a three-step progress bar: Multisig configuration is step 1, Import cosigners step 2 and Verify wallet step 3. Welcome and Wallet setup are no longer counted.',
+      swift: 'SetupWizardView.swift (ProgressBarView), SetupWizardViewModel.swift (stepCount, currentStepIndex)',
+    },
+    {
+      screens: ['multisig', 'descriptor', 'descriptor-empty'],
+      change:
+        'The Name Your Wallet step is removed from both flows. Import cosigners goes straight to Verify wallet, and Import on Import descriptor creates the wallet.',
+      swift: 'WalletNameView.swift (removed), SetupWizardViewModel.swift (goToNext, goBack), SetupWizardView.swift',
+    },
+    {
+      screens: ['multisig', 'descriptor', 'descriptor-empty'],
+      change:
+        'Wallet Name and Bitcoin Network share one card: the optional Wallet Name field first (styled like the Cosigner form fields, with the "My Wallet" placeholder), then the network picker, both labels leading-aligned. Left empty, the wallet is saved as "My Wallet".',
+      swift: 'MultisigConfigView.swift, DescriptorImportView.swift, ElectrumServerSetupSection.swift (SetupNetworkPicker)',
+    },
+    {
+      screens: ['descriptor', 'descriptor-empty'],
+      change:
+        'Scan QR and Paste sit inside the Output Descriptor card, under the field, as in-card utilities: two equal tonal buttons, Scan QR in the brand tint and Paste neutral. The separate Scan Descriptor QR button and the Paste link above the field are removed.',
+      swift: 'DescriptorImportView.swift (a tonal button style, new in Theme.swift)',
+    },
+    {
+      screens: ['descriptor', 'descriptor-empty'],
+      change:
+        'The "Expected format" line under the descriptor field is removed. Instead the empty field shows wsh(sortedmulti(M,[fp/path]xpub/0/*,...)) as placeholder text until something is typed.',
+      swift: 'DescriptorImportView.swift (TextEditor has no prompt: overlay a placeholder-colored Text while the text is empty)',
+    },
+    {
+      screens: ['cosigner-empty', 'cosigner'],
+      change:
+        'The footer button reads "Next" instead of "Next Cosigner" (or "Continue"). Until every cosigner is complete it is an outlined button: a 1.5pt brand border and brand text with no fill, the same size and radius as the primary. Tapping it then opens the first incomplete cosigner\'s tab. Once all are complete it fills in to the solid primary and moves on. The tabs are how you move between cosigners.',
+      swift: 'CosignerImportView.swift (nextTitle; a new outlined button style, strokeBorder 1.5pt in hbBitcoinOrange, used while any cosigner is incomplete, never .disabled; on tap select the first incomplete cosigner), SetupWizardViewModel.swift (goToNext, a per-cosigner complete check)',
+    },
+    {
+      screens: ['cosigner-empty', 'cosigner'],
+      change: 'The "Cosigner 1 of 3" line under the title is removed; the tabs show the position.',
+      swift: 'CosignerImportView.swift (positionLabel)',
+    },
+    {
+      screens: ['cosigner-empty', 'cosigner'],
+      change:
+        'The cosigner form reorders to Label, Extended Public Key, Master Fingerprint, Derivation Path. Scan QR and Paste sit under the key as in-card utilities, matching Import descriptor (Scan QR brand tonal, Paste neutral tonal, equal width), replacing the Scan QR Code link and the Paste link above the key. The format toggle stays beside the key\'s label.',
+      swift: 'CosignerImportView.swift (identityFields, xpubField)',
+    },
+    {
+      screens: ['cosigner-empty', 'cosigner'],
+      change:
+        'The cosigner slots become 46pt folder tabs on top of the cosigner form, one per cosigner, each a button that switches to that cosigner. A tab centers the cosigner\'s number (17pt, semibold when open) beside a status icon: an empty circle until every field is valid, then a check in the success color. Labels stay off the tabs because they often won\'t fit. The tabs have physical depth: the open tab stands 4pt taller than the others, lit from above with a sheen that fades into the card fill, joins the form (which loses its top corners) and casts a soft shadow up and onto its neighbours; the other tabs sit behind the card, halfway between card and ground, with its shadow across their base. The lock icons and the numbers under the slots are removed. Past six cosigners the tabs scroll sideways.',
+      swift: 'CosignerImportView.swift (CosignerSlot, cosignerSlots: tappable, set currentCosignerIndex; complete = the cosigner\'s fields all valid; UnevenRoundedRectangle tabs, a LinearGradient sheen and a shadow masked at the open tab\'s base)',
+    },
+    {
+      screens: ['descriptor', 'descriptor-empty', 'multisig', 'cosigner-empty', 'cosigner'],
+      change:
+        'Back is a secondary button: hbHeadline in the brand color on the card fill, the same height and corner radius as the compact Next or Import beside it.',
+      swift: 'DescriptorImportView.swift, MultisigConfigView.swift, CosignerImportView.swift',
+    },
+  ]
 
-  function phone(screen, mode, design = 'today') {
+  function phone(screen, mode, design = 'today', device = 'iphone') {
+    D = deviceOf(device)
+    LH = `line-height:1.1934;line-height:round(up, 1.1934em, ${D.scale === 2 ? '0.5px' : '0.33333px'})`
     // The wrapper reserves the scaled size; the phone itself is scaled with a transform, because
     // CSS zoom lets Safari bump 10pt text up to its minimum font size and break the layout
-    const rel = shotPath(screen, mode)
-    return `<div class="ph-wrap"><figure class="ph m-${mode} d-${design}" data-screen="${screen.id}" data-mode="${mode}" data-design="${design}">
-      <div class="ph-screen">${screen.build(mode, design)}${statusBar(mode)}<i class="ph-island"></i>
-        <img class="ph-ref"${shotBase ? ` src="${shotBase + rel}"` : ''} data-shot="${rel}" alt="" loading="lazy" decoding="async"></div>
+    const rel = screen.shot ? shotPath(screen, mode, D.id) : null
+    return `<div class="ph-wrap" style="--dw:${D.w}px;--dh:${D.h}px;--dr:${D.radius}px"><figure class="ph m-${mode} d-${design} dev-${D.id}" data-screen="${screen.id}" data-mode="${mode}" data-design="${design}" data-device="${D.id}"${(screen.scroll || {})[D.id] ? ` data-scroll="${screen.scroll[D.id]}"` : ''}>
+      <div class="ph-screen">${screen.build(mode, design)}${statusBar(mode)}${D.chrome === 'iphone' ? '<i class="ph-island"></i>' : ''}
+        ${rel ? `<img class="ph-ref"${shotBase ? ` src="${shotBase + rel}"` : ''} data-shot="${rel}" alt="" loading="lazy" decoding="async">` : ''}</div>
     </figure></div>`
   }
 
   root.BirchShipped = {
     SCREENS,
+    DEVICES,
     FUTURE_CHANGES,
     phone,
     SHOT_BASES,
     shotPath,
+    /** Scrolls each phone whose screenshot was taken scrolled (data-scroll: points, or max) to match it */
+    applyScrolls(rootEl = document) {
+      rootEl.querySelectorAll('.ph[data-scroll]').forEach((ph) => {
+        const v = ph.dataset.scroll
+        ph.querySelectorAll('.ph-screen > .sx, .ssheet > .sx').forEach((el) => (el.scrollTop = v === 'max' ? el.scrollHeight : parseFloat(v) || 0))
+      })
+    },
     /** Points every overlay image, current and future, at the screenshots under `base` */
     setShotBase(base) {
       shotBase = base

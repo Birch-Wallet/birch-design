@@ -19,7 +19,7 @@
   const clone = (o) => JSON.parse(JSON.stringify(o))
   const STORAGE_KEY = 'birch-ds-v1'
   // The designs first: Today (the app as it ships) and Future (the next version, built on Today).
-  // Then the color themes, which recolor Today's layout
+  // Then the color themes, which recolor Future's layout
   const BUILT_IN = ['T', 'F', 'A', 'B', 'C']
 
   const FONTS = {
@@ -95,7 +95,7 @@
 
   // Tuning panel schema: [path, label, kind, min|options, max, step, unit, flags]
   // Every control reaches the app screens unless flagged { only: 'components' }: those
-  // elements (toggles, errors, secondary buttons...) appear only in the component boards.
+  // elements (toggles, errors, destructive buttons...) appear only in the component boards.
   const COMP = { only: 'components' }
   const NEEDS_ACCENT = { needsAccent: true }
   const DIAL = [
@@ -186,8 +186,8 @@
       ['buttons.tertiary', 'Text links', 'seg', [['brand', 'Brand'], ['accent', 'Accent'], ['ink', 'Ink']]],
       // Seen while a button is held down; the Buttons section shows it in its Pressed column
       ['buttons.press', 'Pressed', 'seg', [['dim', 'Dim'], ['scale', 'Scale']], 0, 0, '', { preview: 'components' }],
-      ['buttons.secondary', 'Secondary', 'seg', [['fill', 'Fill'], ['outline', 'Outline'], ['tonal', 'Tonal']], 0, 0, '', COMP],
-      ['buttons.disabled', 'Disabled', 'seg', [['muted', 'Muted'], ['fade', 'Faded']], 0, 0, '', COMP],
+      ['buttons.secondary', 'Secondary', 'seg', [['fill', 'Fill'], ['outline', 'Outline'], ['tonal', 'Tonal']]],
+      ['buttons.disabled', 'Disabled', 'seg', [['muted', 'Muted'], ['fade', 'Faded']]],
     ] },
     { id: 'layout', name: 'Layout', rows: [
       ['layout.footer', 'Setup footer', 'seg', [['split', 'Split'], ['stacked', 'Stacked']]],
@@ -243,6 +243,7 @@
       modes: 'both',
       zoom: { focus: 0.62, compare: 0.5 },
       compareScreen: 'review',
+      device: 'iphone',
       includeToday: true,
       pageTheme: 'system',
       dialOpen: typeof window === 'undefined' || window.innerWidth > 900,
@@ -270,8 +271,13 @@
     migrated = migrated || s.migrated
     delete s.migrated
     const merged = Object.assign(d, s)
-    // Fill keys a newer preset definition added
-    for (const id of BUILT_IN) merged.params[id] = deepMerge(clone(TK.PRESETS[id]), merged.params[id] || {})
+    // Fill keys a newer preset definition added. A built-in preset's group and design aren't
+    // tunable, so they always come from its definition, not from what was saved
+    for (const id of BUILT_IN) {
+      merged.params[id] = deepMerge(clone(TK.PRESETS[id]), merged.params[id] || {})
+      merged.params[id].group = TK.PRESETS[id].group
+      merged.params[id].design = TK.PRESETS[id].design
+    }
     if (!merged.params[merged.current]) merged.current = 'T'
     return merged
   }
@@ -337,7 +343,7 @@
 
   const presetIds = () => [...BUILT_IN, ...Object.keys(S.custom)]
   const P = (id = S.current) => S.params[id]
-  /** Toolbar group: a design (layout and theme) or a color theme over Today's layout */
+  /** Toolbar group: a design (layout and theme) or a color theme over Future's layout */
   const groupOf = (id) => (P(id) && P(id).group) || 'theme'
   /** Which layout the screens are built with: 'today' or 'future' */
   const designOf = (id) => (P(id) && P(id).design) || 'today'
@@ -432,18 +438,19 @@
     if (p.layout.footer === 'stacked') {
       css += `${sel} .wizfoot{flex-direction:column-reverse;align-items:stretch;gap:calc(8px * var(--sp))}\n`
       css += `${sel} .wizfoot .wiznext{width:100%;min-height:var(--btn-h)!important}\n${sel} .wizfoot .wizback{align-self:center}\n${sel} .wizfoot .sp{display:none}\n`
+      css += `${sel} .wizfoot .wizback.sbtn{align-self:stretch;min-height:var(--btn-h)!important}\n`
     }
     if (p.chrome.tabbar === 'solid') {
       css += `${sel} .tabbar{background:var(--card);-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 0 0 .5px var(--line),0 6px 20px rgba(0,0,0,.14)}\n${sel} .tabpill{background:var(--nested)}\n`
     }
 
-    // Component boards
+    // Secondary buttons: the component boards and the app screens' .sbtn
     const sec = {
       fill: `background:var(--card);color:var(--brandInk);box-shadow:var(--cardShadow)`,
       outline: `background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--secBorder,var(--lineStrong))`,
       tonal: `background:var(--brandTint);color:var(--brandInk);box-shadow:none`,
     }[p.buttons.secondary]
-    css += `${sel} .b-secondary{${sec}}\n`
+    css += `${sel} .b-secondary,${sel} .sbtn{${sec}}\n`
     if (p.buttons.secondary === 'fill') css += `${sel} .b-card .b-secondary,${sel} .b-sheetbar .b-secondary{background:var(--nested);box-shadow:none}\n`
     css += `${sel} .b-secondary.b-danger-ink{color:var(--danger)}\n`
 
@@ -452,12 +459,13 @@
       css += `${sel} .b-btn.b-tertiary.is-disabled{background:transparent;color:var(--ink3)}\n`
     } else {
       css += `${sel} .b-btn.is-disabled{opacity:.38;cursor:not-allowed}\n`
+      css += `${sel} .pbtn.is-disabled,${sel} .pbtn.is-disabled:active,${sel} .wiznext.is-disabled,${sel} .wiznext.is-disabled:active{background:var(--brand);color:var(--onBrand);opacity:.38}\n`
     }
     const pressOverlay = p.buttons.press === 'scale' ? 0.06 : 0.12
     css += `${sel} .b-btn.is-pressed::after,${sel} .b-btn:not(.is-disabled):active::after{opacity:${pressOverlay}}\n`
     css += `${sel} .b-primary.is-pressed::after,${sel} .b-primary:active::after,${sel} .b-tertiary.is-pressed::after,${sel} .b-tertiary:active::after{opacity:0}\n`
     css += `${sel} .b-tertiary.is-pressed,${sel} .b-tertiary:not(.is-disabled):active{opacity:.5;transform:none}\n`
-    if (p.buttons.press === 'scale') css += `${sel} .b-btn.is-pressed,${sel} .b-btn:not(.is-disabled):active,${sel} .pbtn:active,${sel} .wiznext:active{transform:scale(.97)}\n`
+    if (p.buttons.press === 'scale') css += `${sel} .b-btn.is-pressed,${sel} .b-btn:not(.is-disabled):active,${sel} .pbtn:not(.is-disabled):active,${sel} .wiznext:not(.is-disabled):active,${sel} .sbtn:active{transform:scale(.97)}\n`
     return css
   }
 
@@ -542,6 +550,11 @@
 
   const presetName = (id) => (P(id) ? `${P(id).name}` : id)
   const presetLabel = (id) => (BUILT_IN.includes(id) && groupOf(id) === 'theme' ? `${id} · ${presetName(id)}` : presetName(id))
+  /** Where a screen comment was made, when it wasn't the iPhone */
+  const deviceNote = (c) => {
+    const d = c.device && c.device !== 'iphone' && SH.DEVICES.find((x) => x.id === c.device)
+    return d ? d.label : ''
+  }
   const modeLabel = (m) => (m === 'light' ? 'Light' : m === 'dark' ? 'Dark' : 'Both modes')
 
   // ---------------------------------------------------------------------------
@@ -648,9 +661,15 @@
 
   const cAttr = (key, label) => ` data-c="${esc(key)}" data-cl="${esc(label)}"`
 
-  /** Future's notes are its change log in ds-shipped.js; the color themes have fixed notes */
+  /** Future's notes are its change log in ds-shipped.js; the color themes have fixed notes, plus a
+   *  pointer to that log, since they're drawn on Future's layout */
   function optionNotes(id) {
-    if (id !== 'F') return OPTION_NOTES[id]
+    if (id !== 'F') {
+      const notes = OPTION_NOTES[id]
+      if (!notes || designOf(id) !== 'future') return notes
+      const n = futureChanges().length
+      return [...notes, `Screens use the Future layout${n ? `, with its ${n} change${n === 1 ? '' : 's'} from today listed under Future` : ''}.`]
+    }
     return futureChanges().length ? futureChanges().map((c) => `${c.where}: ${c.change}`) : ['Nothing yet. Future is an exact copy of Today.']
   }
 
@@ -687,19 +706,27 @@
     return `<div class="ctable-wrap"><table class="ctable"><thead><tr><th>Token</th><th>Light</th><th>Dark</th><th>Role</th><th>Replaces in Theme.swift</th></tr></thead><tbody>${body}</tbody></table></div>`
   }
 
-  function renderFocus() {
-    const id = S.current
-    const boards = ['cards', 'rows', 'inputs', 'chips', 'callouts', 'progress', 'states', 'nav']
-    const screensHtml = SCREEN_GROUPS.map((g) => {
+  /** The device the screens are built for: iPhone 17 Pro, the iPhone Duo closed or open, or iPad portrait */
+  const deviceSeg = () =>
+    `<div class="dev-bar"><span class="vlabel">Device</span><div class="seg" role="group" aria-label="Device">${SH.DEVICES.map(
+      (d) => `<button type="button" data-device="${d.id}" aria-pressed="${d.id === S.device}">${esc(d.label)}</button>`,
+    ).join('')}</div></div>`
+
+  function screensDyn(id = S.current) {
+    return SCREEN_GROUPS.map((g) => {
       const list = SH.SCREENS.filter((s) => s.group === g)
       return `<h3 class="grp-title" id="screens-${g.toLowerCase()}">${g}</h3><div class="shots">${list
         .map(
           (s) =>
-            `<div class="shot"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code></div><div class="shot-pair">${SH.phone(s, 'light', designOf(id))}${SH.phone(s, 'dark', designOf(id))}</div></div>`,
+            `<div class="shot"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code>${!s.shot ? '<span class="shot-note">No simulator screenshot</span>' : s.shotNote && s.shotNote[S.device] ? `<span class="shot-note">${esc(s.shotNote[S.device])}</span>` : ''}</div><div class="shot-pair">${SH.phone(s, 'light', designOf(id), S.device)}${SH.phone(s, 'dark', designOf(id), S.device)}</div></div>`,
         )
         .join('')}</div>`
     }).join('')
+  }
 
+  function renderFocus() {
+    const id = S.current
+    const boards = ['cards', 'rows', 'inputs', 'chips', 'callouts', 'progress', 'states', 'nav']
     $('#main').innerHTML = `<div id="scope" class="opt-${id}" data-opt="${id}">
       <section class="sec" id="overview"><p class="eyebrow">Overview</p><div id="ov-dyn">${ovDyn()}</div>${notesBlock('overview', 'the overview')}</section>
 
@@ -732,8 +759,8 @@
         ${notesBlock('components', 'components')}</section>
 
       <section class="sec" id="screens"><p class="eyebrow">Screens</p><h2>Screens</h2>
-        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Future</b> builds on Today and is where layout changes are tried; the color themes keep Today’s layout. <b>Overlay Screenshot</b> lays the simulator screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
-        ${screensHtml}${notesBlock('screens', 'screens')}</section>
+        <p class="lede">The real Birch layouts, rebuilt point for point from the SwiftUI views with real SF Symbols. Every Tune control reaches these screens: color, chrome, shape, type, spacing, buttons and layout. With the <b>Today</b> preset they match the simulator screenshots. <b>Future</b> builds on Today and is where layout changes are tried; the color themes recolor Future’s layout. <b>Overlay Screenshot</b> lays the simulator screenshot over each phone, and the Layout group in Tune has a one-click <b>Apply interview decisions</b>. Phones scroll, and Comment mode pins notes to any element.</p>
+        ${deviceSeg()}<div id="screens-dyn">${screensDyn(id)}</div>${notesBlock('screens', 'screens')}</section>
     </div>`
     observeSections()
   }
@@ -776,12 +803,13 @@
     const ids = presetIds().filter((id) => id !== 'T' || S.includeToday)
     const screen = SH.SCREENS.find((s) => s.id === S.compareScreen) || SH.SCREENS[0]
     const head = ids.map((id) => `<div class="cmp-col-head" data-head="${id}">${compareHead(id)}</div>`).join('')
-    const row = (m) => ids.map((id) => `<div class="cmp-cell opt-${id}" data-opt="${id}">${SH.phone(screen, m, designOf(id))}</div>`).join('')
+    const row = (m) => ids.map((id) => `<div class="cmp-cell opt-${id}" data-opt="${id}">${SH.phone(screen, m, designOf(id), S.device)}</div>`).join('')
     $('#main').innerHTML = `
       <div class="cmp-bar">
         <span class="eyebrow" style="margin:0">Screen</span>
         <div class="chips">${SH.SCREENS.map((s) => `<button type="button" class="chip-x" data-cmp="${s.id}" aria-pressed="${s.id === screen.id}">${esc(s.group)} · ${esc(s.label)}</button>`).join('')}</div>
         <label class="chk"><input type="checkbox" id="incToday" ${S.includeToday ? 'checked' : ''}> Include Today</label>
+        ${deviceSeg()}
       </div>
       <div class="cmp-grid" style="grid-template-columns:repeat(${ids.length}, max-content)">
         ${head}${S.modes !== 'dark' ? row('light') : ''}${S.modes !== 'light' ? row('dark') : ''}
@@ -792,6 +820,7 @@
   function renderMain() {
     if (S.view === 'compare') renderCompare()
     else renderFocus()
+    SH.applyScrolls()
     renderPins()
   }
 
@@ -1176,7 +1205,9 @@
       scopeLabel = (SECTIONS.find((s) => secEl && s[0] === secEl.id) || [0, 'Page'])[1]
       swift = secEl && secEl.id === 'color' ? 'Theme.swift (HBTheme)' : ''
     }
-    return { opt, mode: modeEl ? modeEl.dataset.mode : 'both', scope, scopeLabel, swift, key: el.dataset.c, label: el.dataset.cl || el.dataset.c }
+    const devEl = screenEl && screenEl.closest('[data-device]')
+    const device = devEl ? devEl.dataset.device : undefined
+    return { opt, mode: modeEl ? modeEl.dataset.mode : 'both', scope, scopeLabel, swift, key: el.dataset.c, label: el.dataset.cl || el.dataset.c, ...(device ? { device } : {}) }
   }
 
   function computedOf(el) {
@@ -1197,7 +1228,8 @@
     for (const sc of scopes) {
       let containers = []
       const [kind, id] = c.scope.split(':')
-      if (kind === 'screen') containers = $$(`[data-screen="${id}"][data-mode="${c.mode}"]`, sc)
+      // Comments from before devices were added were all made on the iPhone
+      if (kind === 'screen') containers = $$(`[data-screen="${id}"][data-mode="${c.mode}"][data-device="${c.device || 'iphone'}"]`, sc)
       else if (kind === 'board') containers = $$(`[data-board="${id}"][data-mode="${c.mode}"]`, sc)
       else containers = $$(`section#${CSS.escape(id)}`, sc)
       for (const ct of containers) {
@@ -1206,6 +1238,20 @@
       }
     }
     return null
+  }
+
+  /** Rebuilds only the phones for another device, so the page keeps its place */
+  function setDevice(d) {
+    if (!SH.DEVICES.some((x) => x.id === d) || d === S.device) return
+    S.device = d
+    save()
+    if (S.view === 'compare') renderCompare()
+    else {
+      $('#screens-dyn').innerHTML = screensDyn()
+      $$('#main [data-device]').forEach((b) => b.tagName === 'BUTTON' && b.setAttribute('aria-pressed', String(b.dataset.device === S.device)))
+    }
+    SH.applyScrolls()
+    renderPins()
   }
 
   function renderPins() {
@@ -1249,7 +1295,7 @@
     draft = c
     const types = ['Change', 'Issue', 'Question', 'Keep']
     pop.innerHTML = `
-      <div class="ctx"><b>${esc(c.optName)}</b> · ${modeLabel(c.mode)} · ${esc(c.scopeLabel)}<br>${esc(c.label)}</div>
+      <div class="ctx"><b>${esc(c.optName)}</b> · ${modeLabel(c.mode)}${deviceNote(c) ? ` · ${esc(deviceNote(c))}` : ''} · ${esc(c.scopeLabel)}<br>${esc(c.label)}</div>
       <div class="seg" role="group" aria-label="Comment type">${types.map((t) => `<button type="button" data-type="${t}" aria-pressed="${c.type === t}">${t}</button>`).join('')}</div>
       <textarea id="popText" aria-label="Comment" placeholder="${c.type === 'Keep' ? 'What works here and should stay?' : 'What should change? For example: “make this 44pt” or “too much contrast in dark mode”.'}">${esc(c.text)}</textarea>
       <label class="chk"><input type="checkbox" id="popAll" ${c.allOptions ? 'checked' : ''}> Applies to every option</label>
@@ -1367,7 +1413,7 @@
           .map(
             (c) => `<div class="cm">
           <div class="cm-top"><span class="cm-n" style="${c.status === 'resolved' ? 'background:var(--x-ink3)' : ''}">${c.n}</span><span class="tag">${esc(c.type)}</span>${c.status === 'resolved' ? '<span class="tag">Resolved</span>' : ''}${c.allOptions ? '<span class="tag">All options</span>' : ''}</div>
-          <div class="cm-ctx">${esc(c.optName)} · ${modeLabel(c.mode)} · ${esc(c.scopeLabel)} › ${esc(c.label)}</div>
+          <div class="cm-ctx">${esc(c.optName)} · ${modeLabel(c.mode)}${deviceNote(c) ? ` · ${esc(deviceNote(c))}` : ''} · ${esc(c.scopeLabel)} › ${esc(c.label)}</div>
           <div class="cm-text">${esc(c.text)}</div>
           <div class="cm-actions"><button type="button" data-locate="${c.id}">Show</button><button type="button" data-edit="${c.id}">Edit</button><button type="button" data-resolve="${c.id}">${c.status === 'resolved' ? 'Reopen' : 'Resolve'}</button><button type="button" data-del="${c.id}">Delete</button></div>
         </div>`,
@@ -1446,6 +1492,10 @@
     }
     if (c.mode !== 'both' && S.modes !== 'both' && S.modes !== c.mode) {
       S.modes = 'both'
+      rerender = true
+    }
+    if (c.scope.startsWith('screen:') && (c.device || 'iphone') !== S.device) {
+      S.device = c.device || 'iphone'
       rerender = true
     }
     if (rerender) rerenderAll()
@@ -1714,7 +1764,8 @@
     L.push(`Exported ${new Date().toLocaleString()} from the Birch Design System page (\`design/design-system.html\`).`, '')
     L.push('You’re working in the birch-wallet repository. Update the SwiftUI code under `birch/` so the app matches the design changes below: the preset selected on the page, the values tuned in its Tune panel, and the comments and notes pinned to its screens and components.', '')
     if (today) L.push('**Selected preset:** Today, the app as it ships. Apply only the changes listed below.', '')
-    else if (future) L.push(`**Selected preset:** ${p.name}, the next version of the app’s design. It’s built on the app as it ships: apply its design changes and every setting and color listed below as changed from the shipped app.`, '')
+    else if (id === 'F') L.push(`**Selected preset:** ${p.name}, the next version of the app’s design. It’s built on the app as it ships: apply its design changes and every setting and color listed below as changed from the shipped app.`, '')
+    else if (future) L.push(`**Selected preset:** ${p.name}, a color theme on the Future design and a different direction from the app as it ships. Move the app to it: apply Future’s design changes and every setting and color listed below as changed from the shipped app.`, '')
     else L.push(`**Selected preset:** ${p.name}, a different direction from the app as it ships. Move the app to it: apply every setting and color listed below as changed from the shipped app.`, '')
 
     if (S.overall.trim()) L.push('## Overall notes', '', S.overall.trim(), '')
@@ -1749,7 +1800,7 @@
     const commentBlock = (c) => {
       const out = []
       out.push(`### ${c.n}. ${c.type}: ${c.scopeLabel} › ${c.label}`)
-      out.push(`- **Where:** ${c.scopeLabel}${c.swift ? ` (\`${c.swift}\`)` : ''}, ${modeLabel(c.mode).toLowerCase()}, made on ${c.optName}${c.allOptions ? ', applies to every preset' : ''}`)
+      out.push(`- **Where:** ${c.scopeLabel}${c.swift ? ` (\`${c.swift}\`)` : ''}, ${modeLabel(c.mode).toLowerCase()}${deviceNote(c) ? `, on the ${deviceNote(c)}` : ''}, made on ${c.optName}${c.allOptions ? ', applies to every preset' : ''}`)
       out.push(`- **Element:** \`${c.key}\`${c.computed ? `: fill ${c.computed.background}, text ${c.computed.text}, radius ${c.computed.radius}, font ${c.computed.font}, ${c.computed.size}pt` : ''}`)
       out.push('', c.text.split('\n').map((l) => '> ' + l).join('\n'), '')
       return out.join('\n')
@@ -1900,6 +1951,11 @@
       }
     })
     $('#main').addEventListener('click', (e) => {
+      const dev = e.target.closest('[data-device]')
+      if (dev && dev.tagName === 'BUTTON') {
+        setDevice(dev.dataset.device)
+        return
+      }
       const chip = e.target.closest('[data-cmp]')
       if (chip) {
         S.compareScreen = chip.dataset.cmp
@@ -1941,8 +1997,8 @@
     })
   }
 
-  // Harness: one bare screen at 402x874 for pixel comparison with the simulator
-  // design-system.html?harness=<screen>&mode=dark|light&preset=T|F|A|B|C&rules=system&scroll=<pt>
+  // Harness: one bare screen at the device's size for pixel comparison with the simulator
+  // design-system.html?harness=<screen>&mode=dark|light&preset=T|F|A|B|C&device=iphone|duo-closed|duo-open|ipad&rules=system&scroll=<pt>
   // (rules=system applies the interview decisions from the Layout group)
   const HP = new URLSearchParams(location.search)
   if (HP.has('harness')) {
@@ -1953,7 +2009,8 @@
     document.body.className = 'harness'
     if (HP.get('rules') === 'system') for (const [path, v] of Object.entries(INTERVIEW)) setPath(S.params[id], path, v)
     document.getElementById('tokens').textContent = cssFor(id)
-    document.body.innerHTML = `<div id="scope" class="opt-${id}" data-opt="${id}">${SH.phone(screen, mode, designOf(id))}</div>`
+    document.body.innerHTML = `<div id="scope" class="opt-${id}" data-opt="${id}">${SH.phone(screen, mode, designOf(id), HP.get('device') || 'iphone')}</div>`
+    SH.applyScrolls()
     const y = parseFloat(HP.get('scroll') || '0')
     if (y) document.querySelectorAll('.ph-screen > .sx, .ssheet > .sx').forEach((el) => (el.scrollTop = y))
     return

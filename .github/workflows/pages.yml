@@ -1,5 +1,6 @@
-# Publishes design-system.html to GitHub Pages, with the iPhone 17 Pro
-# screenshots from birch-screenshots so Overlay Screenshot works on the site.
+# Publishes design-system.html to GitHub Pages, with the screenshots from
+# birch-screenshots for every device the page builds (iPhone 17 Pro, the iPhone
+# Duo closed and open, iPad Pro 13-inch) so Overlay Screenshot works on the site.
 name: Publish to GitHub Pages
 
 on:
@@ -29,7 +30,7 @@ jobs:
         with:
           path: design
 
-      - name: Check out the iPhone 17 Pro screenshots
+      - name: Check out the screenshots
         uses: actions/checkout@v7
         with:
           repository: Birch-Wallet/birch-screenshots
@@ -38,21 +39,31 @@ jobs:
           sparse-checkout: |
             /dark/en-US/iPhone 17 Pro-*.png
             /light/en-US/iPhone 17 Pro-*.png
+            /dark/en-US/iPhone Duo (Closed)-*.png
+            /light/en-US/iPhone Duo (Closed)-*.png
+            /dark/en-US/iPhone Duo (Open)-*.png
+            /light/en-US/iPhone Duo (Open)-*.png
+            /dark/en-US/iPad Pro 13-inch (M5)-*.png
+            /light/en-US/iPad Pro 13-inch (M5)-*.png
 
       - name: Assemble the site
         run: |
           mkdir -p _site
           cp -R design/design-system.html design/assets _site/
           cp design/design-system.html _site/index.html
+          # Each screen's screenshot (its shot starts with a digit) for each device (whose shot is the
+          # screenshot name prefix), in both modes. Fail if one is missing, so Overlay never ships half broken
+          grep -o "shot: '[A-Za-z][^']*'" design/assets/ds-shipped.js | cut -d"'" -f2 > devices.txt
+          grep -o "shot: '[0-9][^']*'" design/assets/ds-shipped.js | cut -d"'" -f2 > shots.txt
           for mode in dark light; do
             mkdir -p "_site/screenshots/$mode/en-US"
-            cp shots/$mode/en-US/iPhone\ 17\ Pro-*.png "_site/screenshots/$mode/en-US/"
-          done
-          # Fail if a screen's screenshot is missing, so Overlay never ships half broken
-          for shot in $(grep -o "shot: '[^']*'" design/assets/ds-shipped.js | cut -d"'" -f2); do
-            for mode in dark light; do
-              test -f "_site/screenshots/$mode/en-US/iPhone 17 Pro-$shot.png" || { echo "Missing $mode screenshot: $shot"; exit 1; }
-            done
+            while read -r device; do
+              while read -r shot; do
+                f="shots/$mode/en-US/$device-$shot.png"
+                test -f "$f" || { echo "Missing $mode screenshot: $device-$shot"; exit 1; }
+                cp "$f" "_site/screenshots/$mode/en-US/"
+              done < shots.txt
+            done < devices.txt
           done
           du -sh _site
 

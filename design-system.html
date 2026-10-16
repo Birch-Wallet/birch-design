@@ -156,7 +156,9 @@ body.only-light .pairs, body.only-dark .pairs { grid-template-columns: minmax(0,
 .shot-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .shot-head b { font: 600 15px var(--x-display); }
 .shot-head code { font-size: 11.5px; color: var(--x-ink2); }
+.shot-note { font-size: 11.5px; color: var(--x-ink2); font-style: italic; }
 .shot-pair { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.dev-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; }
 .grp-title { font: 650 20px/1.2 var(--x-display); margin: 30px 0 14px; display: flex; align-items: center; gap: 10px; scroll-margin-top: 112px; }
 .grp-title:first-of-type { margin-top: 8px; }
 
@@ -179,10 +181,11 @@ body.only-light .pairs, body.only-dark .pairs { grid-template-columns: minmax(0,
 .cmp-cell { min-width: 0; }
 
 /* ---------- Phone ---------- */
-.ph-wrap { width: calc(420px * var(--zoom)); height: calc(892px * var(--zoom)); flex: none; position: relative; }
-.ph { position: absolute; top: 0; left: 0; margin: 0; width: 420px; height: 892px; transform: scale(var(--zoom)); transform-origin: 0 0; border-radius: 60px; padding: 9px; background: #0A0A0B;
+/* Device size and corner radius come from --dw, --dh and --dr on the wrapper (iPhone 17 Pro by default) */
+.ph-wrap { width: calc((var(--dw, 402px) + 18px) * var(--zoom)); height: calc((var(--dh, 874px) + 18px) * var(--zoom)); flex: none; position: relative; }
+.ph { position: absolute; top: 0; left: 0; margin: 0; width: calc(var(--dw, 402px) + 18px); height: calc(var(--dh, 874px) + 18px); transform: scale(var(--zoom)); transform-origin: 0 0; border-radius: calc(var(--dr, 51px) + 9px); padding: 9px; background: #0A0A0B;
   box-shadow: 0 0 0 1px #2A2A2D, 0 30px 60px -20px rgba(0,0,0,.35); flex: none; position: relative; isolation: isolate; }
-.ph-screen { position: relative; width: 402px; height: 874px; border-radius: 51px; overflow: hidden; background: var(--ground); color: var(--ink);
+.ph-screen { position: relative; width: var(--dw, 402px); height: var(--dh, 874px); border-radius: var(--dr, 51px); overflow: hidden; background: var(--ground); color: var(--ink);
   font-family: var(--f-text); font-size: var(--fs-body); line-height: 1.3; -webkit-font-smoothing: antialiased; text-align: left; }
 .ph-status { position: absolute; top: 0; left: 0; right: 0; height: 54px; background: linear-gradient(var(--ground) 72%, transparent); display: flex; align-items: center; justify-content: space-between; padding: 6px 30px 0 52px; z-index: 30; color: var(--ink); pointer-events: none; }
 .ph-time { font: 600 17px/1 var(--f-text); letter-spacing: -.2px; }
@@ -556,8 +559,8 @@ sup.only { color: var(--x-pin); font-weight: 700; margin-left: 1px; font-size: 1
 </script>
 <style>
 body.harness { margin: 0; background: #000; }
-body.harness .ph-wrap { width: 402px; height: 874px; }
-body.harness .ph { transform: none; padding: 0; border-radius: 0; box-shadow: none; background: none; width: 402px; height: 874px; }
+body.harness .ph-wrap { width: var(--dw, 402px); height: var(--dh, 874px); }
+body.harness .ph { transform: none; padding: 0; border-radius: 0; box-shadow: none; background: none; width: var(--dw, 402px); height: var(--dh, 874px); }
 body.harness .ph-screen { border-radius: 0; }
 body.harness .ph-island { display: none; }
 </style>
