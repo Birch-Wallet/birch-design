@@ -324,7 +324,7 @@ What changes on the other devices, beyond size:
 - **Navigation** on the Duo leads with the title at the top and puts a 48pt glass back button in the side column under the clock. The iPad's back button sits 10pt in, level with its tab bar.
 - **Sheets**: on the Duo the fee and filter sheets float 8pt in and aren't scaled, their content stops at the side column, and sheet toolbars sit 2pt lower (the closed Duo leads with the title beside the first button). On the iPad, Bump fee is a form sheet in the middle of the screen, the fee sheet ends where that form sheet does, and the filter sheet is form-sheet wide at its medium detent. Behind a page or form sheet the wallet dims, its tab bar a little more, with the selected tab turned gray.
 - **Setup**: Import descriptor is full screen everywhere but the iPhone's tour; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
-- **Data** in the screenshots differs slightly per device (the fiat value, the refresh age, the iPad's build number, Touch ID on the Duo), and the builders follow it.
+- **Data** in the screenshots is the same on every device, because the tour runs on fixed data (`ScreenshotFixtures` in the app: the price, the fee rates, the clock, the identicons, the chain tip and the transaction). Only the Duo differs, with Touch ID where the others have Face ID, and the builders follow it.
 - The Duo's screenshots come from iOS 27.1, which spaces wrapped address lines 1.67pt further apart than iOS 27.0; a few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
 - The flagged Import cosigners screenshot is scrolled on the Duo, where Next brings the flagged key into view: 10.33pt closed and 15pt open. The page scrolls the screen to match.
 
@@ -334,14 +334,14 @@ To check a screen against its screenshot, open `design-system.html?harness=<scre
 
 ## Tune controls
 
-Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no error states, destructive buttons, tertiary text or Mainnet badge).
+Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no warnings, error states, destructive buttons, tertiary text or Mainnet badge).
 
 | Group | Controls |
 |---|---|
 | Brand | Hue, chroma, lightness per mode, text on brand |
 | Accent and roles | Second hue on/off; with it on, the accent hue, chroma and lightness, and which elements use it: selection, progress, amounts, active tab, toggles (Settings, the UTXO filter sheet) |
 | Dark and light surfaces | Tint hue and amount, ground, surface step or card and field depth, secondary text, tertiary text* |
-| Semantic | Success, info, warning, danger* hues and chroma |
+| Semantic | Success, info, warning*, danger* hues and chroma |
 | Networks | Testnet4, Signet, Testnet3, Mainnet* hues and chroma |
 | App chrome | Wallet header fill, tab bar glass or solid, glass opacity, sheet dimming |
 | Shape | Card, field, button, pill and sheet radius; selection ring; card stroke; light-mode shadow |

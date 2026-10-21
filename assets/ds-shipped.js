@@ -83,15 +83,13 @@
    * sendFiat is the amount being sent in fiat at that price.
    * page is a page sheet that doesn't span the screen: its width, centered, and its top and bottom insets.
    * wizTop is the full-screen setup wizard's top inset where it differs from top (the iPad has no tab bar there).
-   * form is the iPad's form sheet, centered on the screen. version is the build its screenshots show. fiat and age are
-   * the balance's fiat value and the refresh age each device's screenshots show. Builders read
-   * the device being built from D.
+   * form is the iPad's form sheet, centered on the screen. Builders read the device being built from D.
    */
   const DEVICES = [
     { id: 'iphone', label: 'iPhone 17 Pro', w: 402, h: 874, scale: 3, radius: 51, shot: 'iPhone 17 Pro', top: 62, end: 0, bottom: 34, tabClear: 83, fixBottom: 83, navTop: 62, scanSide: 279.4, biometry: 'Face ID', medium: 469.7, chrome: 'iphone', layout: 'compact' },
     { id: 'duo-closed', label: 'iPhone Duo, closed', w: 466, h: 678, scale: 3, radius: 36, shot: 'iPhone Duo (Closed)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 190, biometry: 'Touch ID', medium: 390, chrome: 'duo', layout: 'compact', status: [396.667, 85.667], tabs: 392 },
-    { id: 'duo-open', label: 'iPhone Duo, open', w: 951, h: 669, scale: 3, radius: 36, shot: 'iPhone Duo (Open)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 181, biometry: 'Touch ID', medium: 385, fiat: '$ 167.90', sendFiat: '$ 61.69', age: '2s', chrome: 'duo', layout: 'twoColumn', fold: [475.67, 40], homeIndicator: true, page: { w: 653, top: 8, bottom: 0 }, status: [881.667, 33], tabs: 383 },
-    { id: 'ipad', label: 'iPad Pro 13-inch, portrait', w: 1032, h: 1376, scale: 2, radius: 18, shot: 'iPad Pro 13-inch (M5)', top: 86, end: 0, bottom: 20, tabClear: 20, fixBottom: 20, navTop: 86, scanSide: 500, biometry: 'Face ID', medium: 741.5, fiat: '$ 167.90', sendFiat: '$ 61.69', age: '2s', page: { w: 928, top: 32, bottom: 32 }, form: { w: 580, h: 660 }, wizTop: 32, version: '0.23 (29)', chrome: 'ipad', layout: 'column' },
+    { id: 'duo-open', label: 'iPhone Duo, open', w: 951, h: 669, scale: 3, radius: 36, shot: 'iPhone Duo (Open)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 181, biometry: 'Touch ID', medium: 385, chrome: 'duo', layout: 'twoColumn', fold: [475.67, 40], homeIndicator: true, page: { w: 653, top: 8, bottom: 0 }, status: [881.667, 33], tabs: 383 },
+    { id: 'ipad', label: 'iPad Pro 13-inch, portrait', w: 1032, h: 1376, scale: 2, radius: 18, shot: 'iPad Pro 13-inch (M5)', top: 86, end: 0, bottom: 20, tabClear: 20, fixBottom: 20, navTop: 86, scanSide: 500, biometry: 'Face ID', medium: 741.5, page: { w: 928, top: 32, bottom: 32 }, form: { w: 580, h: 660 }, wizTop: 32, chrome: 'ipad', layout: 'column' },
   ]
   /** How far a floating sheet's content keeps in from its trailing edge beyond the margin: on the Duo the
    *  sheet spans the side column but its content stops at the safe area */
@@ -154,14 +152,16 @@
     return `<nav class="htabbar"${c('tabbar', 'Tab bar')}>${TABS.map(([label]) => `<span class="htab${label === active ? ' on' : ''}">${label}</span>`).join('')}</nav>`
   }
 
-  /** WalletIdenticon: 4x4 cells, palette slot + opacity, sampled from the shipped wallet */
+  /** WalletIdenticon: 4x4 cells, palette slot + opacity, for the screenshot tour's Birch wallet. Its id comes from
+   *  its descriptor (ScreenshotFixtures.walletID), so these are computed the way the app computes them */
   const IDENT = [
-    ['o', 0.6], ['p', 0.85], ['o', 0.65], ['i', 0.8],
-    ['g', 0.65], ['g', 0.8], ['p', 0.95], ['o', 0.75],
-    ['g', 0.55], ['g', 0.9], ['g', 0.7], ['s', 1],
-    ['t', 0.85], ['t', 0.95], ['p', 0.7], ['s', 0.95],
+    ['g', 0.82], ['i', 0.671], ['p', 0.58], ['t', 0.876],
+    ['g', 0.575], ['s', 0.855], ['i', 0.841], ['g', 0.951],
+    ['s', 0.945], ['t', 0.529], ['p', 0.761], ['i', 0.912],
+    ['g', 0.806], ['g', 0.678], ['i', 0.735], ['g', 0.559],
   ]
-  const IDENT_COLOR = { g: 'var(--brand)', i: 'var(--info)', s: 'var(--success)', p: 'var(--purple)', o: 'var(--orange)', t: 'var(--teal)' }
+  // The purple is WalletIdenticon's own Color(red: 0.6, green: 0.4, blue: 0.8), not the system purple --purple holds
+  const IDENT_COLOR = { g: 'var(--brand)', i: 'var(--info)', s: 'var(--success)', p: '#9966CC', o: 'var(--orange)', t: 'var(--teal)' }
   function identicon(size) {
     const cells = IDENT.map(([k, o], i) => `<rect x="${i % 4}" y="${Math.floor(i / 4)}" width="1" height="1" style="fill:${IDENT_COLOR[k]};fill-opacity:${o}"/>`).join('')
     return `<span style="width:${size}px;height:${size}px;border-radius:6px;overflow:hidden;display:block;flex:none"><svg viewBox="0 0 4 4" width="${size}" height="${size}" shape-rendering="crispEdges" style="display:block">${cells}</svg></span>`
@@ -346,7 +346,7 @@
   function home(mode, design, picker = false, state = 'list', age = null) {
     const list = state === 'list'
     const syncing = state === 'loading'
-    const status = syncing ? 'Scanning addresses…' : `Last refreshed ${age || D.age || (mode === 'light' && list ? '2s' : '1s')} ago`
+    const status = syncing ? 'Scanning addresses…' : `Last refreshed ${age || '2s'} ago`
     const content = list
       ? `<div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>`
       : syncing
@@ -362,7 +362,7 @@
           <span class="sp"></span>
           ${syncDot(syncing)}
         </div>
-        <div class="col cx" style="gap:2px"${c('balance', 'Balance')}>${T(list ? '193,885 sats' : '0 sats', 'a', 36, 700, 'ink')}${T(list ? D.fiat || '$ 167.85' : '$ 0.00', 'd', 14, 400, 'ink2')}</div>
+        <div class="col cx" style="gap:2px"${c('balance', 'Balance')}>${T(list ? '193,885 sats' : '0 sats', 'a', 36, 700, 'ink')}${T(list ? '$ 158.92' : '$ 0.00', 'd', 14, 400, 'ink2')}</div>
         <div class="row">
           <span class="nbadge" style="--nb:var(--net_testnet4)"${c('network-badge', 'Network badge')}>Testnet4</span><span class="sp"></span>
           ${T(status, 'd', 11, 400, 'ink2', '', '')}
@@ -517,7 +517,7 @@
     return `
       <div style="padding-bottom:4px">${steps(0)}</div>
       ${recipientFilled()}
-      ${amountCard('71234', ['0.00071234 BTC', '≈ $ 61.67'], '115,823 sats')}
+      ${amountCard('71234', ['0.00071234 BTC', '≈ $ 58.39'], '115,823 sats')}
       ${decisionsCard('0.51 sat/vB · 252 sats')}
       ${sendFooter('71,486 sats', 'Next: Review Transaction')}`
   }
@@ -528,7 +528,7 @@
       <div style="padding-bottom:4px">${steps(0)}</div>
       ${recipientEmpty()}
       ${amountCard(null, null, '193,885 sats')}
-      ${decisionsCard('0.1 sat/vB', 'Medium')}
+      ${decisionsCard('2 sat/vB', 'Medium')}
       ${sendFooter(null, 'Enter an address and amount to continue')}`
   }
 
@@ -556,7 +556,7 @@
       <div class="col" style="gap:${S(16)};padding:${S(24)} calc(var(--gutter) + ${sheetEnd()}px) ${S(24)} var(--gutter);align-items:stretch">
         <div class="row" style="align-items:baseline"${c('sheet-title', 'Sheet title')}>${T('Network Fee', 'r', 22, 'W', 'ink')}<span class="sp"></span>${T('~496 vB tx', 'm', 12, 400, 'ink2', '', 'amt')}</div>
         <div class="col" style="gap:${S(10)};align-items:stretch">
-          ${feeOption('Fast', '0.1 sat/vB')}${feeOption('Medium', '0.1 sat/vB')}${feeOption('Slow', '0.1 sat/vB')}
+          ${feeOption('Fast', '5 sat/vB')}${feeOption('Medium', '2 sat/vB')}${feeOption('Slow', '1 sat/vB')}
           <div class="row sel" style="gap:12px;padding:calc(var(--pad) - 2px) var(--pad);min-height:calc(var(--pad) * 3.875)"${c('fee-custom', 'Fee option: Custom (selected)')}>
             <span style="width:22px;height:22px;border-radius:50%;background:var(--select);color:var(--onAccent);display:grid;place-items:center;flex:none">${Y('checkmark:11:bold')}</span>
             ${T('Custom', 'r', 17, 600, 'ink')}<span class="sp" style="min-width:8px"></span>
@@ -566,7 +566,7 @@
         <div class="row" style="align-items:flex-end;padding-top:4px;position:relative"${c('fee-total', 'Total fee')}>
           <i style="position:absolute;left:0;right:0;top:-10px;height:0.33px;background:var(--border)"></i>
           <div class="col" style="gap:${S(5)};align-items:flex-start">${T('Total fee', 'd', 13, 400, 'ink2')}${T('252 sats', 'm', 17, 700, 'ink', '', 'amt')}</div>
-          <span class="sp"></span>${T('≈ $ 0.22', 'm', 12, 400, 'ink2', '', 'amt')}
+          <span class="sp"></span>${T('≈ $ 0.21', 'm', 12, 400, 'ink2', '', 'amt')}
         </div>
         <span class="pbtn"${c('primary-cta', 'Primary button: Use Custom')}>Use Custom · 0.51 sat/vB</span>
       </div>
@@ -613,15 +613,15 @@
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('review-card', 'Review card')}>
           ${reviewItem('To', `<span class="t tw" style="${F('m', 12)};line-height:normal">${addr(TO)}</span>`, 'to')}
           ${reviewItem('Label', `<span class="row" style="gap:4px"><span style="color:var(--info);display:flex">${Y('tag.fill:10:regular')}</span>${T('Test Transaction', 'd', 16, 400, 'ink')}</span>`, 'label')}
-          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T(D.sendFiat || '$ 61.67', 'd', 13, 400, 'ink2')}</span>`, 'amount')}
-          ${reviewItem('Change', T('4,443 sats', 'm', 14, 400, 'ink', '', 'amt'), 'change')}
+          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T('$ 58.39', 'd', 13, 400, 'ink2')}</span>`, 'amount')}
+          ${reviewItem('Change', T('32,430 sats', 'm', 14, 400, 'ink', '', 'amt'), 'change')}
           ${reviewItem('Change Address', `<span class="t tw" style="${F('m', 12)}">${addr(CHANGE)}</span>`, 'change-address')}
           ${reviewItem('Change Derivation Path', T("m/48'/1'/0'/2'/1/2", 'm', 12, 400, 'ink'), 'change-path')}
           ${chip('Change returns to this wallet', 'This wallet derived the address above from its own change keychain, at the path shown.', 'change-verified')}
           ${reviewItem('Fee Rate', T('0.51 sat/vB', 'm', 14, 400, 'ink', '', 'amt'), 'fee-rate')}
-          ${reviewItem('Total Fee', `<span class="row" style="gap:6px">${T('159 sats', 'm', 14, 400, 'ink', '', 'amt')}${T('$ 0.14', 'd', 13, 400, 'ink2')}</span>`, 'total-fee')}
+          ${reviewItem('Total Fee', `<span class="row" style="gap:6px">${T('159 sats', 'm', 14, 400, 'ink', '', 'amt')}${T('$ 0.13', 'd', 13, 400, 'ink2')}</span>`, 'total-fee')}
           ${reviewItem('Inputs', T('2 UTXOs', 'm', 14, 400, 'ink', '', 'amt'), 'inputs')}
-          ${reviewItem('Inputs Amount', T('75,836 sats', 'm', 16, 700, 'ink', '', 'amt'), 'inputs-amount')}
+          ${reviewItem('Inputs Amount', T('103,823 sats', 'm', 16, 700, 'ink', '', 'amt'), 'inputs-amount')}
           ${chip('Inputs verified against wallet', '2 inputs match the amounts this wallet has recorded.', 'inputs-verified')}
         </div>`)}
         ${gutterBox(flowDiagram())}
@@ -654,12 +654,12 @@
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('psbt-summary', 'Transaction summary')}>
           ${reviewItem('To', `<span class="t tw" style="${F('m', 12)}">${addr(TO)}</span>`)}
           ${reviewItem('Label', `<span class="row" style="gap:4px"><span style="color:var(--info);display:flex">${Y('tag.fill:10:regular')}</span>${T('Test Transaction', 'd', 16, 400, 'ink')}</span>`)}
-          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T(D.sendFiat || '$ 61.67', 'd', 13, 400, 'ink2')}</span>`)}
+          ${reviewItem('Amount', `<span class="row" style="gap:6px">${T('71,234 sats', 'm', 16, 700, 'amt', '', 'amt')}${T('$ 58.39', 'd', 13, 400, 'ink2')}</span>`)}
           ${reviewItem('Fee Rate', T('0.51 sat/vB', 'm', 14, 400, 'ink', '', 'amt'))}
-          ${reviewItem('Total Fee', `<span class="row" style="gap:6px">${T('159 sats', 'm', 14, 400, 'ink', '', 'amt')}${T('$ 0.14', 'd', 13, 400, 'ink2')}</span>`)}
+          ${reviewItem('Total Fee', `<span class="row" style="gap:6px">${T('159 sats', 'm', 14, 400, 'ink', '', 'amt')}${T('$ 0.13', 'd', 13, 400, 'ink2')}</span>`)}
           ${reviewItem('Inputs', T('2 UTXOs', 'm', 14, 400, 'ink', '', 'amt'))}
-          ${reviewItem('Inputs Amount', T('75,836 sats', 'm', 16, 700, 'ink', '', 'amt'))}
-          ${reviewItem('Change', T('4,443 sats', 'm', 14, 400, 'ink', '', 'amt'))}
+          ${reviewItem('Inputs Amount', T('103,823 sats', 'm', 16, 700, 'ink', '', 'amt'))}
+          ${reviewItem('Change', T('32,430 sats', 'm', 14, 400, 'ink', '', 'amt'))}
           ${reviewItem('Signatures Required', T('2', 'm', 14, 400, 'ink', '', 'amt'))}
         </div>`)}
       </div>`)
@@ -1027,7 +1027,7 @@
           <div class="col cx" style="gap:${S(8)};padding-top:${S(8)}"${c('utxo-amount', 'UTXO amount')}>
             <span style="color:var(--brandInk);display:flex">${Y('bitcoinsign.circle.fill:44:regular')}</span>
             ${T('8,754 sats', 'a', 24, 600, 'ink', '', 'amt')}
-            ${T('$ 7.58', 'd', 14, 400, 'ink2')}
+            ${T('$ 7.18', 'd', 14, 400, 'ink2')}
             ${capsule('Confirmed', 'var(--success)', 11, 'utxo-status')}
           </div>
           <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('output', 'Output details')}>
@@ -1042,7 +1042,7 @@
             ${detail('Type', 'Receive')}
             ${detail('Block Height', '127747')}
             ${detail('Timestamp', 'March 29, 2026 at 1:02 AM')}
-            ${detail('Confirmations', '27644')}
+            ${detail('Confirmations', '28966')}
           </div>
           <div class="hcard col" style="gap:${S(6)};align-items:stretch"${c('label', 'Label')}>
             <div class="row">${T('Label', 'd', 13, 400, 'ink2')}<span class="sp"></span><span class="row" style="height:calc(16.9px * var(--ts));color:var(--u-info)"${c('add-label', 'Add label')}>${Y('plus.circle:14:regular')}</span></div>
@@ -1086,7 +1086,7 @@
             ${picker('Currency', 'USD', 'currency', 'padding-top:12px')}</div>`), 'currency')}
         ${section('Appearance', row(picker('Theme', 'System', 'theme')), 'appearance')}
         ${section('App Icon', row(`<div class="row" style="gap:12px;flex:1;align-items:flex-start">${tile('light', true)}${tile('dark', false)}</div>`), 'app-icon')}
-        ${section('About', row(`${T('Version', 'd', 17, 400, 'ink', NLH)}<span class="sp"></span>${T(D.version || '0.23 (31)', 'd', 17, 400, 'ink2', NLH)}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
+        ${section('About', row(`${T('Version', 'd', 17, 400, 'ink', NLH)}<span class="sp"></span>${T('0.23 (31)', 'd', 17, 400, 'ink2', NLH)}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
         <div style="height:${D.tabClear + 35}px"></div>
       </div>${tabbar('Settings')}`
   }
