@@ -42,7 +42,9 @@ def shot(mode, name):
 
 
 def magick(*args):
-    subprocess.run(['magick', *args], check=True, capture_output=True)
+    # Leave out the PNG date chunks, so unchanged screenshots rebuild a byte-identical ds-assets.js
+    *ops, out = args
+    subprocess.run(['magick', *ops, '-define', 'png:exclude-chunks=date,time', out], check=True, capture_output=True)
 
 
 def b64(path):

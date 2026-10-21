@@ -15,6 +15,8 @@ Paths in `DESIGN-SYSTEM.md` and in the page are written from the birch-wallet ro
 
 The simulator screenshots live in a separate repo, [birch-screenshots](https://github.com/Birch-Wallet/birch-screenshots), which birch-wallet mounts at `fastlane/screenshots/`. The page and `tools/build-assets.py` look there first, then in `screenshots/` next to the page (a standalone clone, ignored by git, or the copy the GitHub Pages build adds).
 
+The tour that takes them runs on fixed data (`birch/Utilities/ScreenshotFixtures.swift` in birch-wallet): the BTC price, the fee rates, the clock, the wallets' identicons, the chain tip and the transaction it builds. So a new run only changes a screenshot when the app changes, and the builders' values (the $158.92 balance, "2s ago", 28966 confirmations and so on) stay right until then.
+
 The playground is published at https://birch-wallet.github.io/birch-design/ by `.github/workflows/pages.yml` on every push to `main`.
 
 ## Building UI in birch-wallet
