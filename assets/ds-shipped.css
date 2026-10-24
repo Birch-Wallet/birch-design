@@ -16,7 +16,7 @@
 .sb { position: absolute; left: 0; top: 0; width: 402px; height: 62px; z-index: 50; pointer-events: none; }
 .sb-glyphs { position: absolute; left: 50px; top: 22px; width: 286.667px; height: 20px; background: #fff; -webkit-mask-size: 100% 100%; mask-size: 100% 100%; }
 .m-light .sb-glyphs { background: #000; }
-.sb-batt { position: absolute; left: 340px; top: 24.667px; width: 31px; height: 15px; background-size: 100% 100%; }
+.sb-batt { position: absolute; left: 338px; top: 24.667px; width: 31px; height: 15px; background-size: 100% 100%; }
 
 /* Generic text and layout */
 /* UIFont line height is 1.1934em on iOS; WebKit rounds 'normal' to whole px and sits the baseline ~0.015em lower */
@@ -175,6 +175,10 @@
 .irow { display: flex; align-items: center; min-height: 52px; padding: 15px var(--pad); }
 /* The separator sits inside the bottom of the row above it, as UIKit draws it */
 .isep { display: block; position: relative; height: 1px; margin: -1px var(--pad) 0; background: var(--sep); }
+/* iOS 27.2 sets the iPhone's section headers, rows and separators 4pt further in, as the Duo does */
+.dev-iphone .igh { padding-left: calc(var(--gutter) - 4px + var(--pad)); }
+.dev-iphone .irow { padding-left: calc(var(--pad) + 4px); padding-right: calc(var(--pad) + 4px); }
+.dev-iphone .isep { margin-left: calc(var(--pad) + 4px); margin-right: calc(var(--pad) + 4px); }
 .iswitch { position: relative; flex: none; width: 63px; height: 28px; margin-right: -2px; border-radius: 14px; background: var(--switchOff); }
 .iswitch i { position: absolute; left: 2px; top: 2px; width: 37px; height: 24px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 .iswitch.on { background: var(--toggle); }
@@ -234,8 +238,8 @@
 .qrbox { background: #fff; box-shadow: 0 0 20px color-mix(in srgb, var(--brand) 20%, transparent); }
 .t-sp { font: 400 calc(17px * var(--ts)) var(--f-text); line-height: round(up, 1.1934em, 0.33333px); }
 .dev-ipad .t-sp { line-height: round(up, 1.1934em, 0.5px); }
-/* The Duo's screenshots come from iOS 27.1, which sets wrapped address lines 1.67pt further apart (between
-   lines only, so the extra half-leading above the first line and below the last is taken back) */
+/* The Duo sets wrapped address lines 1.67pt further apart than the iPhone and the iPad (between lines only,
+   so the extra half-leading above the first line and below the last is taken back) */
 .dev-duo-closed .t-sp, .dev-duo-open .t-sp { line-height: calc(22px * var(--ts)); }
 .dev-duo-closed .t:has(> .t-sp), .dev-duo-open .t:has(> .t-sp) { margin: calc(-0.835px * var(--ts)) 0; }
 

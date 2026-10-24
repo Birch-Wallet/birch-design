@@ -91,7 +91,7 @@ def status_bar(tmp):
     batt = {}
     for mode, bg in (('dark', 'srgb(36,32,24)'), ('light', 'srgb(227,221,211)')):
         out = os.path.join(tmp, f'batt-{mode}.png')
-        magick(shot(mode, '04-Transactions'), '-crop', '93x45+1020+74', '+repage', '-fuzz', '9%', '-transparent', bg, 'PNG32:' + out)
+        magick(shot(mode, '04-Transactions'), '-crop', '93x45+1014+74', '+repage', '-fuzz', '9%', '-transparent', bg, 'PNG32:' + out)
         batt[mode] = b64(out)
     return b64(mask), batt
 

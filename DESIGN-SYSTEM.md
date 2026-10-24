@@ -136,8 +136,8 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 - Gold text on light surfaces fails: 2.9:1 on cards and 2.5:1 on the ground. This affects Copy Address, Add Label, value pickers ("sats", "Electrum Server"), View All Addresses, the setup footers' Back and outlined Next, and the Scan QR utility.
 - Olive success text on dark cards is 3.5:1. Received amounts in the transaction list are hard to read.
 - Error text on dark cards is 2.7:1, which includes the field error messages on Import cosigners.
-- The light-mode fastlane screenshots show segmented controls with a near-black track (Bitcoin Network, Addresses, Protocol, QR settings). The track color is set through `UISegmentedControl.appearance()` in `ThemeManager.applyControlAppearance()`, which only affects controls created afterwards, so a control created before the light palette applies keeps the dark track. On device in light mode the track is light. It is still a latent bug: switching appearance while a screen is open leaves its segmented controls in the old color.
-- The light-mode Settings screenshot shows the menu picker values (Electrum Server, sats, Zeus, USD, System) in the dark palette's gold, `#D4A835`, instead of `#B28622`. The pickers are UIKit menus that keep the `.tint()` color they were created with, the same way the segmented track does. Toggles in the same screenshot use the light gold.
+- Switching appearance while a screen is open leaves its segmented controls (Bitcoin Network, Addresses, Protocol, QR settings) with the old palette's track: going from dark to light leaves a near-black track. The track color is set through `UISegmentedControl.appearance()` in `ThemeManager.applyControlAppearance()`, which only affects controls created afterwards.
+- The same switch leaves the menu picker values in Settings (Electrum Server, sats, Zeus, USD, System) in the old palette's gold: `#D4A835` instead of `#B28622` after going from dark to light. The pickers are UIKit menus that keep the `.tint()` color they were created with. Toggles change with the palette. The fastlane screenshots set the appearance before the app launches, so they show the right colors.
 
 **Semantics**
 - `success`, `secondaryAccent` (`hbSteelBlue`) and the testnet badge are one olive, so "confirmed", "testnet" and "secondary action" look identical.
@@ -297,25 +297,25 @@ Platform details that the rebuild reproduces:
 - **The segmented control** takes a 31pt frame and draws its 32pt track 1pt past it, so the network card is 86.67pt tall.
 - **The fee and filter sheets** are the iOS 26 floating sheet: on the iPhone laid out full width, then drawn at 386/402 scale, 8pt from the edges, with 12pt corners and a 57pt × 4pt grabber 6pt from the top. The filter sheet stops at its medium detent, 451pt tall.
 - **The setup wizard**, on the iPhone, is a full-width sheet at 62pt over the dimmed wallet for the import descriptor, multisig, cosigner and verify steps. Welcome and Wallet setup are the first-launch wizard, full screen. The other devices differ: see Devices.
-- **Lists** keep the iOS 26 metrics: plain lists (Transactions, UTXOs) with 16pt insets and the system chevron; the inset grouped list in Settings with 26pt section corners, 52pt minimum rows, 17pt semibold section headers in the system secondary label color, and 63 × 28pt switches. Separators are `#3C3A38` on the dark card and `#DCD9D2` on the light one. The list shapes are drawn by iOS, so Tune's radius controls don't change them.
+- **Lists** keep the iOS 26 metrics: plain lists (Transactions, UTXOs) with 16pt insets and the system chevron; the inset grouped list in Settings with 26pt section corners, section headers, rows and separators 20pt in from the section's edges on the iPhone and the Duo, 52pt minimum rows, 17pt semibold section headers in the system secondary label color, and 63 × 28pt switches. Separators are `#3C3A38` on the dark card and `#DCD9D2` on the light one. The list shapes are drawn by iOS, so Tune's radius controls don't change them.
 - **Navigation bars** have the Liquid Glass back button (44pt) and the inline title in the system label color.
 - **Sheet toolbars** use `HBBarButtonStyle`: 15pt semibold on the card fill (the prominent one on the brand fill), 34pt tall, 21pt down and 16pt in, around the inline title.
 - **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button, the warning symbol on Verify wallet).
 - **The app icon** is the artwork from `Assets.xcassets`. On Welcome, a ground-colored 24pt stroke blurred by 12pt fades its edges, as in `WelcomeStepView`.
 - **The PSBT and receive QR codes** are the actual module grids sampled from the screenshots.
-- **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode. The light-mode screenshots show a near-black track that does not appear on device (see 1.6), so light segmented controls are one of two places the rebuild intentionally differs from the screenshots. The other is the light-mode Settings picker values, drawn in the light gold rather than the dark gold the screenshot kept (see 1.6).
+- **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode.
 
 Every Tune control reaches these screens, through CSS variables whose Today values equal the shipped layout (listed at the top of `ds-shipped.js`). That makes each design decision testable on the real screen. **Apply interview decisions** in Tune's Layout group sets the four rules from the interview at once: numbers in the amount face, signed amounts, received amounts in ink, and a stacked setup footer.
 
 ### Devices
 
-**Device** above the screens (and in Compare) rebuilds every screen for one of the devices the fastlane tour captures. `DEVICES` in `ds-shipped.js` holds each one's size, safe areas, chrome and layout:
+**Device** above the screens (and in Compare) rebuilds every screen for one of the devices the fastlane tour captures, all on iOS 27.2. `DEVICES` in `ds-shipped.js` holds each one's size, safe areas, chrome and layout:
 
 | Device | Size | Chrome | Setup layout |
 |---|---|---|---|
 | iPhone 17 Pro | 402 × 874pt, 3x | Status bar and Dynamic Island; floating tab bar at the bottom | One column, setup steps in a sheet at 62pt |
-| iPhone Duo, closed | 466 × 678pt, 3x (iOS 27.1) | No top inset; an 84pt side column with the clock, a battery ring and a vertical Liquid Glass tab bar (icons only); 34.67pt at the bottom | One column; sheets float 8pt in from the top and sides |
-| iPhone Duo, open | 951 × 669pt, 3x (iOS 27.1) | The same side column | Two columns split at the fold (32pt and 24pt margins, a 64pt gap centered on the fold); sheets are 653pt page sheets centered on the screen |
+| iPhone Duo, closed | 466 × 678pt, 3x | No top inset; an 84pt side column with the clock, a battery ring and a vertical Liquid Glass tab bar (icons only); 34.67pt at the bottom | One column; sheets float 8pt in from the top and sides |
+| iPhone Duo, open | 951 × 669pt, 3x | The same side column | Two columns split at the fold (32pt and 24pt margins, a 64pt gap centered on the fold); sheets are 653pt page sheets centered on the screen |
 | iPad Pro 13-inch, portrait | 1032 × 1376pt, 2x | Status bar with the date and app name; floating text tab bar 32pt down; the window's resize grip | One 600pt readable column; page sheets 928pt wide, form sheets 580 × 660pt |
 
 What changes on the other devices, beyond size:
@@ -325,7 +325,7 @@ What changes on the other devices, beyond size:
 - **Sheets**: on the Duo the fee and filter sheets float 8pt in and aren't scaled, their content stops at the side column, and sheet toolbars sit 2pt lower (the closed Duo leads with the title beside the first button). On the iPad, Bump fee is a form sheet in the middle of the screen, the fee sheet ends where that form sheet does, and the filter sheet is form-sheet wide at its medium detent. Behind a page or form sheet the wallet dims, its tab bar a little more, with the selected tab turned gray.
 - **Setup**: Import descriptor is full screen everywhere but the iPhone's tour; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
 - **Data** in the screenshots is the same on every device, because the tour runs on fixed data (`ScreenshotFixtures` in the app: the price, the fee rates, the clock, the identicons, the chain tip and the transaction). Only the Duo differs, with Touch ID where the others have Face ID, and the builders follow it.
-- The Duo's screenshots come from iOS 27.1, which spaces wrapped address lines 1.67pt further apart than iOS 27.0; a few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
+- The Duo, which has its own iOS 27.2 simulator runtime, spaces wrapped address lines 1.67pt further apart than the iPhone and the iPad do. A few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
 - The flagged Import cosigners screenshot is scrolled on the Duo, where Next brings the flagged key into view: 10.33pt closed and 15pt open. The page scrolls the screen to match.
 
 ### The harness

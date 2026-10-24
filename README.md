@@ -79,7 +79,7 @@ Your tuning and comments are saved in that browser's local storage, separately f
 
 ## Keeping it accurate
 
-With the Today preset, the rebuilt screens match the simulator screenshots to within about a point on every device (a little more on a few long iPad and Duo screens, where the newer iOS rounds text differently). Screens with no screenshot were checked against the same SwiftUI views built in the simulator. After changing the page, run the end-to-end check in both engines:
+With the Today preset, the rebuilt screens match the simulator screenshots to within about a point on every device (a little more on a few long iPad and Duo screens, where iOS rounds text differently). Screens with no screenshot were checked against the same SwiftUI views built in the simulator. After changing the page, run the end-to-end check in both engines:
 
 ```sh
 node tools/check-page.js webkit
