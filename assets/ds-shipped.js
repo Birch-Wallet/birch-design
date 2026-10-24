@@ -1064,7 +1064,8 @@
   // Settings (an inset grouped List: iOS draws the sections, the app colors the rows)
   // ---------------------------------------------------------------------------
 
-  function settings() {
+  function settings(mode, design) {
+    if (design === 'future') return settingsCards()
     const toggle = (on, key, label) => `<span class="iswitch${on ? ' on' : ''}"${c(key, label)}><i></i></span>`
     const titled = (title, sub) => `<div class="col" style="gap:2px;align-items:flex-start;flex:0 1 auto">${T(title, 'd', 17, 400, 'ink', LH)}${T(sub, 'd', 12, 400, 'ink2', LH, 'tw')}</div>`
     const picker = (label, value, key, extra = '') =>
@@ -1088,6 +1089,46 @@
         ${section('App Icon', row(`<div class="row" style="gap:12px;flex:1;align-items:flex-start">${tile('light', true)}${tile('dark', false)}</div>`), 'app-icon')}
         ${section('About', row(`${T('Version', 'd', 17, 400, 'ink', NLH)}<span class="sp"></span>${T('0.23 (31)', 'd', 17, 400, 'ink2', NLH)}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
         <div style="height:${D.tabClear + 35}px"></div>
+      </div>${tabbar('Settings')}`
+  }
+
+  /** Future: Settings as the app's own cards (SettingsSection: a system-style header over a BirchCard
+   *  with 16pt sides and 4pt above and below). Rows are settingsRow(): 8pt above and below, at least
+   *  52pt, with an HBDivider between them. A choice shows its value and a chevron and pushes a list
+   *  of the options instead of opening a menu */
+  function settingsCards() {
+    const toggle = (on, key, label) => `<span class="iswitch${on ? ' on' : ''}"${c(key, label)}><i></i></span>`
+    const titled = (title, sub) => `<div class="col" style="gap:2px;align-items:flex-start;flex:0 1 auto">${T(title, 'd', 17, 400, 'ink', LH)}${T(sub, 'd', 12, 400, 'ink2', LH, 'tw')}</div>`
+    const row = (inner, key, label) => `<div class="row srow"${key ? c(key, label) : ''}>${inner}</div>`
+    const choice = (label, value, key) =>
+      row(`${T(label, 'd', 17, 400, 'ink', LH)}<span class="sp"></span><span class="row" style="gap:8px;color:var(--ink2)">${T(value, 'd', 17, 400, 'ink2', LH)}${Y('chevron.right:12:semibold')}</span>`, key, label + ' choice')
+    const divider = '<div class="divider"></div>'
+    const section = (title, rows, key) =>
+      `<div class="col" style="gap:${S(8)};align-items:stretch"><div style="padding:0 4px">${T(title, 'd', 17, 600, 'var(--sysInk2)', LH)}</div><div class="card col scard" style="align-items:stretch"${c(key, title + ' section')}>${rows}</div></div>`
+    const tile = (m, on) => `<div class="col cx" style="flex:1 1 0;gap:8px;padding:8px 0"${c('icon-' + m, (m === 'light' ? 'Light' : 'Dark') + ' app icon')}>
+        <span style="position:relative;display:block">${appIcon(m, 72, 16)}${on ? '<i class="iconring"></i>' : ''}</span>
+        <span class="row" style="gap:4px">${on ? `<span style="color:var(--select);display:flex">${Y('checkmark.circle.fill:12:regular')}</span>` : ''}${T(m === 'light' ? 'Light' : 'Dark', 'd', 13, 400, 'ink', LH)}</span></div>`
+    return `${tabTitle('Settings')}
+      <div class="sx" style="top:${D.top + 54.95}px;right:${D.end}px">
+        <div class="col" style="gap:${S(20)};padding:${S(16)} ${M16};align-items:stretch">
+          ${section('Security', row(`${titled('App Lock', `Require ${D.biometry} to open app`)}<span class="sp"></span>${toggle(false, 'app-lock', 'App Lock switch')}`), 'security')}
+          ${section('Fee Estimation', choice('Fee Source', 'Electrum Server', 'fee-source'), 'fees')}
+          ${section(
+            'Currency Display',
+            [
+              choice('Bitcoin Unit', 'sats', 'unit'),
+              // A Toggle keeps its label 24pt from the switch (20pt on the Duo), as in Today
+              `<div class="row srow" style="gap:${D.chrome === 'duo' ? 20 : 24}px">${titled('Show Fiat Price', 'Display estimated fiat value alongside bitcoin amounts')}<span class="sp"></span>${toggle(true, 'fiat', 'Show Fiat Price switch')}</div>`,
+              choice('Price Source', 'Zeus', 'price-source'),
+              choice('Currency', 'USD', 'currency'),
+            ].join(divider),
+            'currency',
+          )}
+          ${section('Appearance', choice('Theme', 'System', 'theme'), 'appearance')}
+          ${section('App Icon', `<div class="row" style="gap:12px;align-items:flex-start;padding:8px 0">${tile('light', true)}${tile('dark', false)}</div>`, 'app-icon')}
+          ${section('About', row(`${T('Version', 'd', 17, 400, 'ink', LH)}<span class="sp"></span>${T('0.23 (31)', 'd', 17, 400, 'ink2', LH)}<span style="color:var(--ink2);display:flex;margin-left:8px">${Y('doc.text.magnifyingglass:14:regular')}</span>`), 'about')}
+        </div>
+        <div style="height:${D.tabClear}px"></div>
       </div>${tabbar('Settings')}`
   }
 
@@ -1242,7 +1283,14 @@
    * Builders receive the design ('today' or 'future') as their second argument, and each phone
    * carries a d-today or d-future class, so a Future change can branch in a builder or in CSS.
    */
-  const FUTURE_CHANGES = []
+  const FUTURE_CHANGES = [
+    {
+      screens: ['settings'],
+      change:
+        "Settings drops the inset grouped List for the app's own cards (12pt corners, card fill, light-mode shadow), with system-style section headers, 52pt rows and dividers; each choice shows its value and a chevron and pushes a list of the options instead of opening a menu",
+      swift: 'SettingsView.swift',
+    },
+  ]
 
   function phone(screen, mode, design = 'today', device = 'iphone') {
     D = deviceOf(device)

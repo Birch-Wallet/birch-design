@@ -196,17 +196,34 @@ async function firstVisit(p) {
   check(flow.order === 'label,xpub,fingerprint,path; 2 tonal; Next outlined, Next outlined, Next outlined', area, 'Today: the cosigner form runs Label, key with Scan QR and Paste, fingerprint, path; Next is outlined until every cosigner is done', flow.order)
   check(flow.flags === 'xpub-text,fingerprint: Xpub is required, Fingerprint is required', area, 'Today: Next on an empty cosigner flags its key and fingerprint with the reason under each', flow.flags)
 
-  // Future: a copy of Today that builds its screens with the Future layout
-  const todayScreens = await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].map((f) => f.querySelector('.ph-screen').innerHTML))
+  // Future: Today plus the changes in its log, built with the Future layout
+  const phones = () =>
+    [...document.querySelectorAll('#scope .ph')].map((f) => ({
+      id: f.dataset.screen,
+      html: f.querySelector('.ph-screen').innerHTML,
+      cards: f.querySelectorAll('.scard').length,
+      groups: f.querySelectorAll('.igroup').length,
+    }))
+  const todayScreens = await p.evaluate(phones)
   await selectPreset(p, 'F')
   const fut = await p.evaluate(() => ({
     designs: [...new Set([...document.querySelectorAll('#scope .ph')].map((f) => f.dataset.design))].join(','),
-    screens: [...document.querySelectorAll('#scope .ph')].map((f) => f.querySelector('.ph-screen').innerHTML),
     notes: [...document.querySelectorAll('#scope .diffs li')].map((l) => l.textContent).join(' '),
+    changed: [...new Set(window.BirchShipped.FUTURE_CHANGES.flatMap((ch) => ch.screens))],
   }))
+  fut.screens = await p.evaluate(phones)
   check(fut.designs === 'future' && fut.screens.length > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens.length} phones`)
-  check(/exact copy of Today/.test(fut.notes) && (await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)) === 0, area, 'Future starts as an exact copy of Today', fut.notes)
-  check(fut.screens.length === todayScreens.length && fut.screens.every((h, i) => h === todayScreens[i]), area, 'Future’s screens are built exactly as Today’s')
+  check(fut.changed.length > 0 && /Settings › Settings/.test(fut.notes) && !/exact copy of Today/.test(fut.notes), area, 'The Future overview lists each change in the log with its screens', fut.changed.join(','))
+  const strayed = fut.screens.filter((s, i) => !fut.changed.includes(s.id) && s.html !== (todayScreens[i] || {}).html).map((s) => s.id)
+  check(fut.screens.length === todayScreens.length && strayed.length === 0, area, 'Future’s screens match Today’s except the ones its log changes', strayed.join(',') || 'none strayed')
+  const setT = todayScreens.filter((s) => s.id === 'settings')
+  const setF = fut.screens.filter((s) => s.id === 'settings')
+  check(
+    setF.length > 0 && setF.every((s) => s.cards === 6 && s.groups === 0) && setT.every((s) => s.cards === 0 && s.groups === 6),
+    area,
+    'Future: Settings is six cards; Today keeps the inset grouped List',
+    `Future ${setF.map((s) => s.cards).join('/')} cards, Today ${setT.map((s) => s.groups).join('/')} groups`,
+  )
   await p.locator('#exportBtn').click()
   md = await p.locator('#expPre').textContent()
   check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')

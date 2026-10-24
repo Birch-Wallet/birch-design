@@ -36,6 +36,9 @@
 .nest { background: var(--nested); border-radius: var(--r-nested); }
 .hcard { background: var(--card); border-radius: var(--r-card); box-shadow: var(--cardShadow); padding: var(--pad); }
 .divider { height: 1px; background: var(--nested); flex: none; }
+/* Future Settings: a card's rows (settingsRow) and the card's 4pt above and below */
+.scard { padding: 4px var(--pad); }
+.srow { min-height: 52px; padding: 8px 0; box-sizing: border-box; }
 
 /* Buttons as shipped */
 .pbtn { display: flex; align-items: center; justify-content: center; width: 100%; height: var(--btn-h); border-radius: var(--r-btn); background: var(--brand); color: var(--onBrand); font: 600 calc(17px * var(--ts)) var(--f-display); cursor: pointer; transition: transform .12s ease, background-color .12s ease, opacity .12s ease; }

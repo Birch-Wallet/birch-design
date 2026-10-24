@@ -5,7 +5,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | Part | Status |
 |---|---|
 | 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped: build 31, with the setup flow and the seedling loader from [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82). |
-| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped, so it is a copy of Today again. |
+| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped; it now carries the Settings cards. |
 | 3. Final system | Written once an option is chosen and refined: tokens, components, SwiftUI mapping, migration plan, voice and copy. |
 
 ## Files
@@ -243,7 +243,11 @@ Future started as an exact copy of Today, and becomes one again whenever its cha
 
 ### Changes so far
 
-None yet. Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1), so Future is a copy of Today again.
+Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1). The changes since:
+
+| Screen | Change | SwiftUI |
+|---|---|---|
+| Settings | The inset grouped List becomes the app's own cards: 12pt corners, the card fill and the light-mode shadow, as on UTXO Detail. Section headers keep the system style (17pt semibold, secondary label color, 4pt in from the card). A card has 16pt sides and 4pt above and below its rows; a row is 8pt above and below and at least 52pt, with an `HBDivider` between rows. A choice (Fee Source, Bitcoin Unit, Price Source, Currency, Theme, Lock After) shows its value in secondary text and a chevron and pushes a card of the options with a gold checkmark, instead of opening a menu: on iOS 26 a menu collapses back into its button and leaves the value misaligned for a moment. In review in [birch-wallet #86](https://github.com/Birch-Wallet/birch-wallet/pull/86). | `SettingsView.swift` |
 
 ## How a preset becomes colors
 
