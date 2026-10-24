@@ -127,7 +127,7 @@
 /* Layout rules from Tune (Layout and Type groups) switch these on per preset */
 .sgn { display: none; }
 
-/* Transactions list (plain List, iOS 26 metrics) */
+/* Transactions list (plain List, system metrics) */
 .txlist { background: var(--ground); }
 .txrow { position: relative; min-height: var(--row-h); padding: 0.67px calc(var(--gutter) + 14.2px) 0.33px calc(var(--gutter) - 8px); display: flex; align-items: center; background: var(--card); }
 .txrow::after { content: ""; position: absolute; left: calc(var(--gutter) + 36px); right: calc(var(--gutter) - 7px); bottom: 0; height: 1px; background: var(--sep); }
