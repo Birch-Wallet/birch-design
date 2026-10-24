@@ -1711,7 +1711,7 @@
     'Change only what this lists. Everything else keeps its shipped value.',
     'Keep Birch Light and Birch Dark both correct, and keep text at 4.5:1 contrast or better.',
     'If a change is unclear, or would reach beyond the screens it names, ask before you guess.',
-    'When you’re done, build and run the unit tests as `CLAUDE.md` describes. Then report, for each comment and each changed value, what you changed and where, plus anything you skipped and why.',
+    'When you’re done, build and run the unit tests as `AGENTS.md` describes. Then report, for each comment and each changed value, what you changed and where, plus anything you skipped and why.',
     'Finally, bring the design repo (the `design/` submodule) up to date so it still matches the app: Part 1 of `design/DESIGN-SYSTEM.md` and the Today preset in `design/assets/ds-tokens.js`. `design/AGENTS.md` explains how.',
   ]
 
