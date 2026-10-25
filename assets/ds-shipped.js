@@ -83,13 +83,16 @@
    * sendFiat is the amount being sent in fiat at that price.
    * page is a page sheet that doesn't span the screen: its width, centered, and its top and bottom insets.
    * wizTop is the full-screen setup wizard's top inset where it differs from top (the iPad has no tab bar there).
-   * form is the iPad's form sheet, centered on the screen. Builders read the device being built from D.
+   * form is the iPad's form sheet, centered on the screen. tall is the iPad's resizable sheet (birchResizableSheet):
+   * the form sheet's width, from top to bottom less the insets. stacked is a sheet presented over another: on the
+   * iPad its top and height, as wide as the one under it; elsewhere how much lower it starts.
+   * Builders read the device being built from D.
    */
   const DEVICES = [
-    { id: 'iphone', label: 'iPhone 17 Pro', w: 402, h: 874, scale: 3, radius: 51, shot: 'iPhone 17 Pro', top: 62, end: 0, bottom: 34, tabClear: 83, fixBottom: 83, navTop: 62, scanSide: 279.4, biometry: 'Face ID', medium: 469.7, chrome: 'iphone', layout: 'compact' },
-    { id: 'duo-closed', label: 'iPhone Duo, closed', w: 466, h: 678, scale: 3, radius: 36, shot: 'iPhone Duo (Closed)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 190, biometry: 'Touch ID', medium: 390, chrome: 'duo', layout: 'compact', status: [396.667, 85.667], tabs: 392 },
-    { id: 'duo-open', label: 'iPhone Duo, open', w: 951, h: 669, scale: 3, radius: 36, shot: 'iPhone Duo (Open)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 181, biometry: 'Touch ID', medium: 385, chrome: 'duo', layout: 'twoColumn', fold: [475.67, 40], homeIndicator: true, page: { w: 653, top: 8, bottom: 0 }, status: [881.667, 33], tabs: 383 },
-    { id: 'ipad', label: 'iPad Pro 13-inch, portrait', w: 1032, h: 1376, scale: 2, radius: 18, shot: 'iPad Pro 13-inch (M5)', top: 86, end: 0, bottom: 20, tabClear: 20, fixBottom: 20, navTop: 86, scanSide: 500, biometry: 'Face ID', medium: 741.5, page: { w: 928, top: 32, bottom: 32 }, form: { w: 580, h: 660 }, wizTop: 32, chrome: 'ipad', layout: 'column' },
+    { id: 'iphone', label: 'iPhone 17 Pro', w: 402, h: 874, scale: 3, radius: 51, shot: 'iPhone 17 Pro', top: 62, end: 0, bottom: 34, tabClear: 83, fixBottom: 83, navTop: 62, scanSide: 279.4, biometry: 'Face ID', medium: 469.7, stacked: 10, chrome: 'iphone', layout: 'compact' },
+    { id: 'duo-closed', label: 'iPhone Duo, closed', w: 466, h: 678, scale: 3, radius: 36, shot: 'iPhone Duo (Closed)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 190, biometry: 'Touch ID', medium: 390, stacked: 10, chrome: 'duo', layout: 'compact', status: [396.667, 85.667], tabs: 392 },
+    { id: 'duo-open', label: 'iPhone Duo, open', w: 951, h: 669, scale: 3, radius: 36, shot: 'iPhone Duo (Open)', top: 0, end: 84, bottom: 34.67, tabClear: 0, fixBottom: 34.67, navTop: 28, scanSide: 181, biometry: 'Touch ID', medium: 385, chrome: 'duo', layout: 'twoColumn', fold: [475.67, 40], homeIndicator: true, page: { w: 653, top: 8, bottom: 0 }, stacked: 20, status: [881.667, 33], tabs: 383 },
+    { id: 'ipad', label: 'iPad Pro 13-inch, portrait', w: 1032, h: 1376, scale: 2, radius: 18, shot: 'iPad Pro 13-inch (M5)', top: 86, end: 0, bottom: 20, tabClear: 20, fixBottom: 20, navTop: 86, scanSide: 500, biometry: 'Face ID', medium: 741.5, page: { w: 928, top: 32, bottom: 32 }, form: { w: 580, h: 660 }, tall: { w: 580, top: 32, bottom: 20 }, stacked: { top: 368, h: 640 }, wizTop: 32, chrome: 'ipad', layout: 'column' },
   ]
   /** How far a floating sheet's content keeps in from its trailing edge beyond the margin: on the Duo the
    *  sheet spans the side column but its content stops at the safe area */
@@ -428,11 +431,23 @@
   /** What's under a full-height sheet over the Transactions tab, and the sheet's opening tag (close it with
    *  </div>): behind a page sheet, the screen and the tab bar show dimmed; the iPad shows it as a form sheet
    *  in the middle of the screen */
-  function sheetOpen() {
-    const under = D.page ? `<div class="under-dim"><div class="sx"></div>${tabbar('Transactions')}</div><div class="scrim"></div>` : '<div class="sx setup-under" style="background:var(--ground)"></div>'
-    const frame = D.form ? ` style="top:${(D.h - D.form.h) / 2}px;bottom:auto;height:${D.form.h}px;left:${(D.w - D.form.w) / 2}px;right:auto;width:${D.form.w}px;border-radius:var(--r-sheet)"` : sheetFrame()
+  function sheetOpen(over = {}) {
+    const under = over.under ?? (D.page ? `<div class="under-dim"><div class="sx"></div>${tabbar('Transactions')}</div><div class="scrim"></div>` : '<div class="sx setup-under" style="background:var(--ground)"></div>')
+    const frame = over.frame ?? (D.form ? ` style="top:${(D.h - D.form.h) / 2}px;bottom:auto;height:${D.form.h}px;left:${(D.w - D.form.w) / 2}px;right:auto;width:${D.form.w}px;border-radius:var(--r-sheet)"` : sheetFrame())
     return `${under}<div class="ssheet${D.form ? ' form' : ''}"${frame}${D.page ? ' data-z="page"' : ''}>`
   }
+
+  /** Future's Wallet Settings sheet (birchResizableSheet, from birch-wallet #90): on the iPad no longer a centered
+   *  form sheet but the form sheet's width from top to bottom; elsewhere the full-height sheet. Its width, and
+   *  where it sits */
+  const resizable = () =>
+    D.tall
+      ? { w: D.tall.w, frame: ` style="top:${D.tall.top}px;bottom:${D.tall.bottom}px;left:${(D.w - D.tall.w) / 2}px;right:auto;width:${D.tall.w}px;border-radius:var(--r-sheet)"` }
+      : { w: D.page ? D.page.w : D.chrome === 'duo' ? D.w - D.end - 8 : D.w, frame: sheetFrame() }
+
+  /** Behind a page sheet over Transactions, that screen dimmed. Under a second sheet stacked on the first, the
+   *  open Duo dims it once, with the scrim over both (`scrim` false); the iPad dims it under each */
+  const dimmedHome = (mode, design, scrim = true) => `<div class="under-dim">${home(mode, design).replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')}</div>${scrim ? '<div class="scrim"></div>' : ''}`
 
   /** BumpFeeView on its first step, a full-height sheet over the transaction: the original fee, the new
    *  rate card (open, as it starts, with Custom prefilled at the minimum) and Create Replacement */
@@ -463,8 +478,9 @@
   /** The Birch wallet's cosigners, as the screenshot tour imports them from its descriptor */
   const birchCosigners = () => [...DESCRIPTOR.matchAll(/\[(\w{8})\/[^\]]+\](\w+)/g)].map(([, fp, key], i) => ({ label: `Cosigner ${i + 1}`, fp, key }))
 
-  /** A large navigation title, which scrolls with the content: 34pt bold in the system label color, 16pt in */
-  const largeTitle = (title) => `<div style="height:52px;padding:3px ${M16} 0"${c('large-title', 'Large navigation title')}>${T(title, 'd', 34, 700, 'var(--sysInk)')}</div>`
+  /** A large navigation title, which scrolls with the content: 34pt bold in the system label color, 16pt in.
+   *  `top` is its inset in the 52pt row: 3.67pt as measured in the app (Future); Today keeps its estimate */
+  const largeTitle = (title, top = 3) => `<div style="height:52px;padding:${top}px ${M16} 0"${c('large-title', 'Large navigation title')}>${T(title, 'd', 34, 700, 'var(--sysInk)')}</div>`
 
   /** A card's headline (hbHeadline) */
   const cardTitle = (title) => T(title, 'r', 17, 600, 'ink')
@@ -477,26 +493,40 @@
   }
 
   /** CosignerCardView: the label with its key badge and number, the fingerprint and path, and the key in
-   *  9pt mono on two lines */
-  const cosignerCard = ({ label, fp, key }, i) => `<div class="nest col" style="padding:var(--fpad);gap:${S(8)};align-items:stretch"${c('cosigner-' + i, label)}>
+   *  9pt mono on two lines. `width` is the sheet's: given (Future), the key breaks where the app's does, a
+   *  character every 5.59pt of the line, and is shortened in the middle when two lines can't hold it */
+  const cosignerCard = ({ label, fp, key }, i, width) => {
+    const perLine = width ? Math.floor((width - 88) / 5.59) : 0
+    const text = perLine && key.length > 2 * perLine ? `${key.slice(0, perLine + Math.floor((perLine - 1) / 2))}…${key.slice(-Math.ceil((perLine - 1) / 2))}` : key
+    return `<div class="nest col" style="padding:var(--fpad);gap:${S(8)};align-items:stretch"${c('cosigner-' + i, label)}>
       <div class="row" style="gap:8px"><span style="color:var(--brandInk);display:flex">${Y('person.badge.key.fill:17:regular')}</span>${T(label, 'd', 15, 400, 'ink')}<span class="sp"></span>${T('#' + (i + 1), 'm', 12, 400, 'ink2')}</div>
       <div class="row" style="gap:12px;align-items:flex-start">
         <div class="col" style="gap:2px;align-items:flex-start">${T('Fingerprint', 'd', 10, 400, 'ink2')}${T(fp, 'm', 12, 400, 'brand')}</div>
         <div class="col" style="gap:2px;align-items:flex-start">${T('Path', 'd', 10, 400, 'ink2')}${T("m/48'/1'/0'/2'", 'm', 12, 400, 'ink')}</div>
       </div>
-      ${T(key, 'm', 9, 400, 'ink2', `${charWrap()};display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden`, 'tw')}
+      ${T(text, 'm', 9, 400, 'ink2', `${charWrap(perLine)};display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden`, 'tw')}
     </div>`
+  }
 
   /** WalletInfoView in its sheet over Transactions: the large title, Done, and the cards from the overview
    *  down to Delete Wallet. Future (birch-wallet #90): a grabber and a half-height stop, a plain Edit on the
    *  Cosigners card, and the Wallet Labels card with the BIP 329 import and export */
-  function walletSettings(mode, design) {
+  function walletSettings(mode, design, stacked = false) {
     const future = design === 'future'
+    // Future is checked against the app's screenshots; Today, the app before #90, has none. The app sets the
+    // buttons' symbols with no font, so they take the sheet's 17pt body size
+    const icon = (body, today) => (future ? body : today)
+    const sheet = future ? resizable() : null
+    // The closed Duo sets the title on the toolbar row beside Done, at 28pt
+    const inlineTitle = future && D.chrome === 'duo' && !D.page
     const info = (k, v) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'd', 15, 400, 'ink')}</div>`
     const caption = (text) => T(text, 'd', 12, 400, 'ink2', '', 'tw')
     const toggle = (on, key, label) => `<span class="iswitch${on ? ' on' : ''}"${c(key, label)}><i></i></span>`
     const smallBtn = (icon, label, cls, style, key) =>
       `<span class="row ${cls}" style="flex:1 1 0;gap:6px;justify-content:center;padding:12px 0;border-radius:var(--r-nested);${style}"${c(key, label)}>${Y(icon)}${T(label, 'd', 14, 400, 'currentColor')}</span>`
+    const title = inlineTitle
+      ? `<div style="position:absolute;left:${M16};top:23px;z-index:3"${c('large-title', 'Navigation title')}>${T('Wallet Settings', 'd', 28, 700, 'var(--sysInk)')}</div>`
+      : ''
     const edit = future
       ? `<span${c('edit-cosigners', 'Edit cosigners')}>${T('Edit', 'd', 15, 400, 'brand')}</span>`
       : `<span class="row" style="gap:5px;color:var(--brandInk)"${c('edit-cosigners', 'Edit cosigners')}>${Y('pencil:13:regular')}${T('Edit', 'd', 13, 400, 'brand')}</span>`
@@ -506,19 +536,19 @@
           <div class="row" style="gap:12px">${tonal('square.and.arrow.down:15:semibold', 'Import File', false, 'import-file')}${tonal('square.and.arrow.up:15:semibold', 'Export File', true, 'export-file')}</div>
           <div class="row" style="gap:12px">${tonal('qrcode.viewfinder:15:semibold', 'Import QR', false, 'import-qr')}${tonal('qrcode:15:semibold', 'Export QR', true, 'export-qr')}</div>
         </div>`
-    return `${sheetOpen()}${sheetNav('', null, { label: 'Done', key: 'done', prominent: true })}
-      <div class="sx" style="top:${sheetTop()}px">${largeTitle('Wallet Settings')}
+    return `${sheetOpen(future ? { under: D.page ? dimmedHome(mode, design, !(stacked && !D.tall)) : undefined, frame: sheet.frame } : {})}${sheetNav('', null, { label: 'Done', key: 'done', prominent: true })}${title}
+      <div class="sx" style="top:${sheetTop()}px">${inlineTitle ? '' : largeTitle('Wallet Settings', future ? 3.67 : 3)}
       <div class="col" style="gap:${S(16)};padding:${S(16)} calc(${M16} + ${sheetEnd()}px) ${S(16)} ${M16};align-items:stretch">
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('overview', 'Wallet overview')}>
           <div class="row" style="gap:8px"${c('wallet-name', 'Wallet name')}>${T('Name', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T('Birch', 'd', 15, 400, 'ink')}<span style="color:var(--u-info);display:flex">${Y('pencil:12:regular')}</span></div>
-          ${info('Type', '1-of-2 Multisig')}${info('Network', 'Testnet4')}${info('Script', 'P2WSH (Native Segwit)')}${info('Created', '10/16/26, 9:41 AM')}
+          ${info('Type', '1-of-2 Multisig')}${info('Network', 'Testnet4')}${info('Script', 'P2WSH (Native Segwit)')}${info('Created', future ? '10/16/26, 9:41\u202FAM' : '10/16/26, 9:41 AM')}
         </div>
-        ${utility('qrcode:15:regular', 'Show Output Descriptor QR', 'var(--u-brand)', 'descriptor-qr')}
-        ${utility('doc.on.doc:15:regular', 'Copy Output Descriptor', 'var(--u-info)', 'copy-descriptor')}
-        ${utility('doc.richtext:15:regular', 'PDF/Print Output Descriptor', 'var(--u-purple)', 'descriptor-pdf')}
+        ${utility(icon('qrcode:17:regular', 'qrcode:15:regular'), 'Show Output Descriptor QR', 'var(--u-brand)', 'descriptor-qr', future ? 18 : 0)}
+        ${utility(icon('doc.on.doc:17:regular', 'doc.on.doc:15:regular'), 'Copy Output Descriptor', 'var(--u-info)', 'copy-descriptor', future ? 23.67 : 0)}
+        ${utility(icon('doc.richtext:17:regular', 'doc.richtext:15:regular'), 'PDF/Print Output Descriptor', 'var(--u-purple)', 'descriptor-pdf')}
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('cosigners', 'Cosigners card')}>
           <div class="row">${cardTitle('Cosigners')}<span class="sp"></span>${edit}</div>
-          ${birchCosigners().map(cosignerCard).join('')}
+          ${birchCosigners().map((co, i) => cosignerCard(co, i, sheet && sheet.w)).join('')}
         </div>
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('electrum', 'Electrum Server card')}>
           ${cardTitle('Electrum Server')}
@@ -527,8 +557,8 @@
           <div class="col" style="gap:${S(6)};align-items:stretch">${T('Protocol', 'd', 13, 400, 'ink2')}<div style="height:31px"><div class="seg"${c('protocol', 'Protocol')}><span>TCP</span><span class="on">SSL</span></div></div></div>
           <div class="row" style="gap:8px"${c('insecure-ssl', 'Allow insecure SSL switch')}>${T('Allow insecure SSL', 'd', 13, 400, 'ink')}<span class="sp"></span>${toggle(false)}</div>
           <div class="row" style="gap:12px">
-            ${smallBtn('antenna.radiowaves.left.and.right:14:regular', 'Test Connection', 'ub', '--uc:var(--u-info)', 'test-connection')}
-            ${smallBtn('arrow.counterclockwise:14:regular', 'Reset', 'nest', 'color:var(--ink2)', 'reset-electrum')}
+            ${smallBtn(future ? 'antenna.radiowaves.left.and.right:17:regular' : 'antenna.radiowaves.left.and.right:14:regular', 'Test Connection', 'ub', '--uc:var(--u-info)', 'test-connection')}
+            ${smallBtn(future ? 'arrow.counterclockwise:17:regular' : 'arrow.counterclockwise:14:regular', 'Reset', 'nest', 'color:var(--ink2)', 'reset-electrum')}
           </div>
         </div>
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('explorer', 'Block Explorer card')}>
@@ -544,7 +574,7 @@
           </div>
           <div class="divider"></div>
           <div class="col" style="gap:${S(12)};align-items:stretch">
-            ${utility('arrow.clockwise:15:regular', 'Force Full Refresh', 'var(--u-brand)', 'full-refresh')}
+            ${utility(icon('arrow.clockwise:17:regular', 'arrow.clockwise:15:regular'), 'Force Full Refresh', 'var(--u-brand)', 'full-refresh')}
             ${caption('Refreshes all addresses from scratch using the gap limit above. This may take a while.')}
           </div>
         </div>
@@ -553,7 +583,7 @@
           <div class="col" style="gap:2px;align-items:flex-start;flex:0 1 auto">${T('Privacy Mode', 'd', 17, 400, 'ink', LH)}${T('Hide balances, addresses, and transaction details', 'd', 12, 400, 'ink2', LH, 'tw')}</div>
           <span class="sp"></span>${toggle(false)}
         </div>
-        <div style="padding-top:16px">${utility('trash:15:regular', 'Delete Wallet', 'var(--danger)', 'delete-wallet')}</div>
+        <div style="padding-top:16px">${utility(icon('trash:17:regular', 'trash:15:regular'), 'Delete Wallet', 'var(--danger)', 'delete-wallet')}</div>
       </div><div style="height:${D.bottom}px"></div></div>${future ? '<i class="grabber"></i>' : ''}</div>`
   }
 
@@ -564,8 +594,15 @@
   function editCosigners(mode, design) {
     const [first] = birchCosigners()
     if (design === 'future') {
+      // Stacked on Wallet Settings: on the iPad shorter than it, which stays in view dimmed; elsewhere starting
+      // lower than it, over the dimmed screen
+      const under = `<div style="position:absolute;inset:0">${walletSettings(mode, design, true).replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')}</div><div class="scrim" style="z-index:47"></div>`
+      const ws = resizable()
+      const frame = D.tall
+        ? ` style="top:${D.stacked.top}px;bottom:auto;height:${D.stacked.h}px;left:${(D.w - ws.w) / 2}px;right:auto;width:${ws.w}px;border-radius:var(--r-sheet);z-index:48"`
+        : sheetFrame().replace(/top:(\d+)px/, (m, t) => `top:${+t + D.stacked}px`).replace(/^ style="/, ` style="z-index:48;`) || ` style="top:${D.top + D.stacked}px;z-index:48"`
       // On the closed Duo the content stops at the safe area, short of the sheet's trailing edge
-      return `${sheetOpen()}<div class="sx" style="top:0;padding-right:${sheetEnd()}px"><div class="col" style="gap:${S(24)};padding-top:${S(24)};align-items:stretch">
+      return `${sheetOpen({ under, frame })}<div class="sx" style="top:0;padding-right:${sheetEnd()}px"><div class="col" style="gap:${S(24)};padding-top:${S(24)};align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Sheet title')}>${T('Edit Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
         ${gutterBox(cosignerForm([[true, true], [false, true]], 1, first.key, field('Master Fingerprint (8 hex chars)', first.fp, 'm', 14, 'fingerprint')))}
         ${wizFooter('Cancel', 'Save')}
@@ -1069,9 +1106,10 @@
   const cosignerFilled = () => cosigner('filled')
   const cosignerErrors = () => cosigner('errors')
 
-  /** Full-width tinted utility buttons: 14pt vertical padding at the shipped button height, 10pt corners */
-  const utility = (icon, label, color, key) =>
-    `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
+  /** Full-width tinted utility buttons: 14pt vertical padding at the shipped button height, 10pt corners.
+   *  `frame` is the symbol's height where SwiftUI lays it out shorter than the AppKit render */
+  const utility = (icon, label, color, key, frame) =>
+    `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${frame ? `<span class="row" style="height:${frame}px">${Y(icon)}</span>` : Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
 
   /** Verify wallet: each cosigner's whole key, wrapped at the character on up to three lines. The warning
    *  symbol takes the 22pt frame SwiftUI gives it, a point under the AppKit render's */
@@ -1433,6 +1471,9 @@
     </div>`
   }
 
+  /** On every device: the screenshot shows the app after birch-wallet #90, which Today predates */
+  const AFTER_90 = Object.fromEntries(DEVICES.map((d) => [d.id, 'Screenshot shows the app after #90: Future matches it, Today predates it']))
+
   const SCREENS = [
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
     { id: 'wallet-picker', group: 'Wallet', label: 'Wallet picker', build: walletPicker, shot: '05-WalletPicker', swift: 'TransactionListView.swift (walletPickerOverlay)' },
@@ -1440,9 +1481,9 @@
     { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), SeedlingLoadingView.swift, Theme.swift (SyncStatusDot)' },
     { id: 'home-empty', group: 'Wallet', label: 'No transactions', build: homeEmpty, shot: null, swift: 'TransactionListView.swift (transactionContent)' },
     { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
-    // No screenshots show the next two yet: Today is the app before birch-wallet #90, Future the app after it
-    { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: null, swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, Theme.swift (BirchResizableSheet)' },
-    { id: 'edit-cosigners', group: 'Wallet', label: 'Edit cosigners', build: editCosigners, shot: null, swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift' },
+    // Their screenshots show the app after birch-wallet #90, which Future rebuilds; Today is the app before it
+    { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: '36-WalletSettings', shotNote: AFTER_90, swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, Theme.swift (BirchResizableSheet)' },
+    { id: 'edit-cosigners', group: 'Wallet', label: 'Edit cosigners', build: editCosigners, shot: '37-EditCosigners', shotNote: AFTER_90, swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift' },
     { id: 'send-empty', group: 'Send', label: 'Send, empty', build: sendEmpty, shot: '11-Send', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'send', group: 'Send', label: 'Recipients and amount', build: send, shot: '27-SendRecipientsFilled', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'fee', group: 'Send', label: 'Network fee sheet', build: fee, shot: '26-NetworkFee-Custom', swift: 'SendFeeSheetView.swift' },
@@ -1452,13 +1493,12 @@
     { id: 'broadcast', group: 'Signing', label: 'Ready to broadcast', build: broadcast, shot: null, swift: 'BroadcastResultView.swift, PSBTDisplayView.swift (SignatureProgressView)' },
     { id: 'utxos', group: 'UTXOs', label: 'UTXO list', build: utxos, shot: '12-UTXOs', swift: 'UTXOListView.swift' },
     { id: 'utxo', group: 'UTXOs', label: 'UTXO detail', build: utxoDetail, shot: '13-UTXODetail', swift: 'UTXODetailView.swift' },
-    { id: 'utxo-filter', group: 'UTXOs', label: 'UTXO filter sheet', build: utxoFilter, shot: null, swift: 'UTXOFilterSheet.swift, UTXOFilter.swift' },
+    { id: 'utxo-filter', group: 'UTXOs', label: 'UTXO filter sheet', build: utxoFilter, shot: '38-UTXOFilter', swift: 'UTXOFilterSheet.swift, UTXOFilter.swift' },
     { id: 'settings', group: 'Settings', label: 'Settings', build: settings, shot: '14-Settings', swift: 'SettingsView.swift' },
     { id: 'welcome', group: 'Setup', label: 'Welcome', build: welcome, shot: '01-Welcome', swift: 'WelcomeStepView.swift, SetupWizardView.swift' },
     { id: 'setup', group: 'Setup', label: 'Wallet setup', build: walletSetup, shot: '02-Wallet-Setup', swift: 'WalletCreationChoiceView.swift' },
     { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), CharWrapText.swift (CharWrappingTextEditor)' },
-    // No simulator screenshot shows this state: it is the Import descriptor rebuild with the field empty
-    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: null, swift: 'DescriptorImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
+    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: '35-DescriptorImport-Empty', swift: 'DescriptorImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
     { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard)' },
     { id: 'cosigner-empty', group: 'Setup', label: 'Import cosigners, empty', build: cosignerEmpty, shot: '17-CosignerImport-Empty', swift: 'CosignerImportView.swift' },
     { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosignerFilled, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },

@@ -164,9 +164,9 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 
 ## 1.7 Screens and states
 
-### In the screenshots (34 per mode)
+### In the screenshots (38 per mode)
 
-Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker · Transaction Detail · Wallet Dashboard · Receive · Addresses · Address Detail · Send (empty, filled) · Network Fee (preset, custom) · Review Transaction (top, bottom) · PSBT Inspector · PSBT QR (default, advanced) · Scan Signed PSBT · Save PSBT · UTXOs · UTXO Detail · Settings · Multisig Configuration (testnet, mainnet) · Import Cosigners (empty, filled, last, flagged) · Verify Wallet (top, backup, verify address) · New Wallet Loading.
+Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · Wallet Picker · Transaction Detail · Wallet Dashboard · Receive · Addresses · Address Detail · Send (empty, filled) · Network Fee (preset, custom) · Review Transaction (top, bottom) · PSBT Inspector · PSBT QR (default, advanced) · Scan Signed PSBT · Save PSBT · UTXOs · UTXO Detail · UTXO Filter · Settings · Wallet Settings · Edit Cosigners · Multisig Configuration (testnet, mainnet) · Import Cosigners (empty, filled, last, flagged) · Verify Wallet (top, backup, verify address) · New Wallet Loading.
 
 ### In the code but not in the screenshots
 
@@ -176,7 +176,7 @@ Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker ·
 | Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
 | Connection (`ConnectionStatusView`) | Connected, error, test result; Sync now, Full refresh, Test connection, Copy debug info |
-| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF. The sheet as it opens and Edit Cosigners are in the page. |
+| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
 | Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
@@ -290,13 +290,13 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Welcome | `WelcomeStepView`, `SetupWizardView` | `01-Welcome` |
 | Wallet setup | `WalletCreationChoiceView` | `02-Wallet-Setup` |
 | Import descriptor | `DescriptorImportView`, `WalletNameNetworkCard`, `CharWrappingTextEditor` | `03-DescriptorImport` |
-| Import descriptor, empty | `DescriptorImportView` | None. The Import descriptor rebuild with the field empty: the field at its 120pt minimum showing the format as its placeholder, and Import disabled. |
+| Import descriptor, empty | `DescriptorImportView` | `35-DescriptorImport-Empty`. The field at its 120pt minimum showing the format as its placeholder, and Import disabled. |
 | Transactions, loading | `TransactionListView` (`transactionContent`), `SeedlingLoadingView`, `SyncStatusDot` | None. A new wallet's first sync: the seedling 100pt under the title, a birch seed growing into a tree over 3s, the syncing dot with its halo pulsing, and its message. Checked against the view built in the simulator. |
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
-| UTXO filter sheet | `UTXOFilterSheet` | None. At its medium detent over the UTXO list, with the default filter. Checked in the simulator. |
-| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | None. The sheet over Transactions as it opens, at full height. Today is the app before [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90), Future the app after it. The large title's position is estimated (34pt bold, 52pt under the toolbar), not measured. |
-| Edit cosigners | `EditCosignersView`, `CosignerForm` | None. The sheet over Wallet Settings with cosigner 1 open. Today is the app before #90, Future the app after it. |
+| UTXO filter sheet | `UTXOFilterSheet` | `38-UTXOFilter`. At its medium detent over the UTXO list, with the default filter. |
+| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | `36-WalletSettings`, which shows the app after [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90): Future matches it, and Today is the app before #90, which no screenshot shows. The sheet over Transactions as it opens, at full height. On the iPad it's the resizable sheet, 580pt wide from 32pt down to 20pt above the bottom, not a form sheet; the closed Duo sets the title at 28pt on the toolbar row. The utility buttons' symbols take the sheet's 17pt body size. |
+| Edit cosigners | `EditCosignersView`, `CosignerForm` | `37-EditCosigners`, which shows the app after #90: Future matches it, and Today predates it. The sheet stacked on Wallet Settings with cosigner 1 open: 10pt lower than a first sheet on the iPhone and the closed Duo, 20pt on the open Duo, and on the iPad as wide as Wallet Settings, from 368pt for 640pt, with Wallet Settings dimmed behind it. |
 
 Platform details that the rebuild reproduces:
 
