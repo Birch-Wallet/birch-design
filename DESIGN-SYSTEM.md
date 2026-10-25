@@ -16,7 +16,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
-| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-six app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-seven app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
 | `design/assets/seedling/` | The first sync's loading animation (`SeedlingLoadingView`): eight frames of a birch seed growing into a tree, 360px WebP. |
 | `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bars (iPhone, iPhone Duo, iPad), QR modules sampled from the screenshots, and the app icon artwork. |
 | `design/assets/ds-screens.js` | Component boards (buttons, inputs, callouts and so on), built from tokens. |
@@ -173,7 +173,7 @@ Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker ·
 | Area | States |
 |---|---|
 | App lock (`ContentView`, `PINPadView`) | Face ID / Touch ID prompt, PIN entry, wrong PIN, progressive lockout (60s to 24h), privacy cover in the app switcher, data wipe |
-| Broadcast (`BroadcastResultView`) | Ready to broadcast, broadcasting, animated success with countdown, export transaction |
+| Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
 | Connection (`ConnectionStatusView`) | Connected, error, test result; Sync now, Full refresh, Test connection, Copy debug info |
 | Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF. The sheet as it opens and Edit Cosigners are in the page. |
@@ -251,6 +251,7 @@ Future's first changes, the setup flow and the seedling loader, shipped in [birc
 | Wallet picker | The panel is 16pt in from each side instead of 35pt, so long names fit. Each row ends in a `slider.horizontal.3` button (17pt, secondary text, 40 × 36pt) that opens that wallet's settings without switching to it. Shipped in #90. | `TransactionListView.swift` (`walletPickerOverlay`) |
 | Wallet settings | A grabber and a half-height stop (`birchResizableSheet`): the sheet opens at full height and returns to it when the keyboard appears. Dashboard and Connection Status get the same. A Wallet Labels card above Privacy Mode holds the BIP 329 import and export, by file and by QR, as two rows of tonal buttons (import in the brand tint, export neutral); it only shows for the loaded wallet. The Cosigners card's Edit is plain 15pt text without the pencil. Shipped in #90. | `WalletInfoView.swift` (`WalletLabelsCard`), `Theme.swift` (`BirchResizableSheet`) |
 | Edit cosigners | Uses the Import cosigners form, now shared as `CosignerForm`: folder tabs with completion checks, then Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, with field-level flags. A centered 28pt title replaces the navigation bar, and Cancel and Save Changes sit in the setup footer; Save is outlined until every cosigner is complete. Shipped in #90. | `WalletInfoView.swift` (`EditCosignersView`), `CosignerForm.swift` |
+| Send, Recipients and amount, Network fee sheet, Review transaction, Scan signed PSBT | The step indicator (Recipients, Review, Sign, Broadcast) is gone from the recipients, review and scan-signed-PSBT steps, so each starts with its content: the recipient card 12pt under the header, or the 22pt title. In review in [birch-wallet #91](https://github.com/Birch-Wallet/birch-wallet/pull/91). | `SendAmountView.swift`, `SendReviewView.swift`, `PSBTScanView.swift` |
 | Settings | The inset grouped List becomes the app's own cards: 12pt corners, the card fill and the light-mode shadow, as on UTXO Detail. Section headers keep the system style (17pt semibold, secondary label color, 4pt in from the card). A card has 16pt sides and 4pt above and below its rows; a row is 8pt above and below and at least 52pt, with an `HBDivider` between rows. A choice (Fee Source, Bitcoin Unit, Price Source, Currency, Theme, Lock After) shows its value in secondary text and a chevron and pushes a card of the options with a gold checkmark, instead of opening a menu: on iOS 26 a menu collapses back into its button and leaves the value misaligned for a moment. In review in [birch-wallet #86](https://github.com/Birch-Wallet/birch-wallet/pull/86). | `SettingsView.swift` |
 
 ## How a preset becomes colors
@@ -277,6 +278,7 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Review transaction | `SendReviewView`, `PSBTVerificationBadge` | `28-ReviewTransaction-Top` |
 | PSBT QR | `PSBTDisplayView` | `31-PSBTQRDisplay` |
 | Scan signed PSBT | `PSBTScanView`, `URScannerSheet` | `33-ScanSignedPSBT` |
+| Ready to broadcast | `BroadcastResultView`, `SignatureProgressView` | None. Every signature collected, before Broadcast is tapped: both slots signed, the status block centered in the space above the buttons. Checked against a capture from the app on the iPhone 17 Pro in dark mode, to within a third of a point across and about a point down. It has no step indicator, so Today and Future match. |
 | Multisig configuration | `MultisigConfigView`, `WalletNameNetworkCard` | `15-MultisigConfig-Testnet4` |
 | Import cosigners, empty | `CosignerImportView` | `17-CosignerImport-Empty` |
 | Import cosigners | `CosignerImportView`, `CharWrappingTextEditor` | `18-CosignerImport-Cosigner1` |

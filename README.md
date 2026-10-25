@@ -61,7 +61,7 @@ The toolbar groups the presets in two. **Designs** can change layout as well as 
 | E | Export a prompt for Claude Code to update the app's Swift code |
 | O | Overlay the simulator screenshots on the screens |
 
-The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-six app screens in light and dark. **Compare** puts one screen side by side across every preset.
+The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-seven app screens in light and dark. **Compare** puts one screen side by side across every preset.
 
 The screens cover the wallet (Transactions with and without transactions and while loading, the wallet picker, bump fee, UTXO list, the UTXO filter sheet, UTXO detail, Settings), sending and signing (Send empty and filled, network fee, review, PSBT QR, scan), and setup (Welcome, Wallet setup, Import descriptor filled and empty, multisig configuration, cosigners empty and filled, verify).
 

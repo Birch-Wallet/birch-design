@@ -196,7 +196,7 @@
       <div class="sx" style="top:${top}px;right:${D.end}px">${body}<div style="height:${D.tabClear}px"></div></div>${tabbar('Send')}${after}`
   }
 
-  /** SendStepIndicator: four 3pt bars with 9pt labels */
+  /** SendStepIndicator: four 3pt bars with 9pt labels. Future drops it from every step */
   function steps(current) {
     const names = ['Recipients', 'Review', 'Sign', 'Broadcast']
     return `<div class="row" style="gap:4px;align-items:flex-start"${c('send-steps', 'Send step indicator')}>${names
@@ -219,10 +219,12 @@
       <div class="col" style="gap:4px;flex:1">${T(title, 'd', 13, 400, 'ink')}${T(detail, 'd', 11, 400, 'ink2', '', 'tw')}</div></div>`
   }
 
+  /** SignatureProgressView: a slot per required signature, signed ones filled in the brand color with the signature symbol */
   function sigSlots(collected, required) {
     let h = ''
     for (let i = 0; i < required; i++) {
-      h += `<span style="width:48px;height:48px;border-radius:max(0px, calc(var(--r-nested) - 2px));display:grid;place-items:center;background:var(--card);box-shadow:inset 0 0 0 1px var(--border)">${T(String(i + 1), 'm', 14, 400, 'ink2', '', 'amt')}</span>`
+      const signed = i < collected
+      h += `<span style="width:48px;height:48px;border-radius:max(0px, calc(var(--r-nested) - 2px));display:grid;place-items:center;background:var(${signed ? '--brand' : '--card'});box-shadow:inset 0 0 0 ${signed ? '2px var(--brand)' : '1px var(--border)'}${signed ? ';color:var(--onBrand)' : ''}">${signed ? Y('signature:18:regular') : T(String(i + 1), 'm', 14, 400, 'ink2', '', 'amt')}</span>`
     }
     return `<div class="col cx" style="gap:${S(8)}"${c('sig-slots', 'Signature progress')}><div class="row" style="gap:8px">${h}</div>${T(`${collected} of ${required} required signatures`, 'd', 13, 400, 'ink2')}</div>`
   }
@@ -672,9 +674,9 @@
 
   const walletPicker = (mode, design) => home(mode, design, true)
 
-  function sendBody() {
+  function sendBody(design) {
     return `
-      <div style="padding-bottom:4px">${steps(0)}</div>
+      ${design === 'future' ? '' : `<div style="padding-bottom:4px">${steps(0)}</div>`}
       ${recipientFilled()}
       ${amountCard('71234', ['0.00071234 BTC', '≈ $ 58.39'], '115,823 sats')}
       ${decisionsCard('0.51 sat/vB · 252 sats')}
@@ -682,9 +684,9 @@
   }
 
   /** The Send tab before anything is entered (SendAmountView with an empty recipient) */
-  function sendEmptyBody() {
+  function sendEmptyBody(design) {
     return `
-      <div style="padding-bottom:4px">${steps(0)}</div>
+      ${design === 'future' ? '' : `<div style="padding-bottom:4px">${steps(0)}</div>`}
       ${recipientEmpty()}
       ${amountCard(null, null, '193,885 sats')}
       ${decisionsCard('2 sat/vB', 'Medium')}
@@ -693,12 +695,12 @@
 
   const sendStack = (body) => `<div class="col" style="gap:${S(14)};padding:${S(12)} var(--gutter) 0;align-items:stretch">${body}</div>`
 
-  function send() {
-    return sendScreen(true, sendStack(sendBody()))
+  function send(mode, design) {
+    return sendScreen(true, sendStack(sendBody(design)))
   }
 
-  function sendEmpty() {
-    return sendScreen(true, sendStack(sendEmptyBody()))
+  function sendEmpty(mode, design) {
+    return sendScreen(true, sendStack(sendEmptyBody(design)))
   }
 
   function feeOption(name, rate) {
@@ -707,8 +709,8 @@
       ${T(name, 'r', 17, 600, 'ink')}<span class="sp" style="min-width:8px"></span>${T(rate, 'm', 15, 400, 'ink', '', 'amt')}</div>`
   }
 
-  function fee() {
-    return sendScreen(true, sendStack(sendBody().replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')), `
+  function fee(mode, design) {
+    return sendScreen(true, sendStack(sendBody(design).replace(/ data-c="[^"]*" data-cl="[^"]*"/g, '')), `
     <div class="scrim"></div>
     <div class="fsheet fee"${c('fee-sheet', 'Fee sheet')}>
       <i class="grabber"></i>
@@ -764,10 +766,10 @@
 
   const gutterBox = (inner) => `<div style="padding:0 var(--gutter)">${inner}</div>`
 
-  function review() {
+  function review(mode, design) {
     return sendScreen(false, `
       <div class="col" style="gap:${S(24)};padding-top:${S(16)};align-items:stretch">
-        ${gutterBox(steps(1))}
+        ${design === 'future' ? '' : gutterBox(steps(1))}
         <div class="row" style="justify-content:center"${c('title', 'Screen title')}>${T('Review Transaction', 'r', 22, 'W', 'ink')}</div>
         ${gutterBox(`<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('review-card', 'Review card')}>
           ${reviewItem('To', `<span class="t tw" style="${F('m', 12)};line-height:normal">${addr(TO)}</span>`, 'to')}
@@ -824,7 +826,7 @@
       </div>`)
   }
 
-  function scan() {
+  function scan(mode, design) {
     // URScannerSheet: corners at 70% of its side, 24pt arms, 3pt gold strokes. The scanner is
     // flexible and shares the leftover height with the spacer under it; its side is measured per device
     const side = D.scanSide
@@ -835,7 +837,7 @@
     return `<div class="sx-head" style="position:absolute;top:${D.top}px;left:0;right:${D.end}px;z-index:5;background:var(--ground)">${sendHeader(false)}</div>
     <div class="sx" style="top:${D.top + 54.95}px;right:${D.end}px;display:flex;flex-direction:column">
       <div class="col" style="gap:${S(24)};padding-top:${S(16)};align-items:stretch;flex:1">
-        ${gutterBox(steps(2))}
+        ${design === 'future' ? '' : gutterBox(steps(2))}
         <div class="row" style="justify-content:center"${c('title', 'Screen title')}>${T('Scan Signed PSBT', 'r', 22, 'W', 'ink')}</div>
         ${sigSlots(0, 2)}
         <div class="row" style="padding:0 var(--gutter);justify-content:center"${c('camera', 'Camera viewfinder')}><div style="width:${side}px;height:${side}px;border-radius:var(--r-card);overflow:hidden;background:var(--ground)">
@@ -844,6 +846,27 @@
         <div class="row" style="justify-content:center">${link('doc.on.clipboard:14:regular', 'Paste Base64 PSBT', 'link2', 'paste')}</div>
         <span class="sp"></span>
         <div class="row" style="justify-content:center;padding-bottom:${S(32)}"${c('back', 'Back to QR Display')}>${T('Back to QR Display', 'd', 16, 400, 'ink2')}</div>
+      </div>
+      <div style="height:${D.fixBottom}px;flex:none"></div>
+    </div>${tabbar('Send')}`
+  }
+
+  /** BroadcastResultView, ready to broadcast: every signature collected, before Broadcast is tapped. The two
+   *  spacers share the height left over, so the status block floats in the middle and the buttons sit above the tab bar */
+  function broadcast() {
+    return `<div class="sx-head" style="position:absolute;top:${D.top}px;left:0;right:${D.end}px;z-index:5;background:var(--ground)">${sendHeader(false)}</div>
+    <div class="sx" style="top:${D.top + 54.95}px;right:${D.end}px;display:flex;flex-direction:column">
+      <div class="col" style="gap:${S(24)};align-items:stretch;flex:1">
+        <span class="sp"></span>
+        ${sigSlots(2, 2)}
+        <div class="row" style="justify-content:center"${c('broadcast-icon', 'Broadcast symbol')}><span style="color:var(--brandInk);display:flex">${Y('antenna.radiowaves.left.and.right:48:regular')}</span></div>
+        <div class="row" style="justify-content:center"${c('title', 'Screen title')}>${T('Ready to Broadcast', 'r', 24, 'W', 'ink')}</div>
+        <div class="row" style="justify-content:center"${c('subtitle', 'Status')}>${T('All required signatures have been collected', 'd', 14, 400, 'ink2')}</div>
+        <span class="sp"></span>
+        ${gutterBox(`<span class="pbtn"${c('primary-cta', 'Primary button: Broadcast Transaction')}>Broadcast Transaction</span>`)}
+        <div class="row" style="justify-content:center"><span class="row" style="gap:7px;color:var(--tert)"${c('export', 'Export Transaction')}>${Y('qrcode:15:regular')}${T('Export Transaction', 'd', 15, 400, 'tert')}</span></div>
+        <div class="row" style="justify-content:center"${c('exit', 'Exit')}>${T('Exit', 'd', 16, 400, 'ink2')}</div>
+        <div style="height:${S(32)};flex:none"></div>
       </div>
       <div style="height:${D.fixBottom}px;flex:none"></div>
     </div>${tabbar('Send')}`
@@ -1425,6 +1448,7 @@
     { id: 'review', group: 'Send', label: 'Review transaction', build: review, shot: '28-ReviewTransaction-Top', swift: 'SendReviewView.swift, PSBTVerificationBadge.swift' },
     { id: 'sign', group: 'Signing', label: 'PSBT QR', build: sign, shot: '31-PSBTQRDisplay', swift: 'PSBTDisplayView.swift' },
     { id: 'scan', group: 'Signing', label: 'Scan signed PSBT', build: scan, shot: '33-ScanSignedPSBT', swift: 'PSBTScanView.swift, URScannerSheet.swift' },
+    { id: 'broadcast', group: 'Signing', label: 'Ready to broadcast', build: broadcast, shot: null, swift: 'BroadcastResultView.swift, PSBTDisplayView.swift (SignatureProgressView)' },
     { id: 'utxos', group: 'UTXOs', label: 'UTXO list', build: utxos, shot: '12-UTXOs', swift: 'UTXOListView.swift' },
     { id: 'utxo', group: 'UTXOs', label: 'UTXO detail', build: utxoDetail, shot: '13-UTXODetail', swift: 'UTXODetailView.swift' },
     { id: 'utxo-filter', group: 'UTXOs', label: 'UTXO filter sheet', build: utxoFilter, shot: null, swift: 'UTXOFilterSheet.swift, UTXOFilter.swift' },
@@ -1460,6 +1484,12 @@
    * carries a d-today or d-future class, so a Future change can branch in a builder or in CSS.
    */
   const FUTURE_CHANGES = [
+    {
+      screens: ['send-empty', 'send', 'fee', 'review', 'scan'],
+      change:
+        'The Send flow drops its step indicator (Recipients, Review, Sign, Broadcast) from the recipients, review and scan-signed-PSBT steps, so each starts with its content: the recipient card, or the 22pt title',
+      swift: 'SendAmountView.swift, SendReviewView.swift, PSBTScanView.swift',
+    },
     {
       screens: ['settings'],
       change:
