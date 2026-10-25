@@ -60,8 +60,10 @@ The toolbar groups the presets in two. **Designs** can change layout as well as 
 | C | Comment: click any element to pin a note |
 | E | Export a prompt for Claude Code to update the app's Swift code |
 | O | Overlay the simulator screenshots on the screens |
+| / or S | Find a screen by name, group or Swift file. Compare opens it; Focus scrolls to it |
+| ← → | Step to the previous or next screen in Compare |
 
-The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-seven app screens in light and dark. **Compare** puts one screen side by side across every preset.
+The page opens on **Today** in **Focus**. Focus shows one preset in full: tokens, type, buttons, components and the twenty-seven app screens in light and dark. **Compare** puts one screen side by side across every preset. Choose the screen from the menu that opens from its name, which previews each screen and marks the ones Future changes, the ones with open comments and the ones without a screenshot. Or step through them with ‹ and ›; **Changed in Future** steps through only the screens Future changes. The address follows the screen, so a link such as `design-system.html#compare=fee&device=duo-open` opens that comparison.
 
 The screens cover the wallet (Transactions with and without transactions and while loading, the wallet picker, bump fee, UTXO list, the UTXO filter sheet, UTXO detail, Settings), sending and signing (Send empty and filled, network fee, review, PSBT QR, scan), and setup (Welcome, Wallet setup, Import descriptor filled and empty, multisig configuration, cosigners empty and filled, verify).
 

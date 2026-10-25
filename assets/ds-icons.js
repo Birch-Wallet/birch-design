@@ -59,6 +59,7 @@
     'arrow.up.arrow.down': '<path d="M8 19V5M4.5 8.5 8 5l3.5 3.5M16 5v14m-3.5-3.5L16 19l3.5-3.5"/>',
     'faceid': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9.5v1.5M15 9.5v1.5M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/>',
     'eye': '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+    magnifyingglass: '<circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/>',
     'arrow.uturn.backward': '<path d="M9 14 4.5 9.5 9 5M4.5 9.5H15a5 5 0 0 1 0 10h-3"/>',
   }
 

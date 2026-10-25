@@ -587,9 +587,111 @@ async function views(p) {
   await p.locator('#incToday').uncheck()
   await settle(p, 60)
   check((await p.locator('.cmp-grid .ph').count()) === 8, area, 'Include Today toggles the Today column')
-  await p.locator('.chip-x[data-cmp="multisig"]').click()
+  // Screen switcher: ‹ › and the arrow keys step through the screens in page order
+  const order = await p.evaluate(() => {
+    const all = window.BirchShipped.SCREENS
+    return [...new Set(all.map((s) => s.group))].flatMap((g) => all.filter((s) => s.group === g).map((s) => s.id))
+  })
+  const cmpScreen = () => p.evaluate(() => [...new Set([...document.querySelectorAll('.cmp-grid .ph')].map((f) => f.dataset.screen))].join(','))
+  const start = await cmpScreen()
+  await p.locator('#scrNext').click()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 8, area, 'Compare screen chips switch the screen')
+  const next = await cmpScreen()
+  const pos = await p.locator('#scrPos').textContent()
+  await p.keyboard.press('ArrowLeft')
+  await settle(p, 60)
+  const back = await cmpScreen()
+  check(next === order[order.indexOf(start) + 1] && pos === `${order.indexOf(next) + 1} / ${order.length}` && back === start, area, '› and ← step to the next and previous screen, with a counter', `${start} → ${next} (${pos}) → ${back}`)
+
+  // The screen menu: every screen, with its markers and a live preview. Reopen the resolved
+  // comment on Review first, so there is an open comment to count
+  await p.locator('#exportBtn').click()
+  await p.locator('#drawer [data-tab="comments"]').click()
+  await p.locator('#drawer [data-resolve]', { hasText: 'Reopen' }).first().click()
+  await p.locator('#drawerClose').click()
+  await waitSave(p)
+  await p.keyboard.press('/')
+  await settle(p, 80)
+  const menu = await p.evaluate(() => ({
+    open: !document.querySelector('#scrMenu').hidden,
+    focus: document.activeElement.id,
+    options: document.querySelectorAll('#smList [role="option"]').length,
+    preview: [...document.querySelectorAll('#smPrev .ph')].map((f) => `${f.dataset.screen}/${f.dataset.mode}`).join(' '),
+  }))
+  check(menu.open && menu.focus === 'smQuery' && menu.options === order.length, area, '/ opens the screen menu on its search field, listing every screen', `${menu.options} screens, focus ${menu.focus}`)
+  check(menu.preview === `${start}/light ${start}/dark`, area, 'The menu previews the highlighted screen in both modes', menu.preview)
+  const marks = await p.evaluate(() => {
+    const SH = window.BirchShipped
+    const st = JSON.parse(localStorage.getItem('birch-ds-v1'))
+    const changed = new Set(SH.FUTURE_CHANGES.flatMap((c) => c.screens))
+    const wrong = SH.SCREENS.filter((s) => {
+      const o = document.getElementById('smo-' + s.id)
+      const n = st.comments.filter((c) => c.status !== 'resolved' && c.scope === 'screen:' + s.id).length
+      const cm = o.querySelector('.mk-cm')
+      return !!o.querySelector('.mk-fut') !== changed.has(s.id) || (cm ? +cm.textContent : 0) !== n || !!o.querySelector('.mk-noshot') !== !s.shot
+    })
+    return { wrong: wrong.map((s) => s.id).join(','), comments: document.querySelectorAll('#smList .mk-cm').length }
+  })
+  check(!marks.wrong && marks.comments > 0, area, 'Each screen is marked for Future changes, open comments and a missing screenshot', marks.wrong || `${marks.comments} with comments`)
+
+  // Search covers Swift files; Enter opens the first match
+  await p.keyboard.type('CosignerForm')
+  await settle(p, 60)
+  const found = await p.evaluate(() => [...document.querySelectorAll('#smList [role="option"]')].map((o) => o.dataset.pick).join(','))
+  await p.keyboard.press('Enter')
+  await settle(p, 80)
+  const picked = await cmpScreen()
+  const after = await p.evaluate(() => [document.querySelector('#scrMenu').hidden, document.activeElement.id, location.hash])
+  check(found === 'edit-cosigners' && picked === 'edit-cosigners' && after[0] && after[1] === 'scrPick', area, 'Search matches Swift files, and Enter opens the screen and closes the menu', `${found} → ${picked}, focus ${after[1]}`)
+  check(after[2] === '#compare=edit-cosigners', area, 'The address links to the screen being compared', after[2])
+  await p.keyboard.press('s')
+  await p.keyboard.type('multisig')
+  await p.keyboard.press('Enter')
+  await settle(p, 60)
+  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 8, area, 'S opens the menu too, and picking switches every column')
+
+  // Recent screens, newest first, leaving out the one on screen
+  await p.locator('#scrPick').click()
+  await settle(p, 60)
+  const recent = await p.evaluate(() => [...document.querySelectorAll('#smRecent [data-pick]')].map((b) => b.dataset.pick).join(','))
+  await p.locator('#smRecent [data-pick="edit-cosigners"]').click()
+  await settle(p, 60)
+  check(recent.startsWith('edit-cosigners') && !recent.includes('multisig') && (await cmpScreen()) === 'edit-cosigners', area, 'Recent lists the screens opened before, and opens them', recent)
+  await p.keyboard.press('/')
+  await p.keyboard.press('Escape')
+  await settle(p)
+  check((await p.locator('#scrMenu').isHidden()) && (await cmpScreen()) === 'edit-cosigners', area, 'Escape closes the menu without changing the screen')
+
+  // Changed in Future: the arrows skip the screens Future leaves as they are
+  const changedOrder = await p.evaluate((order) => {
+    const changed = new Set(window.BirchShipped.FUTURE_CHANGES.flatMap((c) => c.screens))
+    return order.filter((id) => changed.has(id))
+  }, order)
+  await p.locator('#changedOnly').click()
+  await settle(p, 60)
+  await p.keyboard.press('ArrowRight')
+  await settle(p, 60)
+  const nextChanged = await cmpScreen()
+  const posChanged = await p.locator('#scrPos').textContent()
+  await waitSave(p)
+  const savedOn = (await state(p)).changedOnly
+  await p.locator('#changedOnly').click()
+  await settle(p, 60)
+  const expectChanged = changedOrder[changedOrder.indexOf('edit-cosigners') + 1]
+  check(nextChanged === expectChanged && posChanged === `${changedOrder.indexOf(expectChanged) + 1} / ${changedOrder.length} changed` && savedOn === true, area, 'Changed in Future steps through only the screens Future changes, and is saved', `→ ${nextChanged} (${posChanged})`)
+
+  // A link opens Compare on its screen and device
+  const linked = await p.context().browser().newContext({ viewport: { width: 1400, height: 900 } })
+  const lp = await linked.newPage()
+  await lp.goto(PAGE + '#compare=fee&device=duo-open')
+  await lp.waitForSelector('.cmp-grid .ph')
+  const link = await lp.evaluate(() => [...new Set([...document.querySelectorAll('.cmp-grid .ph')].map((f) => `${f.dataset.screen} ${f.dataset.device}`))].join(','))
+  await linked.close()
+  check(link === 'fee duo-open', area, 'A #compare= link opens Compare on that screen and device', link)
+  await p.keyboard.press('s')
+  await p.keyboard.type('multisig')
+  await p.keyboard.press('Enter')
+  await settle(p, 60)
   await p.locator('#modeSeg [data-modes="dark"]').click()
   await settle(p, 60)
   check((await p.locator('.cmp-grid .ph').count()) === 4, area, 'Dark only shows one mode in Compare')
@@ -599,6 +701,18 @@ async function views(p) {
   const shots = await p.locator('#scope .shot').count()
   const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
   check(shots === 27 && listed.split(',').length === 27, area, 'Focus shows all twenty-seven screens', listed)
+  check((await p.evaluate(() => location.hash)) === '', area, 'Leaving Compare drops its link from the address')
+  // In Focus, the screen menu scrolls to the screen it picks
+  await p.locator('#rail [data-screen-menu]').click()
+  await p.keyboard.type('utxo filter')
+  await p.keyboard.press('Enter')
+  const jumped = await p
+    .waitForFunction(() => {
+      const top = document.getElementById('shot-utxo-filter').getBoundingClientRect().top
+      return top > 60 && top < 200
+    }, null, { timeout: 4000 })
+    .then(() => true, () => false)
+  check(jumped, area, 'In Focus, Find a screen scrolls to the screen it picks', `top ${(await p.evaluate(() => document.getElementById('shot-utxo-filter').getBoundingClientRect().top)).toFixed(0)}px`)
   for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'wallet-settings', 'edit-cosigners', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty', 'cosigner-errors']) {
     const n = await p.locator(`#scope [data-screen="${id}"] .ph-screen`).count()
     const blank = await p.evaluate((id) => [...document.querySelectorAll(`#scope [data-screen="${id}"] .ph-screen`)].some((s) => s.innerText.trim().length < 20), id)
@@ -798,6 +912,20 @@ async function migration(p) {
   check(st.v === 3 && st.current === 'T' && st.view === 'focus' && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
   check(st.params.F && st.params.F.design === 'future' && (await p.locator('#presetSeg [data-preset="F"]').count()) === 1, area, 'Saved state from before Future gains the Future preset')
   check(['A', 'B', 'C'].every((id) => st.params[id].design === 'future') && st.params.T.design === 'today', area, 'Color themes saved with the Today layout move to the Future layout', ['A', 'B', 'C', 'T'].map((id) => `${id} ${st.params[id].design}`).join(', '))
+
+  // Screens saved by an older page that no longer exist are dropped
+  await p.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('birch-ds-v1'))
+    Object.assign(s, { view: 'compare', compareScreen: 'gone', recentScreens: ['gone', 'fee'] })
+    localStorage.setItem('birch-ds-v1', JSON.stringify(s))
+  })
+  await p.reload()
+  await p.waitForSelector('.cmp-grid .ph')
+  await settle(p, 100)
+  await p.locator('#scrPick').click()
+  const kept = await p.evaluate(() => [document.querySelector('.cmp-grid .ph').dataset.screen, [...document.querySelectorAll('#smRecent [data-pick]')].map((b) => b.dataset.pick).join(',')].join(' | '))
+  await p.keyboard.press('Escape')
+  check(kept === 'review | fee', area, 'Saved screens that no longer exist fall back to Review and leave Recent', kept)
 }
 
 ;(async () => {

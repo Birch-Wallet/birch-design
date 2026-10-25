@@ -243,6 +243,9 @@
       modes: 'both',
       zoom: { focus: 0.62, compare: 0.5 },
       compareScreen: 'review',
+      // Screens opened from the screen menu, newest first, and whether ‹ › step through Future's changes only
+      recentScreens: [],
+      changedOnly: false,
       device: 'iphone',
       includeToday: true,
       pageTheme: 'system',
@@ -279,6 +282,9 @@
       merged.params[id].design = TK.PRESETS[id].design
     }
     if (!merged.params[merged.current]) merged.current = 'T'
+    // A screen that was removed since this was saved
+    if (!SH.SCREENS.some((x) => x.id === merged.compareScreen)) merged.compareScreen = defaults().compareScreen
+    merged.recentScreens = (merged.recentScreens || []).filter((id) => SH.SCREENS.some((x) => x.id === id))
     return merged
   }
 
@@ -610,6 +616,7 @@
     $('#rail').innerHTML =
       SECTIONS.map(([id, l]) => `<a href="#${id}" data-sec="${id}">${l}</a>`).join('') +
       SCREEN_GROUPS.map((g) => `<a class="sub" href="#screens-${g.toLowerCase()}">${g}</a>`).join('') +
+      `<button type="button" class="sub rail-find" data-screen-menu>${IC('magnifyingglass', 13)}Find a screen<kbd>/</kbd></button>` +
       `<hr><div class="hint"><kbd>C</kbd> comment &nbsp;<kbd>T</kbd> tune<br><kbd>E</kbd> export &nbsp;<kbd>O</kbd> overlay<br><kbd>1</kbd>–<kbd>5</kbd> presets &nbsp;<kbd>Esc</kbd> close</div>`
   }
 
@@ -712,13 +719,16 @@
       (d) => `<button type="button" data-device="${d.id}" aria-pressed="${d.id === S.device}">${esc(d.label)}</button>`,
     ).join('')}</div></div>`
 
+  /** Why the overlay can't line up on the current device: no screenshot, or the screen's own note */
+  const shotNote = (s) => (!s.shot ? 'No simulator screenshot' : (s.shotNote && s.shotNote[S.device]) || '')
+
   function screensDyn(id = S.current) {
     return SCREEN_GROUPS.map((g) => {
       const list = SH.SCREENS.filter((s) => s.group === g)
       return `<h3 class="grp-title" id="screens-${g.toLowerCase()}">${g}</h3><div class="shots">${list
         .map(
           (s) =>
-            `<div class="shot"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code>${!s.shot ? '<span class="shot-note">No simulator screenshot</span>' : s.shotNote && s.shotNote[S.device] ? `<span class="shot-note">${esc(s.shotNote[S.device])}</span>` : ''}</div><div class="shot-pair">${SH.phone(s, 'light', designOf(id), S.device)}${SH.phone(s, 'dark', designOf(id), S.device)}</div></div>`,
+            `<div class="shot" id="shot-${s.id}"><div class="shot-head"><b>${esc(s.label)}</b><code>${esc(s.swift)}</code>${shotNote(s) ? `<span class="shot-note">${esc(shotNote(s))}</span>` : ''}</div><div class="shot-pair">${SH.phone(s, 'light', designOf(id), S.device)}${SH.phone(s, 'dark', designOf(id), S.device)}</div></div>`,
         )
         .join('')}</div>`
     }).join('')
@@ -763,6 +773,7 @@
         ${deviceSeg()}<div id="screens-dyn">${screensDyn(id)}</div>${notesBlock('screens', 'screens')}</section>
     </div>`
     observeSections()
+    writeHash()
   }
 
   function updateDynamic() {
@@ -804,17 +815,287 @@
     const screen = SH.SCREENS.find((s) => s.id === S.compareScreen) || SH.SCREENS[0]
     const head = ids.map((id) => `<div class="cmp-col-head" data-head="${id}">${compareHead(id)}</div>`).join('')
     const row = (m) => ids.map((id) => `<div class="cmp-cell opt-${id}" data-opt="${id}">${SH.phone(screen, m, designOf(id), S.device)}</div>`).join('')
+    const list = stepList()
+    const at = list.indexOf(screen)
+    const changed = changedIds()
+    const focused = document.activeElement && document.activeElement.closest('.cmp-bar') ? document.activeElement.id : null
     $('#main').innerHTML = `
       <div class="cmp-bar">
         <span class="eyebrow" style="margin:0">Screen</span>
-        <div class="chips">${SH.SCREENS.map((s) => `<button type="button" class="chip-x" data-cmp="${s.id}" aria-pressed="${s.id === screen.id}">${esc(s.group)} · ${esc(s.label)}</button>`).join('')}</div>
+        <div class="scr-sw">
+          <button type="button" class="xbtn icon" id="scrPrev" title="Previous screen (←)" aria-label="Previous screen">${IC('chevron.left', 16)}</button>
+          <button type="button" class="xbtn scr-pick" id="scrPick" data-screen-menu aria-haspopup="dialog" title="Choose a screen (/)">
+            <span class="scr-g">${esc(screen.group)}</span><span class="scr-sep" aria-hidden="true">›</span><b>${esc(screen.label)}</b>${screenMarks(screen)}<span class="sp"></span>${IC('chevron.up.chevron.down', 15)}</button>
+          <button type="button" class="xbtn icon" id="scrNext" title="Next screen (→)" aria-label="Next screen">${IC('chevron.right', 16)}</button>
+          <span class="scr-pos" id="scrPos">${at < 0 ? '–' : at + 1} / ${list.length}${list.length < ORDERED.length ? ' changed' : ''}</span>
+        </div>
+        ${changed.size && changed.size < ORDERED.length ? `<button type="button" class="xbtn sm toggle" id="changedOnly" role="switch" aria-checked="${S.changedOnly}" title="Step through only the ${changed.size} screens Future changes from Today"><span class="sw" aria-hidden="true"></span>Changed in Future</button>` : ''}
         <label class="chk"><input type="checkbox" id="incToday" ${S.includeToday ? 'checked' : ''}> Include Today</label>
         ${deviceSeg()}
       </div>
+      <p class="cmp-meta"><code>${esc(screen.swift)}</code>${shotNote(screen) ? `<span class="shot-note">${esc(shotNote(screen))}</span>` : ''}</p>
       <div class="cmp-grid" style="grid-template-columns:repeat(${ids.length}, max-content)">
         ${head}${S.modes !== 'dark' ? row('light') : ''}${S.modes !== 'light' ? row('dark') : ''}
       </div>
       <section class="sec" id="compare-notes" style="border:0;padding-top:8px">${notesBlock('compare', 'the comparison')}</section>`
+    // Keep keyboard focus on the arrow or switch that was used, and the address on this screen
+    if (focused && $('#' + focused)) $('#' + focused).focus()
+    writeHash()
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen menu: search and pick a screen, with a live preview. Compare opens the
+  // screen it picks; Focus scrolls to it
+  // ---------------------------------------------------------------------------
+
+  /** Screens in the order the page lists them */
+  const ORDERED = SCREEN_GROUPS.flatMap((g) => SH.SCREENS.filter((s) => s.group === g))
+  const screenById = (id) => SH.SCREENS.find((s) => s.id === id)
+
+  /** Screens Future changes from Today. A change with no screens changes every one */
+  function changedIds() {
+    const ch = SH.FUTURE_CHANGES || []
+    if (ch.some((c) => !(c.screens || []).length)) return new Set(ORDERED.map((s) => s.id))
+    return new Set(ch.flatMap((c) => c.screens))
+  }
+  const openCommentsOn = (id) => S.comments.filter((c) => c.status !== 'resolved' && c.scope === 'screen:' + id).length
+  /** The screens ‹ and › step through */
+  function stepList() {
+    const changed = changedIds()
+    return S.changedOnly && changed.size ? ORDERED.filter((s) => changed.has(s.id)) : ORDERED
+  }
+
+  /** A screen's markers: Future changes it, its open comments, no screenshot to overlay */
+  function screenMarks(s) {
+    const n = openCommentsOn(s.id)
+    return (
+      `<span class="mks">` +
+      (changedIds().has(s.id) ? '<i class="mk-fut" title="Future changes this screen"></i>' : '') +
+      (n ? `<i class="mk-cm" title="${n} open comment${n === 1 ? '' : 's'}">${n}</i>` : '') +
+      (s.shot ? '' : '<i class="mk-noshot" title="No simulator screenshot"></i>') +
+      `</span>`
+    )
+  }
+  const marksLabel = (s) => {
+    const n = openCommentsOn(s.id)
+    return [s.label, changedIds().has(s.id) && 'Future changes it', n && `${n} open comment${n === 1 ? '' : 's'}`, !s.shot && 'no screenshot'].filter(Boolean).join(', ')
+  }
+
+  function setCompareScreen(id, remember) {
+    if (!screenById(id)) return
+    if (remember) rememberScreen(id, S.compareScreen)
+    S.compareScreen = id
+    save()
+    renderCompare()
+    SH.applyScrolls()
+    renderPins()
+  }
+
+  /** Steps to the next screen in the step list, or from a screen outside it, the nearest one that way */
+  function stepScreen(dir) {
+    const list = stepList()
+    const n = ORDERED.length
+    const i = ORDERED.findIndex((s) => s.id === S.compareScreen)
+    for (let k = 1; k <= n; k++) {
+      const s = ORDERED[(((i + dir * k) % n) + n) % n]
+      if (list.includes(s)) return setCompareScreen(s.id)
+    }
+  }
+
+  function rememberScreen(...ids) {
+    S.recentScreens = [...new Set([...ids, ...S.recentScreens])].filter(screenById).slice(0, 6)
+  }
+
+  function jumpToScreen(id) {
+    rememberScreen(id)
+    save()
+    const el = $('#shot-' + id)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    el.classList.remove('hl')
+    void el.offsetWidth
+    el.classList.add('hl')
+  }
+
+  // #compare=<screen>[&device=<device>] opens Compare on that screen, so a comparison can be linked
+  function readHash() {
+    const h = new URLSearchParams(location.hash.slice(1))
+    if (!h.has('compare') || !screenById(h.get('compare'))) return false
+    S.view = 'compare'
+    S.compareScreen = h.get('compare')
+    if (SH.DEVICES.some((d) => d.id === h.get('device'))) S.device = h.get('device')
+    save()
+    return true
+  }
+  function writeHash() {
+    const want = S.view === 'compare' ? `#compare=${S.compareScreen}${S.device === 'iphone' ? '' : `&device=${S.device}`}` : ''
+    if (want === location.hash || (!want && !location.hash.startsWith('#compare='))) return
+    try {
+      history.replaceState(null, '', want || location.pathname + location.search)
+    } catch (e) {
+      /* a page that can't rewrite its address still works */
+    }
+  }
+
+  let menu = null // { list: screens shown, active: index, from: element to refocus }
+
+  function openScreenMenu() {
+    const m = $('#scrMenu')
+    if (!m.hidden) return
+    const cur = S.view === 'compare' ? S.compareScreen : null
+    menu = { list: ORDERED, active: Math.max(0, ORDERED.findIndex((s) => s.id === cur)), from: document.activeElement }
+    m.innerHTML = `<div class="sm-panel" role="dialog" aria-modal="true" aria-label="Choose a screen">
+      <div class="sm-head">
+        <label class="sm-search">${IC('magnifyingglass', 16)}<input id="smQuery" type="text" role="combobox" aria-expanded="true" aria-controls="smList" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Search screens, groups and Swift files"></label>
+        <button type="button" class="xbtn icon" id="smClose" aria-label="Close">${IC('xmark', 14)}</button>
+      </div>
+      <div class="sm-body">
+        <div class="sm-main"><div class="sm-recent" id="smRecent"></div><div class="sm-list" id="smList" role="listbox" aria-label="Screens"></div></div>
+        <div class="sm-prev" id="smPrev" aria-hidden="true"></div>
+      </div>
+      <div class="sm-foot"><span><i class="mk-fut"></i> Future changes it</span><span><i class="mk-cm">2</i> open comments</span><span><i class="mk-noshot"></i> no screenshot</span>
+        <span class="sp"></span><span class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move</span><span class="keys"><kbd>↵</kbd> ${S.view === 'compare' ? 'compare' : 'go to'}</span><span class="keys"><kbd>Esc</kbd> close</span></div>
+    </div>`
+    m.hidden = false
+    document.body.classList.add('menu-open')
+    renderMenuList()
+    $('#smQuery').focus()
+  }
+
+  function closeScreenMenu() {
+    const m = $('#scrMenu')
+    if (m.hidden) return
+    m.hidden = true
+    m.innerHTML = ''
+    document.body.classList.remove('menu-open')
+    const from = menu && menu.from
+    menu = null
+    if (from && from.isConnected) from.focus()
+    else if ($('#scrPick')) $('#scrPick').focus()
+  }
+
+  function pickScreen(id) {
+    const compare = S.view === 'compare'
+    closeScreenMenu()
+    if (compare) {
+      setCompareScreen(id, true)
+      $('#scrPick').focus()
+    } else jumpToScreen(id)
+  }
+
+  /** Every word must appear in the screen's group, label, Swift files, id or screenshot name */
+  function searchScreens(q) {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+    return ORDERED.filter((s) => {
+      const hay = `${s.group} ${s.label} ${s.swift} ${s.id} ${s.shot || ''}`.toLowerCase()
+      return words.every((w) => hay.includes(w))
+    })
+  }
+
+  function renderMenuList() {
+    const q = $('#smQuery').value.trim()
+    const cur = S.view === 'compare' ? S.compareScreen : null
+    const changed = changedIds()
+    const dim = S.view === 'compare' && S.changedOnly && changed.size
+    const shown = q ? searchScreens(q) : ORDERED
+    if (shown !== menu.list) menu.active = 0
+    menu.list = shown
+    const recent = S.recentScreens.filter((id) => id !== cur).slice(0, 4).map(screenById)
+    $('#smRecent').innerHTML =
+      !q && recent.length ? `<span class="eyebrow">Recent</span>${recent.map((s) => `<button type="button" class="chip-x" data-pick="${s.id}">${esc(s.group)} · ${esc(s.label)}</button>`).join('')}` : ''
+    // Why a screen matched, when it wasn't by its name
+    const why = (s) => {
+      const words = q.toLowerCase().split(/\s+/).filter(Boolean)
+      if (!q || words.every((w) => `${s.group} ${s.label}`.toLowerCase().includes(w))) return ''
+      const file = s.swift.split(/,\s*(?![^(]*\))/).find((f) => words.some((w) => f.toLowerCase().includes(w)))
+      return `<span class="sm-why">${esc(file || s.shot || s.id)}</span>`
+    }
+    $('#smList').innerHTML = shown.length
+      ? SCREEN_GROUPS.map((g) => {
+          const items = shown.filter((s) => s.group === g)
+          if (!items.length) return ''
+          return `<div class="sm-grp" role="group" aria-labelledby="smg-${g.toLowerCase()}"><div class="sm-gh" id="smg-${g.toLowerCase()}">${g}<span>${items.length}</span></div>${items
+            .map(
+              (s) =>
+                `<div class="sm-item${s.id === cur ? ' cur' : ''}${dim && !changed.has(s.id) ? ' dim' : ''}" role="option" id="smo-${s.id}" data-pick="${s.id}" aria-selected="false" aria-label="${esc(marksLabel(s))}">` +
+                `<span class="sm-l">${esc(s.label)}${why(s)}</span>${screenMarks(s)}${s.id === cur ? IC('checkmark', 13, 'sm-check') : ''}</div>`,
+            )
+            .join('')}</div>`
+        }).join('')
+      : `<div class="empty-note">No screen matches “${esc(q)}”.</div>`
+    setActive(menu.active)
+  }
+
+  let previewFrame = 0
+  function setActive(i) {
+    if (!menu) return
+    menu.active = Math.max(0, Math.min(menu.list.length - 1, i))
+    const s = menu.list[menu.active]
+    $$('#smList [role="option"]').forEach((o) => o.setAttribute('aria-selected', String(!!s && o.dataset.pick === s.id)))
+    const q = $('#smQuery')
+    if (s) {
+      q.setAttribute('aria-activedescendant', 'smo-' + s.id)
+      const el = $('#smo-' + s.id)
+      if (el) el.scrollIntoView({ block: 'nearest' })
+    } else q.removeAttribute('aria-activedescendant')
+    // Rebuild the preview once per frame, so holding an arrow key doesn't queue renders
+    cancelAnimationFrame(previewFrame)
+    previewFrame = requestAnimationFrame(() => renderPreview(s))
+  }
+
+  /** The highlighted screen, built live for the current preset and device, with what Future changes on it */
+  function renderPreview(s) {
+    const box = $('#smPrev')
+    if (!box) return
+    if (!s) {
+      box.innerHTML = ''
+      return
+    }
+    const modes = S.modes === 'both' ? ['light', 'dark'] : [S.modes]
+    const D = SH.DEVICES.find((d) => d.id === S.device) || SH.DEVICES[0]
+    // Fit the phones (18pt of bezel each) into the pane side by side, or stacked for the open Duo
+    const W = 296
+    const H = 340
+    const gap = 8
+    const w = D.w + 18
+    const h = D.h + 18
+    const n = modes.length
+    const side = Math.min((W - gap * (n - 1)) / (n * w), H / h)
+    const stack = Math.min(W / w, (H - gap * (n - 1)) / (n * h))
+    const notes = (SH.FUTURE_CHANGES || []).filter((c) => !(c.screens || []).length || c.screens.includes(s.id))
+    const cm = openCommentsOn(s.id)
+    box.innerHTML = `<div class="sm-phones opt-${S.current}${stack > side ? ' stack' : ''}" style="--zoom:${Math.max(side, stack).toFixed(4)}">${modes.map((m) => SH.phone(s, m, designOf(S.current), S.device)).join('')}</div>
+      <div class="sm-pv-title">${esc(s.group)} › <b>${esc(s.label)}</b></div>
+      <code class="sm-pv-swift">${esc(s.swift)}</code>
+      <p class="sm-pv-line">${esc(presetName(S.current))} on the ${esc(D.label.replace(', portrait', ''))} · ${s.shot ? `screenshot <span>${esc(s.shot)}</span>` : 'no simulator screenshot'}${cm ? ` · ${cm} open comment${cm === 1 ? '' : 's'}` : ''}</p>
+      ${notes.map((c) => `<p class="sm-pv-fut"><i class="mk-fut"></i>${esc(c.change)}</p>`).join('')}`
+    SH.applyScrolls(box)
+  }
+
+  function onMenuKey(e) {
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      return closeScreenMenu()
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      return setActive(menu.active + (e.key === 'ArrowDown' ? 1 : -1))
+    }
+    if (e.key === 'Enter' && e.target.id === 'smQuery') {
+      e.preventDefault()
+      const s = menu.list[menu.active]
+      if (s) pickScreen(s.id)
+      return
+    }
+    // Keep Tab inside the menu
+    if (e.key === 'Tab') {
+      const f = $$('#scrMenu input, #scrMenu button')
+      const i = f.indexOf(document.activeElement)
+      if (e.shiftKey ? i <= 0 : i === f.length - 1) {
+        e.preventDefault()
+        f[e.shiftKey ? f.length - 1 : 0].focus()
+      }
+    }
   }
 
   function renderMain() {
@@ -1389,7 +1670,7 @@
       return
     }
     if (!commenting) return
-    if (e.target.closest('.top, .dial, .drawer, .pop, .notes, .cmp-bar, .rail')) return
+    if (e.target.closest('.top, .dial, .drawer, .pop, .notes, .cmp-bar, .rail, .scr-menu')) return
     const el = e.target.closest('[data-c]')
     if (!el || el.closest('.b-behind')) return
     e.preventDefault()
@@ -1956,10 +2237,12 @@
         setDevice(dev.dataset.device)
         return
       }
-      const chip = e.target.closest('[data-cmp]')
-      if (chip) {
-        S.compareScreen = chip.dataset.cmp
+      if (e.target.closest('#scrPrev, #scrNext')) return stepScreen(e.target.closest('#scrNext') ? 1 : -1)
+      if (e.target.closest('#changedOnly')) {
+        S.changedOnly = !S.changedOnly
         save()
+        // Turning it on from a screen Future doesn't change moves to the next one it does
+        if (S.changedOnly && !stepList().some((s) => s.id === S.compareScreen)) return stepScreen(1)
         renderCompare()
         renderPins()
         return
@@ -1977,6 +2260,29 @@
       }
     })
 
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('[data-screen-menu]')) openScreenMenu()
+    })
+    $('#scrMenu').addEventListener('click', (e) => {
+      const pick = e.target.closest('[data-pick]')
+      if (pick) return pickScreen(pick.dataset.pick)
+      if (e.target.closest('#smClose') || !e.target.closest('.sm-panel')) closeScreenMenu()
+    })
+    $('#scrMenu').addEventListener('mousemove', (e) => {
+      const o = e.target.closest('[role="option"]')
+      const i = o ? menu.list.findIndex((s) => s.id === o.dataset.pick) : -1
+      if (i >= 0 && i !== menu.active) setActive(i)
+    })
+    $('#scrMenu').addEventListener('input', (e) => {
+      if (e.target.id === 'smQuery') renderMenuList()
+    })
+    $('#scrMenu').addEventListener('keydown', onMenuKey)
+    window.addEventListener('hashchange', () => {
+      if (!readHash()) return
+      renderTop()
+      renderMain()
+    })
+
     document.addEventListener('keydown', (e) => {
       const tag = (e.target.tagName || '').toLowerCase()
       if (e.key === 'Escape') {
@@ -1985,6 +2291,7 @@
         if (commenting) return setCommenting(false)
       }
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable || e.metaKey || e.ctrlKey || e.altKey) return
+      if (!$('#scrMenu').hidden) return
       const k = e.key.toLowerCase()
       if (k === 'c') setCommenting(!commenting)
       else if (k === 't') {
@@ -1993,7 +2300,13 @@
         renderTop()
       } else if (k === 'e') openDrawer('export')
       else if (k === 'o') toggleRef()
-      else if (/^[1-9]$/.test(k) && BUILT_IN[+k - 1]) switchPreset(BUILT_IN[+k - 1])
+      else if (k === '/' || k === 's') {
+        e.preventDefault()
+        openScreenMenu()
+      } else if ((k === 'arrowleft' || k === 'arrowright') && S.view === 'compare' && $('#drawer').hidden && $('#pop').hidden) {
+        e.preventDefault()
+        stepScreen(k === 'arrowright' ? 1 : -1)
+      } else if (/^[1-9]$/.test(k) && BUILT_IN[+k - 1]) switchPreset(BUILT_IN[+k - 1])
     })
   }
 
@@ -2017,6 +2330,7 @@
   }
 
   // Boot
+  readHash()
   applyTokens()
   renderTop()
   renderRail()
