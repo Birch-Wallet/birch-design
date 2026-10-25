@@ -176,6 +176,8 @@
     ovr('navGlass', over('#FFFFFF', dark ? 0.13 : 0.45, t.ground))
     ovr('segText', dark ? '#FFFFFF' : '#000000')
     ovr('segTextOn', dark ? '#FFFFFF' : '#000000')
+    // A checkmark on a selection fill: white, or the accent's on-color where that reads better
+    ovr('onSelect', contrast(t.select, '#FFFFFF') >= contrast(t.select, t.onAccent) ? '#FFFFFF' : t.onAccent)
     const stroke = p.shape.stroke
     const ring = stroke > 0 ? `inset 0 0 0 ${stroke}px ${t.line}` : ''
     const sh = t.shadow && t.shadow !== 'none' ? t.shadow : ''
@@ -325,30 +327,6 @@
   }
 
   const PRESETS = {
-    A: {
-      id: 'A',
-      group: 'theme',
-      design: 'future',
-      name: 'Catkin',
-      kind: 'Evolution',
-      thesis:
-        'Today’s Birch, refined. Gold stays the brand, named for the birch catkin, but the primary button now carries dark text so it passes contrast in both modes. Dark mode moves from brown to a warm-neutral charcoal. Light mode leaves beige for birch-bark white.',
-      dark: { hue: 80, chroma: 0.006, groundL: 0.195, step: 0.04, inkL: 0.94, ink2L: 0.74, ink3L: 0.55 },
-      light: { hue: 100, chroma: 0.006, groundL: 0.957, cardL: 0.997, nestedDelta: 0.035, inkL: 0.23, ink2L: 0.48, ink3L: 0.66 },
-      brand: { hue: 84, chroma: 0.135, darkL: 0.8, lightL: 0.76, onBrand: 'auto' },
-      // Used only when Second hue is turned on in Tune: leaf green beside the catkin gold
-      accent: { enabled: false, hue: 140, chroma: 0.12, darkL: 0.78, lightL: 0.55 },
-      roles: { selection: 'brand', progress: 'brand', toggles: 'brand', amountUnit: 'ink', tabTint: 'brand' },
-      semantic: { ...shared.semantic, warningHue: 62 },
-      networks: { mainnet: 84, testnet4: 238, testnet3: 196, signet: 305 },
-      networkChroma: shared.networkChroma,
-      shape: { card: 12, nested: 8, button: 12, chip: 16, sheet: 16, ring: 1.5, stroke: 0, shadow: 0.7 },
-      type: { display: 'rounded', titleWeight: 600, amountFace: 'rounded', numerals: 'mono', scale: 1 },
-      density: { gutter: 24, cardPad: 16, field: 12, space: 1, buttonH: 52, rowH: 73.33 },
-      buttons: { utility: 'tinted', utilityColor: 'mixed', tertiary: 'brand', secondary: 'fill', disabled: 'muted', press: 'dim' },
-      layout: { footer: 'split', signed: false, received: 'color' },
-      chrome: { header: 'shipped', tabbar: 'glass', glass: 1, dim: 1 },
-    },
     B: {
       id: 'B',
       group: 'theme',
@@ -373,29 +351,6 @@
       layout: { footer: 'split', signed: false, received: 'color' },
       chrome: { header: 'shipped', tabbar: 'glass', glass: 1, dim: 1 },
     },
-    C: {
-      id: 'C',
-      group: 'theme',
-      design: 'future',
-      name: 'Bark',
-      kind: 'Bolder',
-      thesis:
-        'Birch bark at dusk: cool slate grounds and near-monochrome controls. The primary button is the highest-contrast thing on screen, light on dark and dark on light. Autumn amber is the one warm color, kept for Bitcoin amounts, selection and anything that needs attention. Corners are tighter for a more precise, instrument-like feel.',
-      dark: { hue: 248, chroma: 0.013, groundL: 0.19, step: 0.042, inkL: 0.95, ink2L: 0.75, ink3L: 0.56 },
-      light: { hue: 235, chroma: 0.008, groundL: 0.955, cardL: 0.997, nestedDelta: 0.035, inkL: 0.23, ink2L: 0.48, ink3L: 0.66 },
-      brand: { hue: 248, chroma: 0.014, darkL: 0.93, lightL: 0.28, onBrand: 'auto' },
-      accent: { enabled: true, hue: 68, chroma: 0.15, darkL: 0.8, lightL: 0.74 },
-      roles: { selection: 'accent', progress: 'accent', toggles: 'accent', amountUnit: 'accent', tabTint: 'accent' },
-      semantic: { ...shared.semantic, successHue: 140, warningHue: 68 },
-      networks: { mainnet: 68, testnet4: 240, testnet3: 198, signet: 305 },
-      networkChroma: shared.networkChroma,
-      shape: { card: 8, nested: 6, button: 8, chip: 6, sheet: 12, ring: 1.5, stroke: 1, shadow: 0.35 },
-      type: { display: 'default', titleWeight: 700, amountFace: 'default', numerals: 'mono', scale: 1 },
-      density: { gutter: 24, cardPad: 16, field: 12, space: 1, buttonH: 50, rowH: 73.33 },
-      buttons: { utility: 'tinted', utilityColor: 'mixed', tertiary: 'accent', secondary: 'outline', disabled: 'muted', press: 'dim' },
-      layout: { footer: 'split', signed: false, received: 'color' },
-      chrome: { header: 'shipped', tabbar: 'glass', glass: 1, dim: 1 },
-    },
     T: {
       id: 'T',
       group: 'design',
@@ -403,17 +358,17 @@
       name: 'Today',
       kind: 'Reference',
       thesis:
-        'Shipping Birch Light and Birch Dark from Theme.swift, mapped onto the new component structure for before and after comparison. White text on gold, the shared olive for success and secondary accent, and beige grounds are kept as they are.',
-      // Fitted so the generated palette lands within ~0.01 dE of Theme.swift; the exact
-      // values live in overrides until a color control is edited
-      dark: { hue: 78, chroma: 0.015, groundL: 0.207, step: 0.036, inkL: 0.803, ink2L: 0.703, ink3L: 0.317 },
-      light: { hue: 72.6, chroma: 0.017, groundL: 0.901, cardL: 0.95, nestedDelta: 0.05, inkL: 0.242, ink2L: 0.407, ink3L: 0.598 },
-      brand: { hue: 86.667, chroma: 0.136, darkL: 0.751, lightL: 0.642, onBrand: 'light' },
-      // Used only when Second hue is turned on in Tune: the olive Theme.swift calls secondaryAccent
-      accent: { enabled: false, hue: 125, chroma: 0.06, darkL: 0.6, lightL: 0.47 },
+        'Birch Light and Birch Dark as Theme.swift ships them. Gold is the brand, with dark text on the primary button and a deeper gold for gold text in light mode. Dark mode is a warm-neutral charcoal and light mode a birch-bark white with white cards. Success, info, warning and each network have their own hue.',
+      // The generated palette lands on Theme.swift's colors; the exact values live in overrides until a
+      // color control is edited
+      dark: { hue: 80, chroma: 0.006, groundL: 0.195, step: 0.04, inkL: 0.94, ink2L: 0.74, ink3L: 0.55 },
+      light: { hue: 100, chroma: 0.006, groundL: 0.957, cardL: 0.997, nestedDelta: 0.035, inkL: 0.23, ink2L: 0.48, ink3L: 0.66 },
+      brand: { hue: 84, chroma: 0.135, darkL: 0.8, lightL: 0.76, onBrand: 'auto' },
+      // Used only when Second hue is turned on in Tune: leaf green beside the gold
+      accent: { enabled: false, hue: 140, chroma: 0.12, darkL: 0.78, lightL: 0.55 },
       roles: { selection: 'brand', progress: 'brand', toggles: 'brand', amountUnit: 'ink', tabTint: 'brand' },
-      semantic: { ...shared.semantic },
-      networks: { mainnet: 84, testnet4: 130, testnet3: 130, signet: 305 },
+      semantic: { ...shared.semantic, warningHue: 62 },
+      networks: { mainnet: 84, testnet4: 238, testnet3: 196, signet: 305 },
       networkChroma: shared.networkChroma,
       shape: { card: 12, nested: 8, button: 12, chip: 16, sheet: 12, ring: 1.5, stroke: 0, shadow: 0.6 },
       type: { display: 'rounded', titleWeight: 500, amountFace: 'rounded', numerals: 'mono', scale: 1 },
@@ -421,40 +376,38 @@
       buttons: { utility: 'tinted', utilityColor: 'mixed', tertiary: 'brand', secondary: 'fill', disabled: 'muted', press: 'dim' },
       layout: { footer: 'split', signed: false, received: 'color' },
       chrome: { header: 'shipped', tabbar: 'glass', glass: 1, dim: 1 },
-      // Exact Theme.swift values (birchDark / birchLight + the ground/card/nested role swap)
+      // Exact Theme.swift values (HBTheme.birchDark / birchLight). The wallet identicons' orange and teal
+      // are fixed colors outside the theme
       overrides: {
         dark: {
-          ground: '#1A1814', card: '#242018', nested: '#2E2820', floating: '#2E2820',
-          line: '#2E2820', lineStrong: '#3D3530', ink: '#EDE8DF', ink2: '#A89E92', ink3: '#6F675E',
-          brand: '#D4A835', onBrand: '#FFFFFF', brandPressed: '#B8912B', brandInk: '#D4A835',
-          brandTint: 'rgba(212, 168, 53, 0.12)', accent: '#D4A835', onAccent: '#FFFFFF', accentInk: '#D4A835',
-          accentTint: 'rgba(212, 168, 53, 0.12)', select: '#D4A835', selectTint: 'rgba(212, 168, 53, 0.12)',
-          progress: '#D4A835', toggle: '#D4A835', tabTint: '#D4A835', unit: '#A89E92',
-          success: '#6A7A52', successTint: 'rgba(106, 122, 82, 0.12)', info: '#6A7A52', infoTint: 'rgba(106, 122, 82, 0.12)',
-          danger: '#B03C28', dangerTint: 'rgba(176, 60, 40, 0.12)', dangerFill: '#B03C28', onDanger: '#FFFFFF',
-          warning: '#D4A835', warningTint: 'rgba(212, 168, 53, 0.12)',
-          net_mainnet: '#D4A835', net_testnet4: '#6A7A52', net_testnet3: '#8B9875', net_signet: '#AF52DE',
-          net_mainnetTint: 'rgba(212, 168, 53, 0.15)', net_testnet4Tint: 'rgba(106, 122, 82, 0.15)',
-          net_testnet3Tint: 'rgba(106, 122, 82, 0.1)', net_signetTint: 'rgba(175, 82, 222, 0.15)',
-          // hbPrimaryButton and the setup wizard's buttons draw white text on hbBorder when disabled
-          disabledFill: '#3D3530', disabledInk: '#FFFFFF', shadow: 'none',
-          hero: '#242018', border: '#3D3530', purple: '#BF5AF2', sysGreen: '#30D158', orange: '#E6804D', teal: '#4DB3B3',
+          ground: '#161512', card: '#201E1B', nested: '#292724', floating: '#292724', line: '#2F2D2A',
+          lineStrong: '#6F6D69', ink: '#ECEBE8', ink2: '#ADAAA6', ink3: '#74716D', brand: '#E7B64A', onBrand: '#1B150A',
+          brandPressed: '#D3A333', brandInk: '#E7B64A', brandTint: 'rgba(231, 182, 74, 0.16)', accent: '#E7B64A',
+          onAccent: '#1B150A', accentInk: '#E7B64A', accentTint: 'rgba(231, 182, 74, 0.16)', select: '#E7B64A',
+          selectTint: 'rgba(231, 182, 74, 0.12)', onSelect: '#1B150A', progress: '#E7B64A', toggle: '#E7B64A', tabTint: '#E7B64A',
+          unit: '#ADAAA6', success: '#7DC67F', successTint: 'rgba(125, 198, 127, 0.15)', info: '#7DB9E1',
+          infoTint: 'rgba(125, 185, 225, 0.15)', danger: '#F0726C', dangerTint: 'rgba(240, 114, 108, 0.15)',
+          dangerFill: '#C8393A', onDanger: '#FFFFFF', warning: '#F2A359', warningTint: 'rgba(242, 163, 89, 0.15)',
+          net_mainnet: '#D8BA7E', net_testnet4: '#89C6EE', net_testnet3: '#77CFD0', net_signet: '#CAB0EA',
+          net_mainnetTint: 'rgba(216, 186, 126, 0.18)', net_testnet4Tint: 'rgba(137, 198, 238, 0.18)',
+          net_testnet3Tint: 'rgba(119, 207, 208, 0.18)', net_signetTint: 'rgba(202, 176, 234, 0.18)',
+          disabledFill: '#2B2A27', disabledInk: '#74716D', hero: '#201E1B', border: '#383633', purple: '#CAB0EA',
+          sysGreen: '#7DC67F', shadow: 'none', orange: '#E6804D', teal: '#4DB3B3',
         },
         light: {
-          ground: '#E3DDD3', card: '#F2EEE6', nested: '#E3DDD3', floating: '#F2EEE6',
-          line: '#E3DDD3', lineStrong: '#B0A99D', ink: '#231F1B', ink2: '#4F4840', ink3: '#8A8278',
-          brand: '#B28622', onBrand: '#FFFFFF', brandPressed: '#9A741C', brandInk: '#B28622',
-          brandTint: 'rgba(178, 134, 34, 0.12)', accent: '#B28622', onAccent: '#FFFFFF', accentInk: '#B28622',
-          accentTint: 'rgba(178, 134, 34, 0.12)', select: '#B28622', selectTint: 'rgba(178, 134, 34, 0.12)',
-          progress: '#B28622', toggle: '#B28622', tabTint: '#B28622', unit: '#4F4840',
-          success: '#475F39', successTint: 'rgba(71, 95, 57, 0.12)', info: '#475F39', infoTint: 'rgba(71, 95, 57, 0.12)',
-          danger: '#992E1F', dangerTint: 'rgba(153, 46, 31, 0.12)', dangerFill: '#992E1F', onDanger: '#FFFFFF',
-          warning: '#B28622', warningTint: 'rgba(178, 134, 34, 0.12)',
-          net_mainnet: '#B28622', net_testnet4: '#475F39', net_testnet3: '#6B7D60', net_signet: '#AF52DE',
-          net_mainnetTint: 'rgba(178, 134, 34, 0.15)', net_testnet4Tint: 'rgba(71, 95, 57, 0.15)',
-          net_testnet3Tint: 'rgba(71, 95, 57, 0.1)', net_signetTint: 'rgba(175, 82, 222, 0.15)',
-          disabledFill: '#B0A99D', disabledInk: '#FFFFFF',
-          hero: '#E3DDD3', border: '#B0A99D', purple: '#AF52DE', sysGreen: '#34C759', orange: '#E6804D', teal: '#4DB3B3',
+          ground: '#F2F1EC', card: '#FEFEFD', nested: '#F3F3EE', floating: '#FEFEFD', line: '#D9D8D4',
+          lineStrong: '#74746F', ink: '#1D1D1B', ink2: '#5E5E59', ink3: '#8B8B86', brand: '#D9A93B', onBrand: '#1B150A',
+          brandPressed: '#C69621', brandInk: '#8D6800', brandTint: 'rgba(141, 104, 0, 0.12)', accent: '#D9A93B',
+          onAccent: '#1B150A', accentInk: '#8D6800', accentTint: 'rgba(141, 104, 0, 0.12)', select: '#8D6800',
+          selectTint: 'rgba(141, 104, 0, 0.09)', onSelect: '#FFFFFF', progress: '#8D6800', toggle: '#D9A93B', tabTint: '#8D6800',
+          unit: '#5E5E59', success: '#2C7533', successTint: 'rgba(44, 117, 51, 0.11)', info: '#2D6A8E',
+          infoTint: 'rgba(45, 106, 142, 0.11)', danger: '#AA3332', dangerTint: 'rgba(170, 51, 50, 0.11)',
+          dangerFill: '#BA2B2E', onDanger: '#FFFFFF', warning: '#915100', warningTint: 'rgba(145, 81, 0, 0.11)',
+          net_mainnet: '#74591B', net_testnet4: '#276488', net_testnet3: '#006C6D', net_signet: '#695184',
+          net_mainnetTint: 'rgba(116, 89, 27, 0.13)', net_testnet4Tint: 'rgba(39, 100, 136, 0.13)',
+          net_testnet3Tint: 'rgba(0, 108, 109, 0.13)', net_signetTint: 'rgba(105, 81, 132, 0.13)',
+          disabledFill: '#E2E1DC', disabledInk: '#8B8B86', hero: '#F2F1EC', border: '#B1B0AC', purple: '#695184',
+          sysGreen: '#2C7533', orange: '#E6804D', teal: '#4DB3B3',
         },
       },
     },
@@ -470,35 +423,43 @@
     design: 'future',
     kind: 'Proposal',
     thesis:
-      'The next version of Birch, built on Today. Layout, type, color and component changes are made here a few at a time, so each one can be judged against the app as it ships. It began as an exact copy of Today; the first changes rework the setup flow.',
+      'The next version of Birch, built on Today. Layout, type, color and component changes are made here a few at a time, so each one can be judged against the app as it ships. It starts as an exact copy of Today.',
   })
 
-  // Token reference: name -> role, plus the Theme.swift name it replaces
+  // Token reference: name -> role, plus the Theme.swift name that draws it ("new" where the app has none)
   const TOKEN_DOCS = [
     ['ground', 'Screen and sheet background', 'hbBackground, hbSheet'],
     ['card', 'Card fill, grouped rows, secondary button fill', 'hbSurface'],
     ['nested', 'Fields, segmented track and rows inside a card', 'hbSurfaceElevated'],
     ['floating', 'Menus and popovers above content', 'hbFloating'],
+    ['hero', 'Wallet header behind the balance', 'hbHeroBackground'],
     ['line', 'Hairline dividers between rows', 'hbDivider'],
-    ['lineStrong', 'Outlined button and control borders (3:1 or more)', 'hbBorder'],
+    ['border', 'Quiet strokes: empty radios, progress tracks, underlines', 'hbBorder'],
+    ['lineStrong', 'Outlined button and control borders (3:1 or more)', 'new'],
     ['ink', 'Primary text and icons', 'hbTextPrimary'],
     ['ink2', 'Secondary text: labels, metadata (4.5:1 or more)', 'hbTextSecondary'],
     ['ink3', 'Placeholder and disabled text', 'new: hbTextTertiary'],
-    ['brand', 'Primary button fill, toggles on', 'hbBitcoinOrange (as fill)'],
-    ['onBrand', 'Text and icons on brand fill', 'new: hbOnBrand (replaces .white)'],
-    ['brandInk', 'Brand as text or icon on surfaces (4.5:1 or more)', 'hbBitcoinOrange (as text)'],
-    ['brandTint', 'Tonal button and chip fill', 'hbBitcoinOrange.opacity(0.12)'],
-    ['accent', 'Second hue: Bitcoin amounts, selection, attention (C only)', 'new: hbAccent'],
+    ['brand', 'Primary button fill', 'hbBrand'],
+    ['onBrand', 'Text and icons on brand fill', 'hbOnBrand'],
+    ['brandInk', 'Brand as text or icon on surfaces (4.5:1 or more)', 'hbBrandInk'],
+    ['brandTint', 'Tonal button and chip fill', 'hbBrandInk.opacity(0.12)'],
+    ['accent', 'Second hue: Bitcoin amounts, selection, attention', 'new: hbAccent'],
     ['accentInk', 'Accent as text or icon (4.5:1 or more)', 'new: hbAccentInk'],
-    ['select', 'Selection ring and selected radio', 'birchSelected ring'],
+    ['select', 'Selection ring, checkmarks and selected radios', 'hbSelection'],
+    ['onSelect', 'Checkmark on a selection fill', 'hbOnSelection'],
+    ['toggle', 'Switches when on', 'hbToggle'],
+    ['progress', 'Spinners, progress bars and the syncing dot', 'hbProgress'],
+    ['tabTint', 'The active tab', 'hbTabTint'],
+    ['disabledFill', 'Disabled primary button fill', 'hbDisabledFill'],
+    ['disabledInk', 'Disabled primary button text', 'hbDisabledInk'],
     ['success', 'Confirmed, verified, signed', 'hbSuccess'],
-    ['warning', 'Needs a closer look, unconfirmed', 'new: hbWarning (was hbBitcoinOrange)'],
+    ['warning', 'Needs a closer look, unconfirmed', 'hbWarning'],
     ['danger', 'Errors and destructive actions', 'hbError'],
-    ['info', 'Neutral information callouts', 'hbSteelBlue (retired)'],
-    ['net_mainnet', 'Mainnet badge', 'NetworkBadge .mainnet'],
-    ['net_testnet4', 'Testnet4 badge', 'NetworkBadge .testnet4'],
-    ['net_testnet3', 'Testnet3 badge', 'NetworkBadge .testnet3'],
-    ['net_signet', 'Signet badge', 'NetworkBadge .signet (was .purple)'],
+    ['info', 'Neutral information: change, labels, copy and paste', 'hbInfo'],
+    ['net_mainnet', 'Mainnet badge', 'hbNetwork(.mainnet)'],
+    ['net_testnet4', 'Testnet4 badge', 'hbNetwork(.testnet4)'],
+    ['net_testnet3', 'Testnet3 badge', 'hbNetwork(.testnet3)'],
+    ['net_signet', 'Signet badge, PDF and print actions', 'hbNetwork(.signet), hbPurple'],
   ]
 
   const api = { lch, contrast, over, rgba, derive, PRESETS, TOKEN_DOCS, hexToRgb, toHex }

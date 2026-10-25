@@ -19,8 +19,8 @@
   const clone = (o) => JSON.parse(JSON.stringify(o))
   const STORAGE_KEY = 'birch-ds-v1'
   // The designs first: Today (the app as it ships) and Future (the next version, built on Today).
-  // Then the color themes, which recolor Future's layout
-  const BUILT_IN = ['T', 'F', 'A', 'B', 'C']
+  // Then the color theme, which recolors Future's layout
+  const BUILT_IN = ['T', 'F', 'B']
 
   const FONTS = {
     rounded: 'ui-rounded, "Birch SF Rounded", "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
@@ -30,13 +30,6 @@
   }
 
   const OPTION_NOTES = {
-    A: [
-      'Primary button text turns dark: 9.7:1 on gold in dark mode, up from 2.2:1 with white text today.',
-      'Dark ground moves from brown (#1A1814) to a warm-neutral charcoal.',
-      'Light ground moves from beige to birch-bark white, with white cards.',
-      'Success, info and each network get their own hue. Today success, the secondary accent and the testnet badge share one olive.',
-      'Secondary buttons keep today’s card fill with brand-colored text.',
-    ],
     B: [
       'Brand moves from gold to the leaf green on the app icon.',
       'Dark mode is forest at night: near-black with a faint green cast.',
@@ -44,17 +37,10 @@
       'Secondary buttons are outlined. Titles use SF Pro instead of Rounded; amounts stay Rounded.',
       'The mainnet badge turns amber, so Bitcoin keeps a warm marker.',
     ],
-    C: [
-      'The primary button is monochrome: near-white on slate in dark mode, deep slate on white in light mode.',
-      'Autumn amber is reserved for amounts, selection, progress and toggles.',
-      'Corners tighten to 8/6 and cards get a hairline stroke.',
-      'All type is SF Pro (not Rounded), with bold titles.',
-      'Tertiary actions use amber text.',
-    ],
     T: [
-      'Exact Theme.swift colors, kept as the before picture.',
-      'White text on gold fails contrast: 2.2:1 in dark mode, 3.3:1 in light.',
-      'Gold text on light cards fails at 2.9:1.',
+      'Exact Theme.swift colors: Birch Light and Birch Dark as the app ships them.',
+      'The primary button carries dark text on gold, 9.7:1 in dark mode and 8.4:1 in light.',
+      'Gold as text in light mode is a deeper #8D6800, 5.1:1 on the card.',
     ],
   }
 
@@ -76,19 +62,20 @@
     brandPressed: ['Primary button, pressed', 'new'],
     onAccent: ['Text on accent fill', 'new'],
     accentTint: ['Accent chip and selection fill', 'new'],
-    selectTint: ['Selected row fill', 'birchSelected fill'],
+    selectTint: ['Selected row fill', 'hbSelection.opacity(0.12)'],
     successTint: ['Success callout and chip fill', 'hbSuccess.opacity'],
-    warningTint: ['Warning callout and chip fill', 'new'],
+    warningTint: ['Warning callout and chip fill', 'hbWarning.opacity'],
     dangerTint: ['Error callout fill', 'hbError.opacity(0.12)'],
-    dangerFill: ['Destructive primary button fill', 'hbError (as fill)'],
+    dangerFill: ['Destructive primary button fill', 'hbErrorFill'],
     onDanger: ['Text on destructive fill', '.white'],
-    infoTint: ['Info callout fill', 'hbSteelBlue.opacity(0.12)'],
+    infoTint: ['Info callout fill', 'hbInfo.opacity(0.12)'],
   }
 
   const COLOR_GROUPS = [
-    ['Surfaces', ['ground', 'card', 'nested', 'floating', 'line', 'lineStrong']],
+    ['Surfaces', ['ground', 'card', 'nested', 'floating', 'hero', 'line', 'border', 'lineStrong']],
     ['Text', ['ink', 'ink2', 'ink3']],
-    ['Brand and accent', ['brand', 'onBrand', 'brandPressed', 'brandInk', 'brandTint', 'accent', 'onAccent', 'accentInk', 'accentTint', 'select', 'selectTint']],
+    ['Brand and accent', ['brand', 'onBrand', 'brandPressed', 'brandInk', 'brandTint', 'accent', 'onAccent', 'accentInk', 'accentTint', 'select', 'selectTint', 'onSelect']],
+    ['Controls', ['toggle', 'progress', 'tabTint', 'disabledFill', 'disabledInk']],
     ['Semantic', ['success', 'successTint', 'warning', 'warningTint', 'danger', 'dangerTint', 'dangerFill', 'onDanger', 'info', 'infoTint']],
     ['Networks', ['net_mainnet', 'net_testnet4', 'net_testnet3', 'net_signet']],
   ]
@@ -235,7 +222,7 @@
 
   function defaults() {
     return {
-      v: 3,
+      v: 4,
       current: 'T',
       params: freshParams(),
       custom: {},
@@ -267,10 +254,11 @@
       s = null
     }
     const d = defaults()
-    if (!s || ![1, 2, 3].includes(s.v)) return d
+    if (!s || ![1, 2, 3, 4].includes(s.v)) return d
     if (s.v === 1) migrateV1(s)
     if (s.v === 2) migrateV2(s)
-    if (s.v !== 3) return d
+    if (s.v === 3) migrateV3(s)
+    if (s.v !== 4) return d
     migrated = migrated || s.migrated
     delete s.migrated
     const merged = Object.assign(d, s)
@@ -299,7 +287,7 @@
     }
     for (const id of Object.keys(st.params || {})) {
       const custom = st.custom && st.custom[id]
-      const from = TK.PRESETS[id] || TK.PRESETS.A
+      const from = TK.PRESETS[id] || TK.PRESETS.T
       stale(st.params[id], custom ? from : null)
       if (custom && custom.base) stale(custom.base, from)
       // Custom presets carry their own copy; give them the new keys too
@@ -320,6 +308,25 @@
     st.current = 'T'
     st.view = 'focus'
     st.v = 3
+    st.migrated = true
+  }
+
+  /** v4 removed Catkin (A) and Bark (C), and Today took over Future with Theme.swift's new colors. Today
+   *  and Future take their new definitions, keeping any shape, type, spacing, button, layout, chrome or
+   *  role setting tuned on them; a color tuned against the old palette no longer applies. Custom presets
+   *  and comments, those made on Catkin and Bark included, stay */
+  function migrateV3(st) {
+    st.params = st.params || {}
+    for (const id of ['T', 'F']) {
+      const fresh = clone(TK.PRESETS[id])
+      const saved = st.params[id]
+      if (saved) for (const k of ['shape', 'type', 'density', 'buttons', 'layout', 'chrome', 'roles']) if (saved[k]) fresh[k] = deepMerge(fresh[k], saved[k])
+      st.params[id] = fresh
+    }
+    delete st.params.A
+    delete st.params.C
+    if (!st.params[st.current]) st.current = 'T'
+    st.v = 4
     st.migrated = true
   }
 
@@ -617,7 +624,7 @@
       SECTIONS.map(([id, l]) => `<a href="#${id}" data-sec="${id}">${l}</a>`).join('') +
       SCREEN_GROUPS.map((g) => `<a class="sub" href="#screens-${g.toLowerCase()}">${g}</a>`).join('') +
       `<button type="button" class="sub rail-find" data-screen-menu>${IC('magnifyingglass', 13)}Find a screen<kbd>/</kbd></button>` +
-      `<hr><div class="hint"><kbd>C</kbd> comment &nbsp;<kbd>T</kbd> tune<br><kbd>E</kbd> export &nbsp;<kbd>O</kbd> overlay<br><kbd>1</kbd>–<kbd>5</kbd> presets &nbsp;<kbd>Esc</kbd> close</div>`
+      `<hr><div class="hint"><kbd>C</kbd> comment &nbsp;<kbd>T</kbd> tune<br><kbd>E</kbd> export &nbsp;<kbd>O</kbd> overlay<br><kbd>1</kbd>–<kbd>3</kbd> presets &nbsp;<kbd>Esc</kbd> close</div>`
   }
 
   function ovDyn() {
@@ -2311,7 +2318,7 @@
   }
 
   // Harness: one bare screen at the device's size for pixel comparison with the simulator
-  // design-system.html?harness=<screen>&mode=dark|light&preset=T|F|A|B|C&device=iphone|duo-closed|duo-open|ipad&rules=system&scroll=<pt>
+  // design-system.html?harness=<screen>&mode=dark|light&preset=T|F|B&device=iphone|duo-closed|duo-open|ipad&rules=system&scroll=<pt>
   // (rules=system applies the interview decisions from the Layout group)
   const HP = new URLSearchParams(location.search)
   if (HP.has('harness')) {

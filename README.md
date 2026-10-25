@@ -48,14 +48,12 @@ The toolbar groups the presets in two. **Designs** can change layout as well as 
 | Preset | Group | What it is |
 |---|---|---|
 | **Today** | Design | The app as it ships, using the exact colors from `Theme.swift`. |
-| **Future** | Design | The next version of the app's design, built on Today. Layout, type, color and component changes are made here a few at a time. Its first changes, the setup flow and the Transactions loading screen, have shipped, so for now it matches Today. |
-| **A · Catkin** | Color theme | An evolution of today's look with a refined gold. |
+| **Future** | Design | The next version of the app's design, built on Today. Layout, type, color and component changes are made here a few at a time. Its changes so far have all shipped, the Catkin colors included, so for now it matches Today. |
 | **B · Leaf** | Color theme | A bolder direction: the leaf from the app icon becomes the brand color. |
-| **C · Bark** | Color theme | A bolder direction: monochrome slate controls with a single autumn amber accent. |
 
 | Key | Action |
 |---|---|
-| 1 to 5 | Switch preset, in toolbar order |
+| 1 to 3 | Switch preset, in toolbar order |
 | T | Tune: sliders for brand, surfaces, type, spacing, shape, buttons and layout |
 | C | Comment: click any element to pin a note |
 | E | Export a prompt for Claude Code to update the app's Swift code |

@@ -4,8 +4,8 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 
 | Part | Status |
 |---|---|
-| 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped: build 31, with the setup flow and the seedling loader from [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82). |
-| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped; it now carries the Settings cards and the Transactions, wallet picker, Wallet Settings and Edit Cosigners changes from [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90). |
+| 1. Current state | Done. Documents the app as it ships: the Birch Light and Birch Dark colors that began as this design system's Catkin theme, the Bark themes, and every layout change Future carried (the setup flow, the seedling loader, the Settings cards, the Send flow without its step indicator, and the Transactions, wallet picker, Wallet Settings and Edit Cosigners changes from birch-wallet #82, #86, #90, #91 and #92). |
+| 2. Exploration | In review. The Future design, again a copy of Today, and the Leaf color theme in `design-system.html`, tuned and commented in the browser. |
 | 3. Final system | Written once an option is chosen and refined: tokens, components, SwiftUI mapping, migration plan, voice and copy. |
 
 ## Files
@@ -16,7 +16,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
-| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-seven app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-seven app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log (empty while Future is a copy of Today). Every size, spacing, radius, type and color value is a Tune variable. |
 | `design/assets/seedling/` | The first sync's loading animation (`SeedlingLoadingView`): eight frames of a birch seed growing into a tree, 360px WebP. |
 | `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bars (iPhone, iPhone Duo, iPad), QR modules sampled from the screenshots, and the app icon artwork. |
 | `design/assets/ds-screens.js` | Component boards (buttons, inputs, callouts and so on), built from tokens. |
@@ -33,56 +33,86 @@ Everything below describes the app as it ships today. Values come from `birch/Vi
 
 ## 1.1 Theme architecture
 
-- **Five themes exist:** System, Hellbender Dark, Hellbender Light, Birch Dark and Birch Light (`AppTheme`). System follows iOS and shows Birch Dark or Birch Light. Hellbender is legacy and out of scope for this system.
-- **`HBTheme`** holds eleven raw colors per theme: `background`, `surface`, `surfaceElevated`, `border`, `textPrimary`, `textSecondary`, `accent`, `heroBackground`, `success`, `error`, `secondaryAccent`.
-- **Surface roles** sit on top of the raw colors and are the most consistent part of the current system:
+- **Seven themes exist:** System, Hellbender Dark, Hellbender Light, Birch Dark, Birch Light, Bark Dark and Bark Light (`AppTheme`). System follows iOS and shows Birch Dark or Birch Light. Hellbender is legacy and out of scope for this system. The page models Birch only; Bark is documented below.
+- **`HBTheme`** holds one color per role, so a view never decides what a color means. Birch and Bark set every role in exact hex. Hellbender is built from the eleven colors it was first drawn with (`HBTheme.legacy`), which keeps it looking as it did. System has no palette of its own: it is Birch Dark or Birch Light, whichever matches the appearance iOS is set to (`HBTheme.birch(_:)`, `ThemeManager.systemColorScheme`).
+- **Roles and their accessors:**
 
-  | Role | Used for | Dark | Light |
-  |---|---|---|---|
-  | `ground` (`hbBackground`, `hbSheet`) | Screens and sheets | `background` | `surface` (swapped) |
-  | `card` (`hbSurface`) | Cards, grouped rows | `surface` | `background` (swapped) |
-  | `nested` (`hbSurfaceElevated`, `hbDivider`) | Fields, rows inside cards, segmented track, dividers | `surfaceElevated` | `surface` |
-  | `floating` (`hbFloating`) | Popovers and menus | `surfaceElevated` | `background` |
+  | Role | Accessor | Used for |
+  |---|---|---|
+  | `ground` | `hbBackground`, `hbSheet` | Screens and sheets |
+  | `card` | `hbSurface` | Cards, grouped rows, the secondary button fill |
+  | `nested` | `hbSurfaceElevated` | Fields, rows inside cards, the segmented track |
+  | `floating` | `hbFloating` | Popovers and the wallet picker |
+  | `hero` | `hbHeroBackground` | The wallet header behind the balance |
+  | `divider` | `hbDivider` | The 1pt line between rows inside a card (`HBDivider`) |
+  | `border` | `hbBorder` | Quiet strokes: empty radios, progress tracks, underlines |
+  | `textPrimary`, `textSecondary` | `hbTextPrimary`, `hbTextSecondary` | Text |
+  | `brand`, `onBrand` | `hbBrand`, `hbOnBrand` | The primary button and other brand fills, and the text on them |
+  | `brandInk` | `hbBrandInk` | The brand as text or an icon on a surface |
+  | `selection`, `onSelection` | `hbSelection`, `hbOnSelection` | Selection ring and fill (`birchSelected`), checkmarks, selected radios, and the checkmark on a filled selection circle |
+  | `toggle`, `progress`, `tabTint`, `link`, `amount` | `hbToggle`, `hbProgress`, `hbTabTint`, `hbLink`, `hbAmount` | Switches, spinners and progress bars, the active tab, forward text links (Inspect PSBT, Export PSBT File), Bitcoin amounts on review |
+  | `success`, `warning`, `error`, `errorFill`, `info` | `hbSuccess`, `hbWarning`, `hbError`, `hbErrorFill`, `hbInfo` | Confirmed; unconfirmed and partly verified; errors and a destructive fill; neutral information (change, labels, copy and paste) |
+  | `disabledFill`, `disabledInk` | `hbDisabledFill`, `hbDisabledInk` | A disabled primary button |
+  | `mainnet`, `testnet4`, `testnet3`, `purple` | `hbNetwork(_:)`, `hbPurple` | The network badges; the palette's purple also draws PDF/Print |
 
-  Light mode swaps ground and card, so cards sit lighter than the screen and lift with a soft shadow. Dark mode steps lighter instead.
+- **Light mode** puts white cards on a faintly tinted ground, so cards sit lighter than the screen and lift with a soft shadow. Dark mode steps lighter instead.
 - **`ThemeManager`** is a singleton. Colors are read through static `Color.hb*` accessors, so views don't receive the theme through the environment.
 
 ## 1.2 Color
 
 ### Birch Dark
 
-| Token | Hex | Role |
+| Role | Hex | |
 |---|---|---|
-| ground | `#1A1814` | Screen background |
-| card | `#242018` | Cards (also `heroBackground`) |
-| nested | `#2E2820` | Fields, nested rows, dividers |
-| border | `#3D3530` | Disabled primary fill, outlines |
-| textPrimary | `#EDE8DF` | Primary text |
-| textSecondary | `#A89E92` | Labels and metadata |
-| accent | `#D4A835` | Gold: primary buttons, links, selection, toggles, mainnet |
-| success | `#6A7A52` | Olive: confirmed, received amounts |
-| secondaryAccent | `#6A7A52` | Same olive: "steel blue" role, testnet badge |
-| error | `#B03C28` | Errors, destructive |
+| ground | `#161512` | Warm-neutral charcoal |
+| card, hero | `#201E1B` | |
+| nested, floating | `#292724` | |
+| divider | `#2F2D2A` | |
+| border | `#383633` | |
+| textPrimary / textSecondary | `#ECEBE8` / `#ADAAA6` | |
+| brand (every brand role) | `#E7B64A` | Gold; `onBrand` and `onSelection` are `#1B150A`, 9.7:1 on it |
+| success / warning / error | `#7DC67F` / `#F2A359` / `#F0726C` | `errorFill` `#C8393A` |
+| info | `#7DB9E1` | |
+| disabledFill / disabledInk | `#2B2A27` / `#74716D` | |
+| mainnet / testnet4 / testnet3 / purple | `#D8BA7E` / `#89C6EE` / `#77CFD0` / `#CAB0EA` | |
 
 ### Birch Light
 
-| Token | Hex | Role |
+| Role | Hex | |
 |---|---|---|
-| ground | `#E3DDD3` | Screen background (beige) |
-| card | `#F2EEE6` | Cards |
-| nested | `#E3DDD3` | Fields, nested rows (same value as ground) |
-| border | `#B0A99D` | Disabled primary fill, outlines |
-| textPrimary | `#231F1B` | Primary text |
-| textSecondary | `#4F4840` | Labels and metadata |
-| accent | `#B28622` | Gold |
-| success / secondaryAccent | `#475F39` | Olive (shared) |
-| error | `#992E1F` | Errors, destructive |
+| ground, hero | `#F2F1EC` | Birch-bark white |
+| card, floating | `#FEFEFD` | |
+| nested | `#F3F3EE` | |
+| divider | `#D9D8D4` | |
+| border | `#B1B0AC` | |
+| textPrimary / textSecondary | `#1D1D1B` / `#5E5E59` | |
+| brand, toggle | `#D9A93B` | Gold fill; `onBrand` `#1B150A`, 8.4:1 |
+| brandInk, selection, progress, tabTint, link, amount | `#8D6800` | Deeper gold for text and lines, 5.1:1 on the card; `onSelection` is white |
+| success / warning / error | `#2C7533` / `#915100` / `#AA3332` | `errorFill` `#BA2B2E` |
+| info | `#2D6A8E` | |
+| disabledFill / disabledInk | `#E2E1DC` / `#8B8B86` | |
+| mainnet / testnet4 / testnet3 / purple | `#74591B` / `#276488` / `#006C6D` / `#695184` | |
+
+### Bark Dark and Bark Light
+
+Slate grounds, a near-monochrome primary button, and amber for selection, toggles, progress, links and amounts. The active tab takes the slate brand ink instead of amber, which read as brown in the tab bar. Bark keeps Birch's shape, type and buttons, and the page doesn't model it.
+
+| Role | Dark | Light |
+|---|---|---|
+| ground | `#0F1419` | `#EBF1F5` |
+| card / nested | `#191E23` / `#22282E` | `#FDFEFF` / `#EEF3F7` |
+| divider / border | `#292E34` / `#32383E` | `#D3D8DC` / `#ABB0B4` |
+| textPrimary / textSecondary | `#EAEFF4` / `#A6AFB8` | `#1B1D1F` / `#595F62` |
+| brand, brandInk, tabTint / onBrand | `#E1E9F1` / `#0A1723` | `#242A30` / `#FFFFFF` |
+| selection, progress, link, amount / toggle | `#FCA942` / `#FCA942` | `#9B5F00` / `#E89629` |
+| success / warning / error / info | `#86C478` / `#EEA753` / `#F0726C` / `#7DB9E1` | `#38742A` / `#8C5500` / `#AA3332` / `#2D6A8E` |
 
 ### Fixed colors outside the theme
 
-- **PSBT inspector map:** dynamic pairs for Global, Input, Output and Signing (`hbPSBTGlobal`, `hbPSBTInput`, `hbPSBTOutput`, `hbPSBTSigning`). This is the only place that already defines separate light and dark values per hue.
-- **QR codes:** always black on white, with a soft gold glow (`shadow(hbBitcoinOrange.opacity(0.2), radius: 20)`). Used the same way in six places.
-- **Hard-coded system colors:** `Color.purple` (Signet badge and the PDF/Print buttons), `Color.green` (the xpub format toggle in cosigner import and Wallet Settings), `.white` (text on gold and on filled buttons), and a rainbow palette in `WalletIdenticon` and the saved-PSBT list.
+- **PSBT inspector map:** dynamic pairs for Global, Input, Output and Signing (`hbPSBTGlobal`, `hbPSBTInput`, `hbPSBTOutput`, `hbPSBTSigning`).
+- **QR codes:** always black on white, with a soft glow in the brand color (`shadow(hbBrand.opacity(0.2), radius: 20)`). Used the same way in six places.
+- **Wallet identicons** (and the saved-PSBT glyphs) mix the brand, info and success colors with three fixed ones: `#9966CC`, `#E6804D` and `#4DB3B3`.
+- **White** stays for text on the error banner's red fill in the QR scanner.
 
 ## 1.3 Typography
 
@@ -111,49 +141,43 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 
 ## 1.5 What is already consistent (keep)
 
-1. **Surface roles.** ground → card → nested, with the light-mode swap. This is the backbone of the new system.
+1. **Surface roles.** ground → card → nested, with white cards on the light ground. This is the backbone of the system.
 2. **Strokeless cards.** 12pt continuous corners, edges come from the fill step, soft shadow in light mode only.
-3. **Selection.** Gold tint at 12% plus a 1.5pt gold ring (`birchSelected`). Used for fee options, the cosigner slots in Wallet Settings and the wallet picker.
-4. **Primary button.** Full-width, gold fill, 12pt, about 52pt tall, `hbHeadline` label. One per screen in most flows.
-5. **Sheet toolbar buttons.** `HBBarButtonStyle`: Done is a prominent gold button and Cancel uses the card fill, both 8pt corners and 34pt tall, replacing the Liquid Glass capsule.
+3. **Selection.** A 12% tint of the selection color plus a 1.5pt ring in it (`birchSelected`). Used for fee options, the cosigner slots in Wallet Settings and the wallet picker.
+4. **Primary button.** Full-width, brand fill with `hbOnBrand` text, 12pt, about 52pt tall, `hbHeadline` label. One per screen in most flows.
+5. **Sheet toolbar buttons.** `HBBarButtonStyle`: Done is a prominent brand button and Cancel uses the card fill, both 8pt corners and 34pt tall, replacing the Liquid Glass capsule.
 6. **Labels above values.** A small secondary label ("Amount", "Master Fingerprint", "Change Address") above the value, inside a card.
 7. **Address chunking.** Addresses are shown in groups of four with alternating weights, in mono, for checking by eye.
 8. **Verification chips.** `PSBTVerificationBadge`/`ChangeVerificationBadge`: icon, title and detail on an 8% tint of the state color. The four states (not checked, verified, partial, failed) map to secondary text, success, accent and error.
-9. **Progress.** The setup wizard uses a segmented gold bar, only while creating a wallet: Multisig configuration, Import cosigners and Verify wallet are steps 1 to 3. Send uses labeled steps (Recipients, Review, Sign, Broadcast).
+9. **Progress.** The setup wizard uses a segmented bar in the progress color, only while creating a wallet: Multisig configuration, Import cosigners and Verify wallet are steps 1 to 3. The Send flow has no step indicator; each step starts with its content.
 10. **Network badge.** Capsule, 11pt semibold, 15% tint of the network color.
-11. **QR presentation.** Black on white with quiet-zone padding and a gold glow. Animated UR/BBQR frames.
-12. **Tab bar.** The native iOS 26 Liquid Glass bar, tinted with the accent.
-13. **Setup footers.** Back on the left as a compact secondary button (`hbCompactSecondaryButton`: `hbHeadline` in gold on the card fill), and the step's action on the right as a compact primary of the same size (`hbCompactPrimaryButton`). The primary is filled, disabled (white on `hbBorder`) while nothing can happen, or outlined (a 1.5pt gold border and gold text, no fill) while the step isn't finished but can still be tapped. Verify wallet and Wallet setup keep a text Back.
-14. **In-card utilities.** Actions on a field sit under it inside its card as equal tonal buttons (`HBTonalButton`): 44pt tall, 12pt corners, 15pt semibold with the symbol, gold on a 12% gold tint for the most useful action and ink on the nested fill for the rest. Scan QR and Paste on Import descriptor and Import cosigners.
+11. **QR presentation.** Black on white with quiet-zone padding and a glow in the brand color. Animated UR/BBQR frames.
+12. **Tab bar.** The native iOS 26 Liquid Glass bar, tinted with `hbTabTint`.
+13. **Setup footers.** Back on the left as a compact secondary button (`hbCompactSecondaryButton`: `hbHeadline` in brand ink on the card fill), and the step's action on the right as a compact primary of the same size (`hbCompactPrimaryButton`). The primary is filled, disabled (`hbDisabledInk` on `hbDisabledFill`) while nothing can happen, or outlined (a 1.5pt brand border and brand-ink text, no fill) while the step isn't finished but can still be tapped. Verify wallet and Wallet setup keep a text Back. Edit Cosigners puts Cancel and Save in the same footer.
+14. **In-card utilities.** Actions on a field sit under it inside its card as equal tonal buttons (`HBTonalButton`): 44pt tall, 12pt corners, 15pt semibold with the symbol, brand ink on a 12% tint of it for the most useful action and ink on the nested fill for the rest. Scan QR and Paste on Import descriptor and Import cosigners, and the labels import and export in Wallet Settings.
 15. **Field errors.** Validation shows only after the user asks to go on. The field gets a 1.5pt `hbError` border inside its nested fill and the reason under it in `hbLabel` and `hbError` (`hbFieldError`). Editing the field clears it. Next scrolls the first flagged field into view and reads the reason out.
 16. **Folder tabs.** Import cosigners puts one tab per cosigner on top of the form card (`CosignerTabs`): the open tab stands 4pt taller and joins the card, whose top corners are square (`hbCard(squareTop:)`); a check in the success color marks a cosigner whose fields all validate. Past six cosigners the tabs scroll.
-17. **Machine data wraps at the character.** Keys and descriptors fill every line to the edge instead of breaking after slashes and commas: `CharWrappingTextEditor` (a `UITextView` set to `.byCharWrapping`) for the fields, and `String.charWrapped` in a `Text` for display.
+17. **Settings rows.** Settings is the app's own cards, not an inset grouped List: a system-style section header over a `BirchCard`, 52pt rows with an `HBDivider` between them, and each choice showing its value and a chevron and pushing a list of the options with a checkmark in the selection color.
+18. **Resizable sheets.** Wallet Settings, Dashboard and Connection Status open at full height with a grabber and a half-height stop, and return to full height when the keyboard appears (`birchResizableSheet`).
+19. **Machine data wraps at the character.** Keys and descriptors fill every line to the edge instead of breaking after slashes and commas: `CharWrappingTextEditor` (a `UITextView` set to `.byCharWrapping`) for the fields, and `String.charWrapped` in a `Text` for display.
 
 ## 1.6 Inconsistencies
 
-**Contrast**
-- White text on gold fails: 2.2:1 in dark mode and 3.3:1 in light. This affects every primary button and every filled signature slot.
-- Gold text on light surfaces fails: 2.9:1 on cards and 2.5:1 on the ground. This affects Copy Address, Add Label, value pickers ("sats", "Electrum Server"), View All Addresses, the setup footers' Back and outlined Next, and the Scan QR utility.
-- Olive success text on dark cards is 3.5:1. Received amounts in the transaction list are hard to read.
-- Error text on dark cards is 2.7:1, which includes the field error messages on Import cosigners.
+**Contrast.** Every text color passes 4.5:1 on the surfaces it sits on in both Birch modes, and the primary button carries dark text on gold (9.7:1 dark, 8.4:1 light).
 - Switching appearance while a screen is open leaves its segmented controls (Bitcoin Network, Addresses, Protocol, QR settings) with the old palette's track: going from dark to light leaves a near-black track. The track color is set through `UISegmentedControl.appearance()` in `ThemeManager.applyControlAppearance()`, which only affects controls created afterwards.
-- The same switch leaves the menu picker values in Settings (Electrum Server, sats, Zeus, USD, System) in the old palette's gold: `#D4A835` instead of `#B28622` after going from dark to light. The pickers are UIKit menus that keep the `.tint()` color they were created with. Toggles change with the palette. The fastlane screenshots set the appearance before the app launches, so they show the right colors.
 
 **Semantics**
-- `success`, `secondaryAccent` (`hbSteelBlue`) and the testnet badge are one olive, so "confirmed", "testnet" and "secondary action" look identical.
-- Unconfirmed transactions and "partially verified" both use the brand gold, so the brand color doubles as a warning.
-- Signet and PDF/Print use system purple, which isn't part of either palette.
-- The wallet identicon uses a rainbow palette that doesn't fit the earthy themes.
+- The wallet identicon mixes three theme colors with three fixed ones (`#9966CC`, `#E6804D`, `#4DB3B3`) that don't follow the theme.
+- Unfreeze is brand ink on UTXO detail but the warning color as a swipe action in the UTXO list, because a swipe action's white label would vanish on Bark Dark's near-white brand ink. Freeze is info in both.
 
 **Buttons.** There are about ten button looks and no defined tertiary.
-- **Filled gold:** Get Started, Review, Create Wallet, Next, Import, and Scan QR on the Send screen.
-- **Outlined gold:** Next on Import cosigners until every cosigner is complete.
-- **Card fill with gold text:** Next Address, and Back on the setup footers.
-- **Tonal:** Scan QR (gold tint) and Paste (nested fill) inside the setup cards.
-- **Tinted fills in five colors:** Show Descriptor QR (gold), Copy Descriptor and Test Connection (olive), PDF/Print (purple), Full Refresh (error), Copy debug info (nested).
-- **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses and Inspect PSBT (gold), Copy TXID (olive).
+- **Filled brand:** Get Started, Review, Create Wallet, Next, Import, and Scan QR on the Send screen.
+- **Outlined brand:** Next on Import cosigners and Save on Edit Cosigners until every cosigner is complete.
+- **Card fill with brand text:** Next Address, and Back on the setup footers.
+- **Tonal:** Scan QR (brand tint) and Paste (nested fill) inside the setup cards.
+- **Tinted fills in five colors:** Show Descriptor QR (brand), Copy Descriptor and Test Connection (info), PDF/Print (purple), Delete Wallet (error), Copy debug info (nested).
+- **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses and Inspect PSBT (brand), Copy TXID (info).
 - **Footers in two layouts:** full-width primary with a text Back below (Create Wallet), and a compact secondary Back on the left with a compact primary on the right (Import, Next). Get Started stands alone.
-- **Disabled primary:** border fill with white text, which is 2.3:1 in light mode and reads as broken rather than inactive.
 
 **Type and numbers**
 - Mono is used for amounts in lists and detail rows as well as for machine data, so "8,717 sats" and a txid look alike.
@@ -176,11 +200,11 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
 | Connection (`ConnectionStatusView`) | Connected, error, test result; Sync now, Full refresh, Test connection, Copy debug info |
-| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
+| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF; the half-height stop. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
 | Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
-| Transaction rows | Unconfirmed (clock, gold), labeled (tag), privacy mode (masked amounts), fiat display |
+| Transaction rows | Unconfirmed (clock, warning), labeled (tag), privacy mode (masked amounts), fiat display |
 | Verification | Inputs not checked, verified, partially verified, failed. Change verified, needs a look, failed |
 | Sync status | Not started, syncing (pulse), synced, error |
 | Networks | All four badges: Mainnet, Testnet4, Testnet3, Signet |
@@ -197,10 +221,10 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | Topic | Decision |
 |---|---|
 | Scope | Birch Light and Birch Dark only. System follows iOS between them. Hellbender is retired from the design system. |
-| Options | One evolution and two bolder directions, each in light and dark. |
+| Options | One evolution and two bolder directions, each in light and dark. The evolution, Catkin, shipped as Birch's colors; the slate direction, Bark, shipped as the Bark themes with the active tab in slate; both have left the page. Leaf remains. |
 | Type | SF family only: SF Pro, SF Pro Rounded, SF Mono. No bundled fonts. |
-| Brand hues | A: evolved gold. B: birch-leaf green. C: bark slate, with autumn amber as the one warm accent. |
-| Dark grounds | Vary by option: warm-neutral charcoal (A), forest-night (B), cool slate (C). Never brown. |
+| Brand hues | Evolved gold (shipped). Leaf: birch-leaf green. |
+| Dark grounds | Warm-neutral charcoal (shipped); forest-night for Leaf. Never brown. |
 | Light grounds | Birch-bark white: a cool, faintly tinted off-white with white cards. No beige or cream. |
 | Avoid | Cream or ivory grounds, clay or terracotta orange, serif display type, generic system-kit looks. Nothing should resemble a specific company's brand. |
 | Amounts | Neutral ink with a +/− sign. Color goes on the direction icon chip only. |
@@ -208,30 +232,32 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | Networks | Each network keeps its own hue, drawn from the palette (no system purple). |
 | CTA tiers | Primary, Secondary, Tertiary, plus a Tonal utility button and a destructive variant of each. |
 | Flow footers | Full-width primary pinned at the bottom with a tertiary Back underneath. |
-| Radius | A and B keep 12 / 8. C goes tighter at 8 / 6. |
+| Radius | 12 / 8, in Birch and in Leaf. |
 | Review tooling | Focus and Compare views, a tuning panel with presets, click-to-pin comments plus section notes, export as Markdown and JSON. |
 | Doc extras (final) | SwiftUI token mapping with a migration plan, and voice and copy rules. |
 | Claude Design | After the final option is settled, structure the output so `/design-sync` can push it to a claude.ai/design design-system project. |
 
 ## The options
 
-| | A · Catkin (evolution) | B · Leaf (bolder) | C · Bark (bolder) |
-|---|---|---|---|
-| Idea | Today's Birch, refined. Gold named for the birch catkin. | The leaf from the app icon becomes the brand. | Birch bark at dusk: monochrome controls, one warm accent. |
-| Primary button | Gold fill, dark text (9.7:1 dark, 8.4:1 light) | Leaf green; dark text in dark mode, white in light | Near-white on slate (dark), deep slate on white (light), about 14.5:1 |
-| Accent | Brand only (leaf green if you turn on Second hue) | Brand only (autumn amber if you turn on Second hue) | Autumn amber for amounts, selection, progress, toggles, active tab |
-| Dark ground | `#161512` warm-neutral charcoal | `#0F1511` forest-night | `#0F1419` cool slate |
-| Light ground | `#F2F1EC` bark white, white cards | `#EEF2ED` green-tinted bark white | `#EBF1F5` slate-tinted bark white |
-| Success | Leaf green | Jade, kept apart from the brand green | Leaf green |
-| Radius | 12 / 8, capsule chips | 12 / 8, capsule chips | 8 / 6, small-radius chips, hairline card stroke |
-| Titles / amounts | Rounded semibold / Rounded | SF Pro bold / Rounded | SF Pro bold / SF Pro |
-| Secondary button | Card fill, brand text (as today) | Outlined | Outlined |
-| Tertiary button | Brand text | Brand text | Amber text |
+Leaf is the one color theme left on the page.
+
+| | Leaf (bolder) |
+|---|---|
+| Idea | The leaf from the app icon becomes the brand. |
+| Primary button | Leaf green; dark text in dark mode, white in light |
+| Accent | Brand only (autumn amber if you turn on Second hue) |
+| Dark ground | `#0F1511` forest-night |
+| Light ground | `#EEF2ED` green-tinted bark white |
+| Success | Jade, kept apart from the brand green |
+| Radius | 12 / 8, capsule chips |
+| Titles / amounts | SF Pro bold / Rounded |
+| Secondary button | Outlined |
+| Tertiary button | Brand text |
 
 The presets fall into two groups, and the toolbar shows them apart:
 
-- **Designs** can change layout as well as theme. **Today** is the app as it ships, with the exact Theme.swift colors: the before picture. **Future** is the next version of the app's design, built on Today.
-- **Color themes** recolor Future's layout without changing it: Catkin, Leaf and Bark, above. Each layout change made in Future shows up in all three, and a theme's export includes Future's design changes.
+- **Designs** can change layout as well as theme. **Today** is the app as it ships, with the exact Theme.swift colors. **Future** is the next version of the app's design, built on Today.
+- **Color themes** recolor Future's layout without changing it: Leaf, above. Each layout change made in Future shows up in it, and its export includes Future's design changes.
 
 ## Future
 
@@ -243,16 +269,7 @@ Future started as an exact copy of Today, and becomes one again whenever its cha
 
 ### Changes so far
 
-Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1). The changes since are below. The rows marked shipped in #90 are in the app already; Today takes them over once `fastlane screenshots` has captured them.
-
-| Screen | Change | SwiftUI |
-|---|---|---|
-| Transactions | The top-left button is `slider.horizontal.3` (18pt, secondary text) and opens Wallet Settings directly instead of a menu. Dashboard moves to a small `chart.bar.xaxis` icon (15pt, primary text) at the trailing end of the Transactions header, in a 44 × 22pt frame that widens the tap area and makes the header 2pt taller. The labels import and export move to Wallet Settings. Also on Transactions, loading and No transactions. Shipped in [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90). | `TransactionListView.swift` |
-| Wallet picker | The panel is 16pt in from each side instead of 35pt, so long names fit. Each row ends in a `slider.horizontal.3` button (17pt, secondary text, 40 × 36pt) that opens that wallet's settings without switching to it. Shipped in #90. | `TransactionListView.swift` (`walletPickerOverlay`) |
-| Wallet settings | A grabber and a half-height stop (`birchResizableSheet`): the sheet opens at full height and returns to it when the keyboard appears. Dashboard and Connection Status get the same. A Wallet Labels card above Privacy Mode holds the BIP 329 import and export, by file and by QR, as two rows of tonal buttons (import in the brand tint, export neutral); it only shows for the loaded wallet. The Cosigners card's Edit is plain 15pt text without the pencil. Shipped in #90. | `WalletInfoView.swift` (`WalletLabelsCard`), `Theme.swift` (`BirchResizableSheet`) |
-| Edit cosigners | Uses the Import cosigners form, now shared as `CosignerForm`: folder tabs with completion checks, then Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, with field-level flags. A centered 28pt title replaces the navigation bar, and Cancel and Save sit in the setup footer; Save is outlined until every cosigner is complete. Shipped in #90, which called it Save Changes; that wraps onto two lines on the iPhone 13 mini and the closed Duo, so it's Save in [birch-wallet #92](https://github.com/Birch-Wallet/birch-wallet/pull/92). | `WalletInfoView.swift` (`EditCosignersView`), `CosignerForm.swift` |
-| Send, Recipients and amount, Network fee sheet, Review transaction, Scan signed PSBT | The step indicator (Recipients, Review, Sign, Broadcast) is gone from the recipients, review and scan-signed-PSBT steps, so each starts with its content: the recipient card 12pt under the header, or the 22pt title. In review in [birch-wallet #91](https://github.com/Birch-Wallet/birch-wallet/pull/91). | `SendAmountView.swift`, `SendReviewView.swift`, `PSBTScanView.swift` |
-| Settings | The inset grouped List becomes the app's own cards: 12pt corners, the card fill and the light-mode shadow, as on UTXO Detail. Section headers keep the system style (17pt semibold, secondary label color, 4pt in from the card). A card has 16pt sides and 4pt above and below its rows; a row is 8pt above and below and at least 52pt, with an `HBDivider` between rows. A choice (Fee Source, Bitcoin Unit, Price Source, Currency, Theme, Lock After) shows its value in secondary text and a chevron and pushes a card of the options with a gold checkmark, instead of opening a menu: on iOS 26 a menu collapses back into its button and leaves the value misaligned for a moment. In review in [birch-wallet #86](https://github.com/Birch-Wallet/birch-wallet/pull/86). | `SettingsView.swift` |
+None. Future is a copy of Today again. Its last round shipped in the app and Today took it over (Part 1): the Settings cards ([birch-wallet #86](https://github.com/Birch-Wallet/birch-wallet/pull/86)), the Transactions, wallet picker, Wallet Settings and Edit Cosigners changes ([#90](https://github.com/Birch-Wallet/birch-wallet/pull/90), [#92](https://github.com/Birch-Wallet/birch-wallet/pull/92)), the Send flow without its step indicator ([#91](https://github.com/Birch-Wallet/birch-wallet/pull/91)), and the Catkin colors as Birch Light and Birch Dark.
 
 ## How a preset becomes colors
 
@@ -278,7 +295,7 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Review transaction | `SendReviewView`, `PSBTVerificationBadge` | `28-ReviewTransaction-Top` |
 | PSBT QR | `PSBTDisplayView` | `31-PSBTQRDisplay` |
 | Scan signed PSBT | `PSBTScanView`, `URScannerSheet` | `33-ScanSignedPSBT` |
-| Ready to broadcast | `BroadcastResultView`, `SignatureProgressView` | None. Every signature collected, before Broadcast is tapped: both slots signed, the status block centered in the space above the buttons. Checked against a capture from the app on the iPhone 17 Pro in dark mode, to within a third of a point across and about a point down. It has no step indicator, so Today and Future match. |
+| Ready to broadcast | `BroadcastResultView`, `SignatureProgressView` | None. Every signature collected, before Broadcast is tapped: both slots signed, the status block centered in the space above the buttons. Checked against a capture from the app on the iPhone 17 Pro in dark mode, to within a third of a point across and about a point down. |
 | Multisig configuration | `MultisigConfigView`, `WalletNameNetworkCard` | `15-MultisigConfig-Testnet4` |
 | Import cosigners, empty | `CosignerImportView` | `17-CosignerImport-Empty` |
 | Import cosigners | `CosignerImportView`, `CharWrappingTextEditor` | `18-CosignerImport-Cosigner1` |
@@ -295,8 +312,8 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
 | UTXO filter sheet | `UTXOFilterSheet` | `38-UTXOFilter`. At its medium detent over the UTXO list, with the default filter. |
-| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | `36-WalletSettings`, which shows the app after [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90): Future matches it, and Today is the app before #90, which no screenshot shows. The sheet over Transactions as it opens, at full height. On the iPad it's the resizable sheet, 580pt wide from 32pt down to 20pt above the bottom, not a form sheet; the closed Duo sets the title at 28pt on the toolbar row. The utility buttons' symbols take the sheet's 17pt body size. |
-| Edit cosigners | `EditCosignersView`, `CosignerForm` | `37-EditCosigners`, which shows the app after #90: Future matches it, and Today predates it. The sheet stacked on Wallet Settings with cosigner 1 open: 10pt lower than a first sheet on the iPhone and the closed Duo, 20pt on the open Duo, and on the iPad as wide as Wallet Settings, from 368pt for 640pt, with Wallet Settings dimmed behind it. |
+| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | `36-WalletSettings`. The sheet over Transactions as it opens, at full height. On the iPad it's the resizable sheet, 580pt wide from 32pt down to 20pt above the bottom, not a form sheet; the closed Duo sets the title at 28pt on the toolbar row. The utility buttons' symbols take the sheet's 17pt body size. |
+| Edit cosigners | `EditCosignersView`, `CosignerForm` | `37-EditCosigners`. The sheet stacked on Wallet Settings with cosigner 1 open: 10pt lower than a first sheet on the iPhone and the closed Duo, 20pt on the open Duo, and on the iPad as wide as Wallet Settings, from 368pt for 640pt, with Wallet Settings dimmed behind it. |
 
 Platform details that the rebuild reproduces:
 
@@ -308,8 +325,8 @@ Platform details that the rebuild reproduces:
 - **Card shadows in light mode** also fall on every view inside the card, because `birchCard()` applies `.shadow` without a `.compositingGroup()`: nested fields, pills and buttons inside a card carry a faint 6% shadow. The rebuild doesn't draw these inner shadows yet.
 - **The segmented control** takes a 31pt frame and draws its 32pt track 1pt past it, so the network card is 86.67pt tall.
 - **The fee and filter sheets** are the iOS 26 floating sheet: on the iPhone laid out full width, then drawn at 386/402 scale, 8pt from the edges, with 12pt corners and a 57pt × 4pt grabber 6pt from the top. The filter sheet stops at its medium detent, 451pt tall.
-- **The setup wizard**, on the iPhone, is a full-width sheet at 62pt over the dimmed wallet for the import descriptor, multisig, cosigner and verify steps. Welcome and Wallet setup are the first-launch wizard, full screen. The other devices differ: see Devices.
-- **Lists** use the system metrics iOS 27.2 draws: plain lists (Transactions, UTXOs) with 16pt insets and the system chevron; the inset grouped list in Settings with 26pt section corners, section headers, rows and separators 20pt in from the section's edges on the iPhone and the Duo, 52pt minimum rows, 17pt semibold section headers in the system secondary label color, and 63 × 28pt switches. Separators are `#3C3A38` on the dark card and `#DCD9D2` on the light one. The list shapes are drawn by iOS, so Tune's radius controls don't change them.
+- **The setup wizard**, on the iPhone, is a full-width sheet at 62pt over the dimmed wallet for the multisig, cosigner and verify steps. Welcome, Wallet setup and Import descriptor are the first-launch wizard, full screen, which is how the tour reaches them. The other devices differ: see Devices.
+- **Lists** use the system metrics iOS 27.2 draws: plain lists (Transactions, UTXOs) with 16pt insets, the system chevron and system separators (`#3A393A` on the dark card, `#E7E7E7` on the light one). Switches are iOS's 63 × 28pt. Settings is the app's own cards, with section headers in the system style (17pt semibold, secondary label color).
 - **Navigation bars** have the Liquid Glass back button (44pt) and the inline title in the system label color.
 - **Sheet toolbars** use `HBBarButtonStyle`: 15pt semibold on the card fill (the prominent one on the brand fill), 34pt tall, 21pt down and 16pt in, around the inline title.
 - **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button, the warning symbol on Verify wallet).
@@ -332,17 +349,18 @@ Every Tune control reaches these screens, through CSS variables whose Today valu
 
 What changes on the other devices, beyond size:
 
-- **Lists** on the Duo and iPad take 20pt margins, and on the Duo they and the grouped lists end at the side column, with separators running to that edge. Plain-list chevrons are a point smaller.
+- **Lists** on the Duo and iPad take 20pt margins, and on the Duo they end at the side column, with separators running to that edge. Plain-list chevrons are a point smaller.
 - **Navigation** on the Duo leads with the title at the top and puts a 48pt glass back button in the side column under the clock. The iPad's back button sits 10pt in, level with its tab bar.
 - **Sheets**: on the Duo the fee and filter sheets float 8pt in and aren't scaled, their content stops at the side column, and sheet toolbars sit 2pt lower (the closed Duo leads with the title beside the first button). On the iPad, Bump fee is a form sheet in the middle of the screen, the fee sheet ends where that form sheet does, and the filter sheet is form-sheet wide at its medium detent. Behind a page or form sheet the wallet dims, its tab bar a little more, with the selected tab turned gray.
-- **Setup**: Import descriptor is full screen everywhere but the iPhone's tour; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
+- **Setup**: Import descriptor is full screen everywhere; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
 - **Data** in the screenshots is the same on every device, because the tour runs on fixed data (`ScreenshotFixtures` in the app: the price, the fee rates, the clock, the identicons, the chain tip and the transaction). Only the Duo differs, with Touch ID where the others have Face ID, and the builders follow it.
 - The Duo, which has its own iOS 27.2 simulator runtime, spaces wrapped address lines 1.67pt further apart than the iPhone and the iPad do. A few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
+- **Known gaps:** on Review transaction the app spaces a wrapped address's lines 1.3pt further apart than the page, so the rows under the To and Change addresses sit up to 4pt lower in the app. The iPad's Wallet Settings drifts by up to 4pt below the descriptor buttons.
 - The flagged Import cosigners screenshot is scrolled on the Duo, where Next brings the flagged key into view: 10.33pt closed and 15pt open. The page scrolls the screen to match.
 
 ### The harness
 
-To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T&device=<device>` at the device's size and scale (`iphone` 402 × 874 at 3x, the default; `duo-closed` 466 × 678 at 3x; `duo-open` 951 × 669 at 3x; `ipad` 1032 × 1376 at 2x). This renders the bare screen at the screenshot's pixel size, with its animations held still (the sync dot's halo at full size, the seedling grown). Screen ids: `home`, `wallet-picker`, `home-loading`, `home-empty`, `bump`, `send-empty`, `send`, `fee`, `review`, `sign`, `scan`, `utxos`, `utxo`, `utxo-filter`, `settings`, `welcome`, `setup`, `descriptor`, `descriptor-empty`, `multisig`, `cosigner-empty`, `cosigner`, `cosigner-errors`, `verify`. Use `preset=F` to see Future. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
+To check a screen against its screenshot, open `design-system.html?harness=<screen>&mode=dark|light&preset=T&device=<device>` at the device's size and scale (`iphone` 402 × 874 at 3x, the default; `duo-closed` 466 × 678 at 3x; `duo-open` 951 × 669 at 3x; `ipad` 1032 × 1376 at 2x). This renders the bare screen at the screenshot's pixel size, with its animations held still (the sync dot's halo at full size, the seedling grown). Screen ids: `home`, `wallet-picker`, `home-loading`, `home-empty`, `bump`, `wallet-settings`, `edit-cosigners`, `send-empty`, `send`, `fee`, `review`, `sign`, `scan`, `broadcast`, `utxos`, `utxo`, `utxo-filter`, `settings`, `welcome`, `setup`, `descriptor`, `descriptor-empty`, `multisig`, `cosigner-empty`, `cosigner`, `cosigner-errors`, `verify`. Use `preset=F` to see Future. Add `&scroll=<pt>` to scroll it, or `&rules=system` to apply the interview decisions.
 
 ## Tune controls
 
@@ -362,13 +380,13 @@ Each control applies to the app screens unless marked *, which means the element
 | Buttons and links | Utility button style and color, text link color, pressed style, secondary style (Back on the setup footers), disabled style (Review on the empty Send screen, Import on the empty Import descriptor) |
 | Layout | Setup footer split or stacked, signed amounts, received amounts in color or ink, Apply interview decisions |
 
-Today shows Theme.swift's exact colors. Editing any color switches it to a generated palette fitted to within about 0.01 ΔE of those colors, and Reset preset restores the exact values.
+Today shows Theme.swift's exact colors. Editing any color switches it to the generated palette, which starts at those same colors because Today's parameters are the ones they were generated from, and Reset preset restores the exact values.
 
 To re-check the page after a change, run `node design/tools/check-page.js webkit` (or `chromium`). It needs `playwright-core`; set `PLAYWRIGHT_CORE` to an install path if it isn't resolvable from the repo.
 
 ## Using `design-system.html`
 
-1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-seven app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
+1. **Pick a preset** in the toolbar, or press 1 to 3. The toolbar groups the designs (Today, Future) apart from the color theme (Leaf). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-seven app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
 2. **Compare** shows one screen across all presets side by side, with Today if you include it. Pick the screen from the screen menu (/ or S), which searches names, groups and Swift files and previews each screen, or step with ← and →. **Changed in Future** limits the steps to the screens Future changes. `#compare=<screen>`, with `&device=<device>` for a device other than the iPhone, opens a comparison from a link.
 3. **Tune** (T) opens the panel. Drag a slider or type a value and press Enter. Every change shows a dot; click the dot to reset that value, or Reset preset for all of them. "Save as preset" keeps a named copy.
 4. **Comment** (C) lets you click any element to pin a note. Each pin records the option, the mode, the screen or board, the element and its current computed styles. Section notes sit at the end of each section.

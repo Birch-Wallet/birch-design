@@ -105,14 +105,6 @@
       .join('')}</nav>`
   }
 
-  function steps(active) {
-    const all = ['Recipients', 'Review', 'Sign', 'Broadcast']
-    const idx = all.indexOf(active)
-    return `<div class="b-steps"${c('send-steps', 'Send step indicator')}>${all
-      .map((s, i) => `<span class="b-step${i < idx ? ' done' : ''}${i === idx ? ' on' : ''}"><i></i>${s}</span>`)
-      .join('')}</div>`
-  }
-
   function progress(states) {
     return `<div class="b-progress"${c('wizard-progress', 'Setup progress bar')}>${states
       .map((s) => `<i class="${s}"></i>`)
@@ -322,7 +314,6 @@
   function boardProgress() {
     return `<div class="b-card b-stack">
       <span class="b-label">Setup progress</span>${progress(['done', 'done', 'on', '', '', ''])}
-      <span class="b-label">Send steps</span>${steps('Review')}
       <span class="b-label">Signatures</span>
       <div class="b-row b-gap16">
         <div class="b-sigs"${c('sigs-0', 'Signature slots, 0 of 2')}>${sigSlots(0, 2)}</div>

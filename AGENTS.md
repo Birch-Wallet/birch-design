@@ -26,9 +26,9 @@ When a feature needs new screens or UI elements:
 1. Read Part 1 of `DESIGN-SYSTEM.md`: color roles (1.2), type (1.3), shape and spacing (1.4), the patterns to keep (1.5), and the known inconsistencies (1.6). Do not copy anything listed in 1.6.
 2. Build with the `Theme.swift` primitives: `Color.hb*`, `Font.hb*()`, `.hbCard()`, `.hbPrimaryButton()`, `.hbSecondaryButton()`, `BirchCard`, `BirchSelected`. Don't use inline colors or fonts.
 3. Match the closest existing screen. Setup steps follow the setup wizard; transaction steps follow the Send flow.
-4. Both appearances ship: Birch Dark and Birch Light. Check the new UI in both.
+4. Both appearances ship: Birch Dark and Birch Light, and the Bark themes too. Check the new UI in both Birch modes, and in Bark when it uses a role Bark colors differently (selection, toggles, progress, links, amounts, the brand).
 5. If the feature adds a reusable element or a new pattern, add it to Part 1 and tell the user.
-6. Part 2 (Future, Catkin, Leaf, Bark and the interview decisions) is exploration and has not shipped. Don't apply it to app code unless the user asks.
+6. Part 2 (Future, Leaf and the interview decisions) is exploration and has not shipped. Don't apply it to app code unless the user asks.
 
 ## Applying an export
 
@@ -52,7 +52,7 @@ The page is plain HTML, CSS and JavaScript loaded with `<script>` tags. It has n
 
 | File | Contents |
 |---|---|
-| `assets/ds-tokens.js` | The OKLCH token engine. `derive()` turns a preset's parameters into tokens and holds every text token at 4.5:1 or better. Presets: T Today and F Future (group `design`), A Catkin, B Leaf and C Bark (group `theme`). T carries `overrides` with the exact `Theme.swift` colors; F starts as a copy of T. |
+| `assets/ds-tokens.js` | The OKLCH token engine. `derive()` turns a preset's parameters into tokens and holds every text token at 4.5:1 or better. Presets: T Today and F Future (group `design`), and B Leaf (group `theme`). T carries `overrides` with the exact `Theme.swift` colors; F starts as a copy of T. |
 | `assets/ds-shipped.js`, `ds-shipped.css` | The twenty-seven app screens, each rebuilt from its SwiftUI view for four devices (`DEVICES`), and `FUTURE_CHANGES`, the Future design's change log. Every size, spacing, radius, type and color value goes through a CSS variable. The header comment lists the variables and their shipped values. |
 | `assets/ds-app.js` | State, `cssFor()` (turns a preset into CSS variables and rules), the Tune panel schema (`DIAL`), comments, export, views and the `?harness=` mode. |
 | `assets/ds-screens.js` | The component boards and the type board. |
@@ -69,7 +69,7 @@ The page is plain HTML, CSS and JavaScript loaded with `<script>` tags. It has n
 - **Animations hold still in the harness.** An animated part of a screen (the sync dot's halo, the seedling) gets a class and keyframes in `ds-shipped.css`, plus a `body.harness` rule that turns the animation off, so harness renders stay comparable. Its resting style is the still frame, which is also what Reduce Motion shows.
 - **Devices.** `DEVICES` in `ds-shipped.js` holds each device's size, safe areas, chrome and layout, and builders read the one being built from `D`. Each phone carries a `dev-<id>` class for device CSS. The iPhone's output must stay identical when you change another device: render all twenty-six iPhone screens before and after, and diff them.
 - **Every Tune control must visibly change the app screens.** Controls marked * change the component boards instead. A new control needs an entry in `DIAL`, a CSS variable or rule in `cssFor()`, and a Today value equal to the shipped value. `tools/check-page.js` finds controls from the panel itself, so it covers new ones automatically.
-- **Leave Catkin, Leaf and Bark as they are** unless the user asks to change them. They are color themes: they recolor Future's layout and never change it. A layout change made in Future reaches them too.
+- **Leave Leaf as it is** unless the user asks to change it. It's a color theme: it recolors Future's layout and never changes it. A layout change made in Future reaches it too.
 - **Layout changes belong to Future.** See "Changing Future" below.
 - **Saved state** lives in local storage under `birch-ds-v1`, with a schema version `v`. If you change the shape of saved state, bump `v` and extend the migration in `ds-app.js`. Never drop a user's comments or tuned values.
 - **Known pitfalls:**
@@ -105,7 +105,7 @@ Both runs must pass every check with no page errors. The check tunes every prese
 If `Theme.swift` or a rebuilt view changes in birch-wallet:
 
 1. Update Part 1 of `DESIGN-SYSTEM.md`.
-2. Update the T preset in `ds-tokens.js`: its `overrides` hold the exact colors, and its parametric values are fitted to within about 0.01 ΔE.
+2. Update the T preset in `ds-tokens.js`: its `overrides` hold the exact colors, and its parametric values generate them (or come within about 0.01 ΔE).
 3. Update the affected screen in `ds-shipped.js` and `ds-shipped.css`.
 4. Regenerate the screenshots in birch-wallet with `fastlane screenshots`, re-diff, then commit them in the `fastlane/screenshots` submodule (birch-screenshots).
 5. Once the new screenshots are pushed, rerun the Pages workflow so the hosted Overlay uses them: `gh workflow run pages.yml -R Birch-Wallet/birch-design`.

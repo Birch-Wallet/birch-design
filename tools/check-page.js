@@ -4,7 +4,7 @@
  * preset, comments, export and import, views, shortcuts and saved-state
  * migration. Drives the page with real mouse and keyboard input.
  *
- *   node design/tools/check-page.js [webkit|chromium] [--presets A,B,C,T] [--skip-tune] [--url <url>]
+ *   node design/tools/check-page.js [webkit|chromium] [--presets B,T] [--skip-tune] [--url <url>]
  *
  * --url checks a served copy instead of the local file, for example the GitHub Pages site:
  * https://birch-wallet.github.io/birch-design/
@@ -22,7 +22,7 @@ const pw = require(process.env.PLAYWRIGHT_CORE || 'playwright-core')
 
 const args = process.argv.slice(2)
 const engine = args.find((a) => a === 'webkit' || a === 'chromium') || 'webkit'
-const presetArg = args.includes('--presets') ? args[args.indexOf('--presets') + 1] : 'T,F,A,B,C'
+const presetArg = args.includes('--presets') ? args[args.indexOf('--presets') + 1] : 'T,F,B'
 const PRESETS = presetArg.split(',')
 const SKIP_TUNE = args.includes('--skip-tune')
 const PAGE = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'file://' + path.resolve(__dirname, '..', 'design-system.html')
@@ -117,8 +117,8 @@ async function firstVisit(p) {
     overlay: document.querySelector('#refBtn').textContent.trim(),
     overlayOn: document.body.classList.contains('show-ref') || document.querySelector('#refBtn').getAttribute('aria-checked') === 'true',
   }))
-  check(top.presets.slice(0, 5).join(',') === 'T,F,A,B,C' && top.selected === 'T', area, 'Today is listed first and selected, then Future', top.presets.join(','))
-  check(top.groups.join(' | ') === 'Design: T F | Color themes: A B C', area, 'Designs and color themes are grouped apart', top.groups.join(' | '))
+  check(top.presets.slice(0, 3).join(',') === 'T,F,B' && top.selected === 'T', area, 'Today is listed first and selected, then Future', top.presets.join(','))
+  check(top.groups.join(' | ') === 'Design: T F | Color themes: B', area, 'Designs and color themes are grouped apart', top.groups.join(' | '))
   check(top.view === 'focus', area, 'The view starts on Focus', top.view)
   check(top.overlay === 'Overlay Screenshot' && !top.overlayOn, area, 'Overlay Screenshot starts off', top.overlay)
   check(top.title === 'Birch Design System', area, 'Header reads Birch Design System', top.title)
@@ -213,20 +213,21 @@ async function firstVisit(p) {
   }))
   fut.screens = await p.evaluate(phones)
   check(fut.designs === 'future' && fut.screens.length > 0, area, 'Future builds its screens with the Future layout', `${fut.designs}, ${fut.screens.length} phones`)
-  check(fut.changed.length > 0 && /Settings › Settings/.test(fut.notes) && !/exact copy of Today/.test(fut.notes), area, 'The Future overview lists each change in the log with its screens', fut.changed.join(','))
+  // An empty log (Future a copy of Today again) says so; otherwise the overview lists each change
+  check(fut.changed.length ? !/exact copy of Today/.test(fut.notes) : /exact copy of Today/.test(fut.notes), area, 'The Future overview lists each change in the log, or says Future is a copy of Today', fut.changed.join(',') || 'empty log')
   const strayed = fut.screens.filter((s, i) => !fut.changed.includes(s.id) && s.html !== (todayScreens[i] || {}).html).map((s) => s.id)
   check(fut.screens.length === todayScreens.length && strayed.length === 0, area, 'Future’s screens match Today’s except the ones its log changes', strayed.join(',') || 'none strayed')
   const setT = todayScreens.filter((s) => s.id === 'settings')
   const setF = fut.screens.filter((s) => s.id === 'settings')
   check(
-    setF.length > 0 && setF.every((s) => s.cards === 6 && s.groups === 0) && setT.every((s) => s.cards === 0 && s.groups === 6),
+    setF.length > 0 && [...setF, ...setT].every((s) => s.cards === 6 && s.groups === 0),
     area,
-    'Future: Settings is six cards; Today keeps the inset grouped List',
-    `Future ${setF.map((s) => s.cards).join('/')} cards, Today ${setT.map((s) => s.groups).join('/')} groups`,
+    'Settings is six cards in Today and Future',
+    `Future ${setF.map((s) => s.cards).join('/')} cards, Today ${setT.map((s) => s.cards).join('/')} cards`,
   )
   await p.locator('#exportBtn').click()
   md = await p.locator('#expPre').textContent()
-  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.'), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
+  check(md.includes('**Selected preset:** Future') && md.includes('### Design') && md.includes('None. Colors stay as they ship.') && (fut.changed.length > 0 || md.includes('None yet. The layout and components match the shipped app.')), area, 'Exporting Future lists its design changes, settings and colors from the shipped app')
   await p.locator('#drawerClose').click()
   await selectPreset(p, 'T')
   check(await p.evaluate(() => [...document.querySelectorAll('#scope .ph')].every((f) => f.dataset.design === 'today')), area, 'Switching back to Today rebuilds the screens with the Today layout')
@@ -350,7 +351,7 @@ async function tuneAudit(p) {
 
 async function tuneFeatures(p) {
   const area = 'Tune features'
-  await selectPreset(p, 'A')
+  await selectPreset(p, 'B')
   await expandAll(p)
 
   // Reset dot on one row
@@ -361,7 +362,7 @@ async function tuneFeatures(p) {
   const st0 = await state(p)
   await waitSave(p)
   const st = await state(p)
-  check(st.params.A.shape.card === 12 && !(await p.locator('#dial [data-reset="shape.card"]').count()), area, 'Reset dot restores the preset value', `card radius ${st.params.A.shape.card}`)
+  check(st.params.B.shape.card === 12 && !(await p.locator('#dial [data-reset="shape.card"]').count()), area, 'Reset dot restores the preset value', `card radius ${st.params.B.shape.card}`)
 
   // Accent rows appear when the second hue is turned on
   const hidden = await p.locator('#dial .dr[data-row="accent.hue"]').count()
@@ -377,7 +378,7 @@ async function tuneFeatures(p) {
   await settle(p)
   await waitSave(p)
   const s2 = await state(p)
-  check(s2.params.A.type.numerals === 'proportional' && s2.params.A.layout.signed === true && s2.params.A.layout.received === 'ink' && s2.params.A.layout.footer === 'stacked', area, 'Apply interview decisions sets all four values')
+  check(s2.params.B.type.numerals === 'proportional' && s2.params.B.layout.signed === true && s2.params.B.layout.received === 'ink' && s2.params.B.layout.footer === 'stacked', area, 'Apply interview decisions sets all four values')
   const stacked = await p.evaluate(() => getComputedStyle(document.querySelector('[data-screen="multisig"] .wizfoot')).flexDirection)
   check(stacked === 'column-reverse', area, 'Interview decisions reach the screens (stacked footer)')
 
@@ -394,12 +395,12 @@ async function tuneFeatures(p) {
   check(!(await p.locator('#presetSeg [data-preset="U1"]').count()), area, 'Deleting a custom preset removes it')
 
   // Reset preset
-  await selectPreset(p, 'A')
+  await selectPreset(p, 'B')
   await p.locator('#dialReset').click()
   await settle(p)
   await waitSave(p)
   const s3 = await state(p)
-  check(s3.params.A.type.numerals === 'mono' && s3.params.A.accent.enabled === false, area, 'Reset preset restores every value')
+  check(s3.params.B.type.numerals === 'mono' && s3.params.B.accent.enabled === false, area, 'Reset preset restores every value')
 
   // Today: exact Theme.swift colors until a color is edited, Reset restores them
   await selectPreset(p, 'T')
@@ -435,7 +436,7 @@ async function tuneFeatures(p) {
 
 async function comments(p) {
   const area = 'Comments'
-  await selectPreset(p, 'A')
+  await selectPreset(p, 'B')
   await p.locator('#commentBtn').click()
   check((await p.locator('#commentBtn').getAttribute('aria-pressed')) === 'true', area, 'Comment button turns comment mode on')
 
@@ -515,12 +516,12 @@ async function comments(p) {
 
   // Export: Markdown and JSON
   await p.locator('#exportBtn').click()
-  await p.locator('#overall').fill('Take Catkin forward.')
+  await p.locator('#overall').fill('Take Leaf forward.')
   await settle(p, 300)
   const md = await p.locator('#expPre').textContent()
-  check(md.includes('Brand gold should be warmer.') && md.includes('Resolved comments (1)') && md.includes('Dark ground feels too warm.') && md.includes('Take Catkin forward.'), area, 'Markdown export holds comments, notes and overall notes')
+  check(md.includes('Brand gold should be warmer.') && md.includes('Resolved comments (1)') && md.includes('Dark ground feels too warm.') && md.includes('Take Leaf forward.'), area, 'Markdown export holds comments, notes and overall notes')
   check(md.includes('SendReviewView.swift') && md.includes('| `brand` |'), area, 'Markdown export names Swift files and the token table')
-  check(md.includes('**Selected preset:** Catkin') && md.includes('| Type › Title weight (`type.titleWeight`) | Medium | Semibold |') && md.includes('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |'), area, 'Exporting another preset lists its differences from the shipped app')
+  check(md.includes('**Selected preset:** Leaf') && md.includes('| Type › Title weight (`type.titleWeight`) | Medium | Bold |') && md.includes('| Token | Role | Replaces in Swift | Light: shipped → new | Dark: shipped → new |'), area, 'Exporting another preset lists its differences from the shipped app')
   // Future's change log, or the line saying it has none yet
   const logged = await p.evaluate(() => window.BirchShipped.FUTURE_CHANGES.length)
   check(md.includes('a color theme on the Future design') && md.includes('### Design') && logged > 0 !== md.includes('None yet. The layout and components match the shipped app.'), area, 'A color theme’s export includes Future’s design changes', `${logged} changes`)
@@ -580,13 +581,13 @@ async function views(p) {
   const area = 'Views'
   await p.locator('#viewSeg [data-view="compare"]').click()
   await settle(p, 100)
-  check((await p.locator('.cmp-grid .ph').count()) === 10, area, 'Compare shows five presets in both modes', `${await p.locator('.cmp-grid .ph').count()} phones`)
+  check((await p.locator('.cmp-grid .ph').count()) === 6, area, 'Compare shows three presets in both modes', `${await p.locator('.cmp-grid .ph').count()} phones`)
   check((await p.locator('.cmp-grid .opt-F .ph[data-design="future"]').count()) === 2, area, 'Compare builds the Future column with the Future layout')
-  const themeDesigns = await p.evaluate(() => ['A', 'B', 'C'].map((id) => [...document.querySelectorAll(`.cmp-grid .opt-${id} .ph`)].map((f) => f.dataset.design).join('+')).join(' '))
-  check(themeDesigns === 'future+future future+future future+future', area, 'Compare builds the color themes with the Future layout', themeDesigns)
+  const themeDesigns = await p.evaluate(() => [...document.querySelectorAll('.cmp-grid .opt-B .ph')].map((f) => f.dataset.design).join('+'))
+  check(themeDesigns === 'future+future', area, 'Compare builds the color theme with the Future layout', themeDesigns)
   await p.locator('#incToday').uncheck()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid .ph').count()) === 8, area, 'Include Today toggles the Today column')
+  check((await p.locator('.cmp-grid .ph').count()) === 4, area, 'Include Today toggles the Today column')
   // Screen switcher: ‹ › and the arrow keys step through the screens in page order
   const order = await p.evaluate(() => {
     const all = window.BirchShipped.SCREENS
@@ -648,7 +649,7 @@ async function views(p) {
   await p.keyboard.type('multisig')
   await p.keyboard.press('Enter')
   await settle(p, 60)
-  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 8, area, 'S opens the menu too, and picking switches every column')
+  check((await p.locator('.cmp-grid [data-screen="multisig"]').count()) === 4, area, 'S opens the menu too, and picking switches every column')
 
   // Recent screens, newest first, leaving out the one on screen
   await p.locator('#scrPick').click()
@@ -667,18 +668,23 @@ async function views(p) {
     const changed = new Set(window.BirchShipped.FUTURE_CHANGES.flatMap((c) => c.screens))
     return order.filter((id) => changed.has(id))
   }, order)
-  await p.locator('#changedOnly').click()
-  await settle(p, 60)
-  await p.keyboard.press('ArrowRight')
-  await settle(p, 60)
-  const nextChanged = await cmpScreen()
-  const posChanged = await p.locator('#scrPos').textContent()
-  await waitSave(p)
-  const savedOn = (await state(p)).changedOnly
-  await p.locator('#changedOnly').click()
-  await settle(p, 60)
-  const expectChanged = changedOrder[changedOrder.indexOf('edit-cosigners') + 1]
-  check(nextChanged === expectChanged && posChanged === `${changedOrder.indexOf(expectChanged) + 1} / ${changedOrder.length} changed` && savedOn === true, area, 'Changed in Future steps through only the screens Future changes, and is saved', `→ ${nextChanged} (${posChanged})`)
+  if (changedOrder.length) {
+    await p.locator('#changedOnly').click()
+    await settle(p, 60)
+    await p.keyboard.press('ArrowRight')
+    await settle(p, 60)
+    const nextChanged = await cmpScreen()
+    const posChanged = await p.locator('#scrPos').textContent()
+    await waitSave(p)
+    const savedOn = (await state(p)).changedOnly
+    await p.locator('#changedOnly').click()
+    await settle(p, 60)
+    const expectChanged = changedOrder[changedOrder.indexOf('edit-cosigners') + 1]
+    check(nextChanged === expectChanged && posChanged === `${changedOrder.indexOf(expectChanged) + 1} / ${changedOrder.length} changed` && savedOn === true, area, 'Changed in Future steps through only the screens Future changes, and is saved', `→ ${nextChanged} (${posChanged})`)
+  } else {
+    // With nothing in the log there is nothing to step through, so the switch is gone
+    check(!(await p.locator('#changedOnly').count()), area, 'Changed in Future is hidden while Future is a copy of Today')
+  }
 
   // A link opens Compare on its screen and device
   const linked = await p.context().browser().newContext({ viewport: { width: 1400, height: 900 } })
@@ -694,7 +700,7 @@ async function views(p) {
   await settle(p, 60)
   await p.locator('#modeSeg [data-modes="dark"]').click()
   await settle(p, 60)
-  check((await p.locator('.cmp-grid .ph').count()) === 4, area, 'Dark only shows one mode in Compare')
+  check((await p.locator('.cmp-grid .ph').count()) === 2, area, 'Dark only shows one mode in Compare')
   await p.locator('#modeSeg [data-modes="both"]').click()
   await p.locator('#viewSeg [data-view="focus"]').click()
   await settle(p, 100)
@@ -777,10 +783,10 @@ async function views(p) {
   await p.keyboard.press('2')
   await settle(p)
   const k2 = await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')
-  await p.keyboard.press('4')
+  await p.keyboard.press('3')
   await settle(p)
-  const k4 = await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')
-  check(k2 === 'F' && k4 === 'B', area, 'Number keys switch presets in toolbar order', `2 → ${k2}, 4 → ${k4}`)
+  const k3 = await p.locator('#presetSeg [aria-pressed="true"]').getAttribute('data-preset')
+  check(k2 === 'F' && k3 === 'B', area, 'Number keys switch presets in toolbar order', `2 → ${k2}, 3 → ${k3}`)
   await p.keyboard.press('1')
 
   // Rail navigation
@@ -883,10 +889,12 @@ async function devices(p) {
 
 async function migration(p) {
   const area = 'Saved state'
+  // Let a save the earlier checks queued land first, or it can overwrite the state written here
+  await waitSave(p)
   const v1 = await p.evaluate(() => {
     const T = window.BirchTokens
     const params = {}
-    for (const id of ['A', 'B', 'C', 'T']) {
+    for (const id of ['B', 'T']) {
       const x = JSON.parse(JSON.stringify(T.PRESETS[id]))
       delete x.layout
       delete x.chrome
@@ -897,7 +905,9 @@ async function migration(p) {
       x.shape.chip = 12
       params[id] = x
     }
-    params.A.brand.hue = 100 // a real tune that must survive
+    // Catkin, since removed, as an older page saved it
+    params.A = Object.assign(JSON.parse(JSON.stringify(params.B)), { id: 'A', name: 'Catkin' })
+    params.B.brand.hue = 100 // a real tune that must survive
     return { v: 1, current: 'A', params, custom: {}, rules: 'system', comments: [{ id: 'c1', n: 1, type: 'Change', text: 'Old comment', status: 'open', opt: 'A', optName: 'Catkin', mode: 'dark', scope: 'screen:home', scopeLabel: 'Wallet › Transactions', key: 'balance', label: 'Balance', x: 50, y: 50 }], notes: {}, overall: '', nextN: 2 }
   })
   await p.evaluate((s) => localStorage.setItem('birch-ds-v1', JSON.stringify(s)), v1)
@@ -907,11 +917,36 @@ async function migration(p) {
   await waitSave(p)
   await p.locator('#dialCopy').click() // any action that saves
   await waitSave(p)
-  const st = await p.evaluate(() => JSON.parse(localStorage.getItem('birch-ds-v1')))
+  let st = await p.evaluate(() => JSON.parse(localStorage.getItem('birch-ds-v1')))
   const margin = await p.evaluate(() => getComputedStyle(document.querySelector('#scope [data-screen="review"][data-mode="dark"] .pbtn').parentElement).paddingLeft)
-  check(st.v === 3 && st.current === 'T' && st.view === 'focus' && st.params.A.density.gutter === 24 && st.params.A.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.A.density.gutter}, hue ${st.params.A.brand.hue}, margin ${margin}`)
+  check(st.v === 4 && st.current === 'T' && st.view === 'focus' && st.params.B.density.gutter === 24 && st.params.B.brand.hue === 100 && st.comments.length === 1 && !('rules' in st) && !('migrated' in st), area, 'v1 state migrates: opens on Today in Focus, new layout defaults, tunes and comments kept', `v${st.v} ${st.current} ${st.view}, gutter ${st.params.B.density.gutter}, hue ${st.params.B.brand.hue}, margin ${margin}`)
   check(st.params.F && st.params.F.design === 'future' && (await p.locator('#presetSeg [data-preset="F"]').count()) === 1, area, 'Saved state from before Future gains the Future preset')
-  check(['A', 'B', 'C'].every((id) => st.params[id].design === 'future') && st.params.T.design === 'today', area, 'Color themes saved with the Today layout move to the Future layout', ['A', 'B', 'C', 'T'].map((id) => `${id} ${st.params[id].design}`).join(', '))
+  check(st.params.B.design === 'future' && st.params.T.design === 'today', area, 'Color themes saved with the Today layout move to the Future layout', ['B', 'T'].map((id) => `${id} ${st.params[id].design}`).join(', '))
+  check(!st.params.A && !st.params.C && !(await p.locator('#presetSeg [data-preset="A"]').count()), area, 'Removed presets (Catkin, Bark) leave saved state; comments made on them stay', Object.keys(st.params).join(','))
+
+  // v3: Today's old colors give way to the new Theme.swift values; a tuned setting stays
+  const v3 = await p.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('birch-ds-v1'))
+    s.v = 3
+    s.params.T.overrides.dark.ground = '#1A1814'
+    s.params.T.shape.card = 20
+    s.params.C = JSON.parse(JSON.stringify(s.params.B))
+    s.current = 'C'
+    return s
+  })
+  await p.evaluate((s) => localStorage.setItem('birch-ds-v1', JSON.stringify(s)), v3)
+  await p.reload()
+  await p.waitForSelector('#dial .dg')
+  await settle(p, 300)
+  await waitSave(p)
+  st = await p.evaluate(() => JSON.parse(localStorage.getItem('birch-ds-v1')))
+  check(st.v === 4 && st.current === 'T' && st.params.T.overrides.dark.ground === '#161512' && st.params.T.shape.card === 20 && !st.params.C, area, 'v3 state migrates: Today takes the shipped colors, keeps a tuned setting, and Bark leaves', `v${st.v} ${st.current}, ground ${st.params.T.overrides.dark.ground}, card ${st.params.T.shape.card}`)
+  // Put Today back as it ships for the checks that follow
+  await p.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('birch-ds-v1'))
+    s.params.T.shape.card = 12
+    localStorage.setItem('birch-ds-v1', JSON.stringify(s))
+  })
 
   // Screens saved by an older page that no longer exist are dropped
   await p.evaluate(() => {

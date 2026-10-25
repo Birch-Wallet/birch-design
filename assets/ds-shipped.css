@@ -35,7 +35,7 @@
 .card { background: var(--card); border-radius: var(--r-card); box-shadow: var(--cardShadow); }
 .nest { background: var(--nested); border-radius: var(--r-nested); }
 .hcard { background: var(--card); border-radius: var(--r-card); box-shadow: var(--cardShadow); padding: var(--pad); }
-.divider { height: 1px; background: var(--nested); flex: none; }
+.divider { height: 1px; background: var(--line); flex: none; }
 /* Future Settings: a card's rows (settingsRow) and the card's 4pt above and below */
 .scard { padding: 4px var(--pad); }
 .srow { min-height: 52px; padding: 8px 0; box-sizing: border-box; }
@@ -137,10 +137,10 @@
 .txdir { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; }
 .txchev { position: absolute; right: calc(var(--gutter) - 2.2px); top: calc(50% - 0.47px); transform: translate(50%, -50%); color: var(--chev); display: flex; }
 /* The Duo lays plain lists out with 20pt margins, and the separators run to the list's trailing edge */
-.dev-duo-closed .txrow, .dev-duo-open .txrow { padding-left: calc(var(--gutter) - 4px); padding-right: calc(var(--gutter) + 6.33px); }
+.dev-duo-closed .txrow, .dev-duo-open .txrow { padding-left: calc(var(--gutter) - 4px); padding-right: calc(var(--gutter) - 1.67px); }
 .dev-duo-closed .txrow::after, .dev-duo-open .txrow::after { left: calc(var(--gutter) + 40px); right: 0; }
 .dev-duo-closed .txchev, .dev-duo-open .txchev { right: calc(var(--gutter) - 9.17px); top: calc(50% + 0.53px); }
-.dev-duo-closed .urow, .dev-duo-open .urow { padding-left: calc(var(--gutter) - 4px); padding-right: calc(var(--gutter) + 6.33px); }
+.dev-duo-closed .urow, .dev-duo-open .urow { padding-left: calc(var(--gutter) - 4px); padding-right: calc(var(--gutter) - 1.67px); }
 .dev-duo-closed .urow::after, .dev-duo-open .urow::after { left: calc(var(--gutter) - 4px); right: 0; }
 .dev-duo-closed .urow .txchev, .dev-duo-open .urow .txchev { top: calc(50% - 0.8px); }
 /* The iPad's lists: 20pt margins too, rows a third of a point taller at 2x */
@@ -150,11 +150,6 @@
 .dev-ipad .urow { padding-top: calc(15.17px * var(--sp) - 0.25px); padding-bottom: calc(15.17px * var(--sp) - 0.25px); }
 /* Full-width tinted buttons stand 2pt taller on the iPad */
 .dev-ipad .row.ub { padding-top: calc((var(--btn-h) - 24.33px) / 2 + 1px) !important; padding-bottom: calc((var(--btn-h) - 24.33px) / 2 + 1px) !important; }
-/* Inset grouped lists too: 20pt in on the leading side, out to the safe area on the trailing side, 20pt row padding */
-.dev-duo-closed .igroup, .dev-duo-open .igroup { margin: 0 0 0 calc(var(--gutter) - 4px); }
-.dev-duo-closed .irow, .dev-duo-open .irow { padding-left: calc(var(--pad) + 4px); padding-right: calc(var(--pad) + 4px); }
-.dev-duo-closed .igh, .dev-duo-open .igh { padding-left: calc(var(--gutter) + var(--pad)); }
-.dev-duo-closed .isep, .dev-duo-open .isep { margin-left: calc(var(--pad) + 4px); margin-right: calc(var(--pad) + 4px); }
 
 /* UTXO list rows: the plain List metrics of the transaction rows, with content-height rows */
 .urow { position: relative; padding: calc(15.17px * var(--sp)) calc(var(--gutter) + 14.2px) calc(15.17px * var(--sp)) calc(var(--gutter) - 8px); display: flex; align-items: center; background: var(--card); }
@@ -171,17 +166,7 @@
 .navtitle.lead { left: 20px; right: auto; top: 37.85px; text-align: left; }
 .navback.duo { position: absolute; left: auto; width: 48px; height: 48px; z-index: 41; background: var(--vtabBg); box-shadow: 0 0 0 0.33px var(--vtabRim), inset 0 0.66px 0 var(--glassRim); }
 
-/* Inset grouped List (Settings): section headers, row groups, separators, switches */
-.igh { padding: 28px calc(var(--gutter) - 8px + var(--pad)) 9.9px; }
-.igh.first { padding-top: 10.5px; }
-.igroup { margin: 0 calc(var(--gutter) - 8px); background: var(--card); border-radius: 26px; overflow: hidden; }
-.irow { display: flex; align-items: center; min-height: 52px; padding: 15px var(--pad); }
-/* The separator sits inside the bottom of the row above it, as UIKit draws it */
-.isep { display: block; position: relative; height: 1px; margin: -1px var(--pad) 0; background: var(--sep); }
-/* iOS 27.2 sets the iPhone's section headers, rows and separators 4pt further in, as the Duo does */
-.dev-iphone .igh { padding-left: calc(var(--gutter) - 4px + var(--pad)); }
-.dev-iphone .irow { padding-left: calc(var(--pad) + 4px); padding-right: calc(var(--pad) + 4px); }
-.dev-iphone .isep { margin-left: calc(var(--pad) + 4px); margin-right: calc(var(--pad) + 4px); }
+/* Switches */
 .iswitch { position: relative; flex: none; width: 63px; height: 28px; margin-right: -2px; border-radius: 14px; background: var(--switchOff); }
 .iswitch i { position: absolute; left: 2px; top: 2px; width: 37px; height: 24px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 .iswitch.on { background: var(--toggle); }
