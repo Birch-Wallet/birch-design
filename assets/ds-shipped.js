@@ -297,17 +297,23 @@
 
   /** The wallet picker as TransactionListView opens it: a 35% black scrim over the screen (the tab bar
    *  stays clear) and a floating panel 60pt below the safe area, 35pt in from each side, its list capped
-   *  at 310pt. The active wallet's row takes a 12% brand tint */
-  function walletPickerPanel() {
+   *  at 310pt. The active wallet's row takes a 12% brand tint. Future: the panel is 16pt in from each side,
+   *  and each row ends in a settings button that opens that wallet's settings without switching to it */
+  function walletPickerPanel(design) {
+    const future = design === 'future'
+    const inset = future ? 16 : 35
+    const settingsBtn = future
+      ? `<span class="sp"></span><span class="row" style="width:40px;height:36px;justify-content:flex-end;color:var(--ink2)"${c('wallet-row-settings', 'Settings for Birch')}>${Y('slider.horizontal.3:17:regular')}</span>`
+      : ''
     return `<div style="position:absolute;inset:0;background:rgba(0, 0, 0, 0.35);z-index:30"></div>
-      <div class="col" style="position:absolute;left:35px;right:${35 + D.end}px;top:${D.top + 60}px;z-index:35;border-radius:var(--r-card);background:var(--floating);box-shadow:0 4px 24px rgba(0, 0, 0, 0.25);overflow:hidden;align-items:stretch"${c('wallet-picker-panel', 'Wallet picker')}>
+      <div class="col" style="position:absolute;left:${inset}px;right:${inset + D.end}px;top:${D.top + 60}px;z-index:35;border-radius:var(--r-card);background:var(--floating);box-shadow:0 4px 24px rgba(0, 0, 0, 0.25);overflow:hidden;align-items:stretch"${c('wallet-picker-panel', 'Wallet picker')}>
         <div class="row" style="padding:12px 14px">${T('Edit', 'd', 15, 400, 'ink2')}<span class="sp"></span>${T('Wallets', 'r', 17, 600, 'ink', LH)}<span class="sp"></span>${T('Add', 'd', 15, 400, 'brand')}</div>
         <div class="divider"></div>
         <div style="height:310px">
           <div class="row" style="gap:12px;padding:15px 14px;background:color-mix(in srgb, var(--brand) 12%, transparent)"${c('wallet-row', 'Wallet row: Birch, active')}>
             ${identicon(32)}
             <div class="col cx" style="gap:4px;flex:none"><span class="nbadge" style="--nb:var(--net_testnet4)">Testnet4</span>${T('1-of-2', 'd', 13, 400, 'ink2')}</div>
-            ${T('Birch', 'd', 16, 400, 'ink')}
+            ${T('Birch', 'd', 16, 400, 'ink')}${settingsBtn}
           </div>
         </div>
       </div>`
@@ -344,6 +350,7 @@
    *  Transactions view 100pt down, its symbol a further 15.67pt inside it). Both are measured from the
    *  view built in the simulator */
   function home(mode, design, picker = false, state = 'list', age = null) {
+    const future = design === 'future'
     const list = state === 'list'
     const syncing = state === 'loading'
     const status = syncing ? 'Scanning addresses…' : `Last refreshed ${age || '2s'} ago`
@@ -355,7 +362,12 @@
     return `<div class="sx">
       <div style="background:var(--hero);padding:${D.top + 16}px calc(${M16} + ${D.end}px) ${S(16)} ${M16};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
         <div class="row" style="height:44px">
-          <span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)"${c('wallet-menu', 'Wallet menu')}>${Y('ellipsis:20:regular')}</span>
+          ${
+            // Future: the top-left button opens Wallet Settings directly instead of a menu
+            future
+              ? `<span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)"${c('wallet-settings', 'Wallet Settings button')}>${Y('slider.horizontal.3:18:regular')}</span>`
+              : `<span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)"${c('wallet-menu', 'Wallet menu')}>${Y('ellipsis:20:regular')}</span>`
+          }
           <span class="sp"></span>
           <span class="row" style="gap:8px;padding:8px 12px;border-radius:calc(var(--r-chip) * 1.375);background:color-mix(in srgb, var(--ink) 8%, transparent)"${c('wallet-picker', 'Wallet picker')}>
             ${identicon(24)}${T('Birch', 'r', 17, 600, 'ink')}<span style="color:var(--ink2);display:flex">${Y(picker ? 'chevron.up:12:semibold' : 'chevron.down:12:semibold')}</span></span>
@@ -368,9 +380,16 @@
           ${T(status, 'd', 11, 400, 'ink2', '', '')}
         </div>
       </div>
-      <div style="padding:${S(12)} calc(${M16} + ${D.end}px) ${S(4)} ${M16}">${T('Transactions', 'r', 17, 600, 'ink')}</div>
+      ${
+        // Future: Dashboard moves out of the menu to a small icon on this header. Its 22pt frame, 2pt taller
+        // than the title, sets the row's height
+        future
+          ? `<div style="padding:${S(12)} calc(${M16} + ${D.end}px) ${S(4)} ${M16}"><div class="row">${T('Transactions', 'r', 17, 600, 'ink')}<span class="sp"></span>
+          <span class="row" style="min-width:44px;min-height:22px;justify-content:flex-end;color:var(--ink)"${c('dashboard', 'Dashboard button')}>${Y('chart.bar.xaxis:15:regular')}</span></div></div>`
+          : `<div style="padding:${S(12)} calc(${M16} + ${D.end}px) ${S(4)} ${M16}">${T('Transactions', 'r', 17, 600, 'ink')}</div>`
+      }
       <div style="margin-right:${D.end}px">${content}</div>
-    </div>${picker ? walletPickerPanel() : ''}${tabbar('Transactions')}`
+    </div>${picker ? walletPickerPanel(design) : ''}${tabbar('Transactions')}`
   }
 
   const homeLoading = (mode, design) => home(mode, design, false, 'loading')
@@ -380,12 +399,14 @@
    *  prominent one in the brand fill) around the inline title in the system label color. The sheet's
    *  content starts 70pt down */
   function sheetNav(title, leading, trailing) {
+    // A large title sits under the toolbar instead, in the content
+    const navTitle = title ? `<span class="t snavtitle"${c('nav-title', 'Navigation title')}>${title}</span>` : ''
     const btn = (b, side) => (b ? `<span class="barbtn${b.prominent ? ' on' : ''}" style="${side}:${D.form ? 10 : 16}px"${c(b.key, `Bar button: ${b.label}`)}>${b.label}</span>` : '')
     // The Duo sets the title beside the leading button, 2pt lower, and the trailing button against the safe area
     if (D.chrome === 'duo' && !D.page)
-      return `<div class="snav lead" style="right:${sheetEnd()}px">${btn(leading, 'left')}<span class="t snavtitle"${c('nav-title', 'Navigation title')}>${title}</span>${trailing ? btn(trailing, 'right').replace('right:16px', 'margin-left:auto') : ''}</div>`
+      return `<div class="snav lead" style="right:${sheetEnd()}px">${btn(leading, 'left')}${navTitle}${trailing ? btn(trailing, 'right').replace('right:16px', 'margin-left:auto') : ''}</div>`
     // A Duo page sheet centers the title, with the Duo's offsets
-    return `<div class="snav${D.chrome === 'duo' ? ' low' : ''}">${btn(leading, 'left')}<span class="t snavtitle"${c('nav-title', 'Navigation title')}>${title}</span>${btn(trailing, 'right')}</div>`
+    return `<div class="snav${D.chrome === 'duo' ? ' low' : ''}">${btn(leading, 'left')}${navTitle}${btn(trailing, 'right')}</div>`
   }
 
   /** A full-height sheet's frame: under the iPhone's status bar; 8pt in from the Duo's top and sides; or a
@@ -402,6 +423,15 @@
   /** Where a sheet's content starts under its toolbar */
   const sheetTop = () => (D.chrome === 'duo' ? 74 : D.form ? 64 : 70)
 
+  /** What's under a full-height sheet over the Transactions tab, and the sheet's opening tag (close it with
+   *  </div>): behind a page sheet, the screen and the tab bar show dimmed; the iPad shows it as a form sheet
+   *  in the middle of the screen */
+  function sheetOpen() {
+    const under = D.page ? `<div class="under-dim"><div class="sx"></div>${tabbar('Transactions')}</div><div class="scrim"></div>` : '<div class="sx setup-under" style="background:var(--ground)"></div>'
+    const frame = D.form ? ` style="top:${(D.h - D.form.h) / 2}px;bottom:auto;height:${D.form.h}px;left:${(D.w - D.form.w) / 2}px;right:auto;width:${D.form.w}px;border-radius:var(--r-sheet)"` : sheetFrame()
+    return `${under}<div class="ssheet${D.form ? ' form' : ''}"${frame}${D.page ? ' data-z="page"' : ''}>`
+  }
+
   /** BumpFeeView on its first step, a full-height sheet over the transaction: the original fee, the new
    *  rate card (open, as it starts, with Custom prefilled at the minimum) and Create Replacement */
   function bumpFee() {
@@ -409,11 +439,7 @@
     const radio = (on) => `<span style="color:${on ? 'var(--brandInk)' : 'var(--border)'};display:flex">${Y(on ? 'checkmark.circle.fill:18:regular' : 'circle:18:regular')}</span>`
     const preset = (name, rate) =>
       `<div class="row" style="gap:10px;min-height:44px"${c('preset-' + name.toLowerCase(), `Fee preset: ${name}`)}>${radio(false)}${T(name, 'd', 14, 400, 'ink')}<span class="sp"></span>${T(rate, 'm', 13, 400, 'ink', '', 'amt')}</div>`
-    // Behind a page sheet, the transaction's screen and the tab bar show dimmed
-    const under = D.page ? `<div class="under-dim"><div class="sx"></div>${tabbar('Transactions')}</div><div class="scrim"></div>` : '<div class="sx setup-under" style="background:var(--ground)"></div>'
-    // The iPad shows it as a form sheet in the middle of the screen
-    const frame = D.form ? ` style="top:${(D.h - D.form.h) / 2}px;bottom:auto;height:${D.form.h}px;left:${(D.w - D.form.w) / 2}px;right:auto;width:${D.form.w}px;border-radius:var(--r-sheet)"` : sheetFrame()
-    return `${under}<div class="ssheet${D.form ? ' form' : ''}"${frame}${D.page ? ' data-z="page"' : ''}>${sheetNav('Bump Fee', { label: 'Cancel', key: 'cancel' })}
+    return `${sheetOpen()}${sheetNav('Bump Fee', { label: 'Cancel', key: 'cancel' })}
       <div class="sx" style="top:${sheetTop()}px"><div class="col" style="gap:${S(20)};padding:${S(16)} calc(${M16} + ${sheetEnd()}px) ${S(16)} ${M16};align-items:stretch">
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('original-fee', 'Original fee card')}>
           ${detail('Original Fee', '159 sats', 'ink')}${detail('Original Fee Rate', '0.5 sat/vB', 'ink')}${detail('Minimum to Bump', '1.51 sat/vB', 'brand')}
@@ -430,6 +456,139 @@
         </div>
         <div style="padding:0 24px"><span class="pbtn"${c('primary-cta', 'Primary button: Create Replacement')}>Create Replacement</span></div>
       </div></div></div>`
+  }
+
+  /** The Birch wallet's cosigners, as the screenshot tour imports them from its descriptor */
+  const birchCosigners = () => [...DESCRIPTOR.matchAll(/\[(\w{8})\/[^\]]+\](\w+)/g)].map(([, fp, key], i) => ({ label: `Cosigner ${i + 1}`, fp, key }))
+
+  /** A large navigation title, which scrolls with the content: 34pt bold in the system label color, 16pt in */
+  const largeTitle = (title) => `<div style="height:52px;padding:3px ${M16} 0"${c('large-title', 'Large navigation title')}>${T(title, 'd', 34, 700, 'var(--sysInk)')}</div>`
+
+  /** A card's headline (hbHeadline) */
+  const cardTitle = (title) => T(title, 'r', 17, 600, 'ink')
+
+  /** A Wallet Settings TextField: a label over 14pt mono on the nested fill with 10pt padding, and `after`
+   *  under it. Empty, it shows its placeholder and sizes to the default body line */
+  function settingsField(label, value, key, placeholder = false, after = '') {
+    return `<div class="col" style="gap:${S(6)};align-items:stretch"${c(key, label + ' field')}>${T(label, 'd', 13, 400, 'ink2')}
+      <div class="nest" style="padding:calc(var(--fpad) - 1px) calc(var(--fpad) - 2px)">${T(value, 'm', 14, 400, placeholder ? 'var(--sysInk3)' : 'ink', placeholder ? EMPTY_LH : 'line-height:1.1934')}</div>${after}</div>`
+  }
+
+  /** CosignerCardView: the label with its key badge and number, the fingerprint and path, and the key in
+   *  9pt mono on two lines */
+  const cosignerCard = ({ label, fp, key }, i) => `<div class="nest col" style="padding:var(--fpad);gap:${S(8)};align-items:stretch"${c('cosigner-' + i, label)}>
+      <div class="row" style="gap:8px"><span style="color:var(--brandInk);display:flex">${Y('person.badge.key.fill:17:regular')}</span>${T(label, 'd', 15, 400, 'ink')}<span class="sp"></span>${T('#' + (i + 1), 'm', 12, 400, 'ink2')}</div>
+      <div class="row" style="gap:12px;align-items:flex-start">
+        <div class="col" style="gap:2px;align-items:flex-start">${T('Fingerprint', 'd', 10, 400, 'ink2')}${T(fp, 'm', 12, 400, 'brand')}</div>
+        <div class="col" style="gap:2px;align-items:flex-start">${T('Path', 'd', 10, 400, 'ink2')}${T("m/48'/1'/0'/2'", 'm', 12, 400, 'ink')}</div>
+      </div>
+      ${T(key, 'm', 9, 400, 'ink2', `${charWrap()};display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden`, 'tw')}
+    </div>`
+
+  /** WalletInfoView in its sheet over Transactions: the large title, Done, and the cards from the overview
+   *  down to Delete Wallet. Future (birch-wallet #90): a grabber and a half-height stop, a plain Edit on the
+   *  Cosigners card, and the Wallet Labels card with the BIP 329 import and export */
+  function walletSettings(mode, design) {
+    const future = design === 'future'
+    const info = (k, v) => `<div class="row">${T(k, 'd', 13, 400, 'ink2')}<span class="sp"></span>${T(v, 'd', 15, 400, 'ink')}</div>`
+    const caption = (text) => T(text, 'd', 12, 400, 'ink2', '', 'tw')
+    const toggle = (on, key, label) => `<span class="iswitch${on ? ' on' : ''}"${c(key, label)}><i></i></span>`
+    const smallBtn = (icon, label, cls, style, key) =>
+      `<span class="row ${cls}" style="flex:1 1 0;gap:6px;justify-content:center;padding:12px 0;border-radius:var(--r-nested);${style}"${c(key, label)}>${Y(icon)}${T(label, 'd', 14, 400, 'currentColor')}</span>`
+    const edit = future
+      ? `<span${c('edit-cosigners', 'Edit cosigners')}>${T('Edit', 'd', 15, 400, 'brand')}</span>`
+      : `<span class="row" style="gap:5px;color:var(--brandInk)"${c('edit-cosigners', 'Edit cosigners')}>${Y('pencil:13:regular')}${T('Edit', 'd', 13, 400, 'brand')}</span>`
+    const labels = `<div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('wallet-labels', 'Wallet Labels card')}>
+          ${cardTitle('Wallet Labels')}
+          ${caption('Import or export transaction, address, UTXO and cosigner labels in BIP 329 format.')}
+          <div class="row" style="gap:12px">${tonal('square.and.arrow.down:15:semibold', 'Import File', false, 'import-file')}${tonal('square.and.arrow.up:15:semibold', 'Export File', true, 'export-file')}</div>
+          <div class="row" style="gap:12px">${tonal('qrcode.viewfinder:15:semibold', 'Import QR', false, 'import-qr')}${tonal('qrcode:15:semibold', 'Export QR', true, 'export-qr')}</div>
+        </div>`
+    return `${sheetOpen()}${sheetNav('', null, { label: 'Done', key: 'done', prominent: true })}
+      <div class="sx" style="top:${sheetTop()}px">${largeTitle('Wallet Settings')}
+      <div class="col" style="gap:${S(16)};padding:${S(16)} calc(${M16} + ${sheetEnd()}px) ${S(16)} ${M16};align-items:stretch">
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('overview', 'Wallet overview')}>
+          <div class="row" style="gap:8px"${c('wallet-name', 'Wallet name')}>${T('Name', 'd', 13, 400, 'ink2')}<span class="sp"></span>${T('Birch', 'd', 15, 400, 'ink')}<span style="color:var(--u-info);display:flex">${Y('pencil:12:regular')}</span></div>
+          ${info('Type', '1-of-2 Multisig')}${info('Network', 'Testnet4')}${info('Script', 'P2WSH (Native Segwit)')}${info('Created', '10/16/26, 9:41 AM')}
+        </div>
+        ${utility('qrcode:15:regular', 'Show Output Descriptor QR', 'var(--u-brand)', 'descriptor-qr')}
+        ${utility('doc.on.doc:15:regular', 'Copy Output Descriptor', 'var(--u-info)', 'copy-descriptor')}
+        ${utility('doc.richtext:15:regular', 'PDF/Print Output Descriptor', 'var(--u-purple)', 'descriptor-pdf')}
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('cosigners', 'Cosigners card')}>
+          <div class="row">${cardTitle('Cosigners')}<span class="sp"></span>${edit}</div>
+          ${birchCosigners().map(cosignerCard).join('')}
+        </div>
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('electrum', 'Electrum Server card')}>
+          ${cardTitle('Electrum Server')}
+          ${settingsField('Host', 'testnet4.mempool.space', 'host', true)}
+          ${settingsField('Port', '40002', 'port', true)}
+          <div class="col" style="gap:${S(6)};align-items:stretch">${T('Protocol', 'd', 13, 400, 'ink2')}<div style="height:31px"><div class="seg"${c('protocol', 'Protocol')}><span>TCP</span><span class="on">SSL</span></div></div></div>
+          <div class="row" style="gap:8px"${c('insecure-ssl', 'Allow insecure SSL switch')}>${T('Allow insecure SSL', 'd', 13, 400, 'ink')}<span class="sp"></span>${toggle(false)}</div>
+          <div class="row" style="gap:12px">
+            ${smallBtn('antenna.radiowaves.left.and.right:14:regular', 'Test Connection', 'ub', '--uc:var(--u-info)', 'test-connection')}
+            ${smallBtn('arrow.counterclockwise:14:regular', 'Reset', 'nest', 'color:var(--ink2)', 'reset-electrum')}
+          </div>
+        </div>
+        <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('explorer', 'Block Explorer card')}>
+          ${cardTitle('Block Explorer')}
+          ${settingsField('Host', 'mempool.space', 'explorer-host', true, caption('Uses mempool.space-compatible URL format: host/tx/, host/address/'))}
+        </div>
+        <div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('refresh', 'Refresh Settings card')}>
+          ${cardTitle('Refresh Settings')}
+          <div class="col" style="gap:${S(6)};align-items:stretch">
+            ${T('Address Gap Limit', 'd', 13, 400, 'ink2')}
+            <div class="row" style="gap:8px"><span class="nest row" style="width:100px;justify-content:center;padding:calc(var(--fpad) - 1px) calc(var(--fpad) - 2px)"${c('gap-limit', 'Gap limit field')}>${T('20', 'm', 16, 400, 'ink', 'line-height:1.1934')}</span>${T('addresses', 'd', 14, 400, 'ink2')}</div>
+            ${caption('Number of consecutive unused addresses to scan. Increase if funds are missing.')}
+          </div>
+          <div class="divider"></div>
+          <div class="col" style="gap:${S(12)};align-items:stretch">
+            ${utility('arrow.clockwise:15:regular', 'Force Full Refresh', 'var(--u-brand)', 'full-refresh')}
+            ${caption('Refreshes all addresses from scratch using the gap limit above. This may take a while.')}
+          </div>
+        </div>
+        ${future ? labels : ''}
+        <div class="hcard row" style="gap:24px"${c('privacy', 'Privacy Mode switch')}>
+          <div class="col" style="gap:2px;align-items:flex-start;flex:0 1 auto">${T('Privacy Mode', 'd', 17, 400, 'ink', LH)}${T('Hide balances, addresses, and transaction details', 'd', 12, 400, 'ink2', LH, 'tw')}</div>
+          <span class="sp"></span>${toggle(false)}
+        </div>
+        <div style="padding-top:16px">${utility('trash:15:regular', 'Delete Wallet', 'var(--danger)', 'delete-wallet')}</div>
+      </div><div style="height:${D.bottom}px"></div></div>${future ? '<i class="grabber"></i>' : ''}</div>`
+  }
+
+  /** Edit Cosigners, a sheet over Wallet Settings. Future (birch-wallet #90): the Import cosigners form
+   *  (CosignerForm) under a centered title, with Cancel and Save Changes in the setup footer; Save is filled
+   *  once every cosigner is complete. Today: an inline title with Cancel, icon tabs, the old field order
+   *  with Paste and Scan QR Code as text links, and a full-width Save Changes */
+  function editCosigners(mode, design) {
+    const [first] = birchCosigners()
+    if (design === 'future') {
+      return `${sheetOpen()}<div class="sx" style="top:0"><div class="col" style="gap:${S(24)};padding-top:${S(24)};align-items:stretch">
+        <div class="row" style="justify-content:center"${c('title', 'Sheet title')}>${T('Edit Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
+        ${gutterBox(cosignerForm([[true, true], [false, true]], 1, first.key, field('Master Fingerprint (8 hex chars)', first.fp, 'm', 14, 'fingerprint')))}
+        ${wizFooter('Cancel', 'Save Changes')}
+      </div><div style="height:${D.bottom}px"></div></div></div>`
+    }
+    const tab = (i, on) => `<div class="col cx" style="flex:1 1 0;gap:4px"${c('tab-' + i, `Cosigner ${i} tab${on ? ', selected' : ''}`)}>
+        <span class="${on ? 'sel' : 'card'}" style="width:100%;height:44px;display:grid;place-items:center;color:${on ? 'var(--brandInk)' : 'var(--ink2)'}">${Y('person.badge.key.fill:14:regular')}</span>
+        ${T(String(i), 'd', 11, 400, on ? 'brand' : 'ink2')}</div>`
+    const xpub = `<div class="col" style="gap:${S(6)};align-items:stretch"${c('xpub', 'Extended public key')}>
+        <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>
+          <span style="color:var(--sysGreen);display:flex;margin-right:12px"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>
+          <span class="row" style="gap:5px;color:var(--u-info)"${c('paste', 'Paste')}>${Y('doc.on.clipboard:13:regular')}${T('Paste', 'd', 13, 400, 'currentColor')}</span></div>
+        <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${T(first.key, 'm', 12, 400, 'ink', `${charWrap()};line-height:1.1934`, 'tw')}</div>
+        <span class="row" style="gap:7px;color:var(--brandInk)"${c('scan', 'Scan QR Code')}>${Y('qrcode.viewfinder:15:regular')}${T('Scan QR Code', 'd', 15, 400, 'currentColor')}</span>
+      </div>`
+    return `${sheetOpen()}${sheetNav('Edit Cosigners', { label: 'Cancel', key: 'cancel' })}
+      <div class="sx" style="top:${sheetTop()}px"><div class="col" style="gap:${S(20)};padding-top:${S(16)};align-items:stretch">
+        <div class="row" style="gap:8px;padding:0 ${M16}"${c('tabs', 'Cosigner tabs')}>${tab(1, true)}${tab(2, false)}</div>
+        <div style="padding:0 ${M16}"><div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
+          ${field('Label', first.label, 'd', 16, 'label')}
+          ${field('Master Fingerprint (8 hex chars)', first.fp, 'm', 14, 'fingerprint')}
+          ${field('Derivation Path', "m/48'/1'/0'/2'", 'm', 14, 'path', false)}
+          ${xpub}
+        </div></div>
+        <div style="padding:0 ${M16} ${S(32)}"><span class="pbtn"${c('primary-cta', 'Primary button: Save Changes')}>Save Changes</span></div>
+      </div><div style="height:${D.bottom}px"></div></div></div>`
   }
 
   /** RecipientCard, filled: the label as the card's title, the network chip and the elided address */
@@ -838,33 +997,46 @@
    *  prefilled, the fingerprint showing its placeholder, the key at its 80pt minimum), 'filled' (cosigner 1
    *  complete) or 'errors' (cosigner 1 complete, then Next on cosigner 2 left empty: Next flags its key and
    *  fingerprint) */
-  function cosigner(state) {
-    const errors = state === 'errors'
-    const open = errors ? 2 : 1
-    const filled = state === 'filled'
-    // The open tab joins the card; a check marks a finished cosigner
-    const tab = (i, cur, done) =>
-      `<div class="ctab${cur ? ' on' : ''}"${c('tab-' + i, `Cosigner ${i} tab${done ? ', complete' : ''}`)}>
+  /** CosignerForm, shared by Import cosigners and Edit Cosigners: a folder tab per cosigner ([open, complete]
+   *  each) on top of the open cosigner's form. The open tab joins the card; a check marks a finished cosigner.
+   *  `key` is the key's text (null for none), `fingerprint` the fingerprint field, `errors` flags an empty key */
+  function cosignerForm(tabs, open, key, fingerprint, errors = false) {
+    const tab = ([cur, done], n) => {
+      const i = n + 1
+      return `<div class="ctab${cur ? ' on' : ''}"${c('tab-' + i, `Cosigner ${i} tab${done ? ', complete' : ''}`)}>
         <span style="display:flex;flex:none;color:${done ? 'var(--success)' : cur ? 'var(--ink)' : 'var(--ink2)'}">${Y(done ? 'checkmark.circle.fill:16:regular' : 'circle:16:regular')}</span>
         ${T(String(i), 'd', 17, cur ? 600 : 400, cur ? 'ink' : 'ink2', 'font-variant-numeric:tabular-nums')}</div>`
+    }
     const label = field('Label', `Cosigner ${open}`, 'd', 16, 'label')
-    const fingerprint = filled
-      ? field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')
-      : // On the flagged screen the field held cosigner 1's fingerprint a moment before, so it keeps the mono line
-        field('Master Fingerprint (8 hex chars)', 'e.g. 73c5da0a', 'm', 14, 'fingerprint', true, errors ? 'held' : true, errors ? 'Fingerprint is required' : null)
     const path = field('Derivation Path', "m/48'/1'/0'/2'", 'm', 14, 'path', false)
     const toggle = `<span style="color:var(--sysGreen);display:flex"${c('xpub-format', 'Xpub format toggle')}>${Y('arrow.left.arrow.right:14:bold')}</span>`
     const xpub = `<div class="col" style="gap:${S(6)};align-items:stretch"${c('xpub', 'Extended public key')}>
             <div class="row">${T('Extended Public Key', 'd', 13, 400, 'ink2')}<span class="sp"></span>${toggle}</div>
-            <div class="col" style="align-items:stretch"><div class="nest${errors ? ' ferr' : ''}" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${filled ? T(KEY_1, 'm', 12, 400, 'ink', `${charWrap()};line-height:1.1934`, 'tw') : ''}</div>${fieldError(errors ? 'Xpub is required' : null)}</div>
+            <div class="col" style="align-items:stretch"><div class="nest${errors ? ' ferr' : ''}" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px) var(--fpad);min-height:104px"${c('xpub-text', 'Xpub text editor')}>${key ? T(key, 'm', 12, 400, 'ink', `${charWrap()};line-height:1.1934`, 'tw') : ''}</div>${fieldError(errors ? 'Xpub is required' : null)}</div>
             <div class="row" style="gap:8px;margin-top:${S(6)}"${c('xpub-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>
           </div>`
+    return `<div class="ctabs"${c('tabs', 'Cosigner tabs')}>${tabs.map(tab).join('')}</div><div class="hcard col ctab-card" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
+          ${[label, xpub, fingerprint, path].join('')}
+        </div>`
+  }
+
+  function cosigner(state) {
+    const errors = state === 'errors'
+    const open = errors ? 2 : 1
+    const filled = state === 'filled'
+    const fingerprint = filled
+      ? field('Master Fingerprint (8 hex chars)', '07d25f0c', 'm', 14, 'fingerprint')
+      : // On the flagged screen the field held cosigner 1's fingerprint a moment before, so it keeps the mono line
+        field('Master Fingerprint (8 hex chars)', 'e.g. 73c5da0a', 'm', 14, 'fingerprint', true, errors ? 'held' : true, errors ? 'Fingerprint is required' : null)
+    const tabs = [
+      [open === 1, state !== 'empty'],
+      [open === 2, false],
+      [false, false],
+    ]
     return setupSheet(NEW_WALLET_STEP.cosigner, `
       <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Import Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
-        ${gutterBox(`<div class="ctabs"${c('tabs', 'Cosigner tabs')}>${tab(1, open === 1, !(state === 'empty'))}${tab(2, open === 2, false)}${tab(3, false, false)}</div><div class="hcard col ctab-card" style="gap:${S(16)};align-items:stretch"${c('form', 'Cosigner form')}>
-          ${[label, xpub, fingerprint, path].join('')}
-        </div>`)}
+        ${gutterBox(cosignerForm(tabs, open, filled ? KEY_1 : null, fingerprint, errors))}
         ${wizFooter('Back', 'Next', 'outline')}
       </div>`)
   }
@@ -872,6 +1044,10 @@
   const cosignerEmpty = () => cosigner('empty')
   const cosignerFilled = () => cosigner('filled')
   const cosignerErrors = () => cosigner('errors')
+
+  /** Full-width tinted utility buttons: 14pt vertical padding at the shipped button height, 10pt corners */
+  const utility = (icon, label, color, key) =>
+    `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
 
   /** Verify wallet: each cosigner's whole key, wrapped at the character on up to three lines. The warning
    *  symbol takes the 22pt frame SwiftUI gives it, a point under the AppKit render's */
@@ -882,9 +1058,6 @@
       ['Cosigner 2', 'd73869a4', 'tpubDET5GnMK8Zr7UH63ni72etKd7ZYxVq8NvtSneNBfEDJ7YtnSHUmiPCaBYXzCdR6ZBKWvBMXT3urCVp7sLmG6z8VTpdFRJuW4VL7xjHdLFpY'],
       ['Cosigner 3', 'e3870581', 'tpubDF3GwUrMb5WkigsDUpUWUADH55G3Ez771QujmFqeyrNEPD7onkqTwCsCEjNRbSrbD9VYKDfMHfg7bajem5aEX7CyMp2q5fvQzacy75bUesQ'],
     ]
-    // Full-width tinted utility buttons: 14pt vertical padding at the shipped button height
-    const utility = (icon, label, color, key) =>
-      `<div class="row ub" style="--uc:${color};gap:8px;justify-content:center;padding:calc((var(--btn-h) - 24.33px) / 2) 0;border-radius:max(0px, calc(var(--r-btn) - 2px))"${c(key, label)}>${Y(icon)}${T(label, 'd', 15, 400, 'currentColor')}</div>`
     return setupSheet(NEW_WALLET_STEP.verify, `
       <div class="col" style="gap:${S(24)};padding-top:calc(${S(16)} + ${colTop()}px);align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Setup title')}>${T('Verify Wallet', 'r', 28, 'W', 'ink', LH)}</div>
@@ -1243,6 +1416,9 @@
     { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), SeedlingLoadingView.swift, Theme.swift (SyncStatusDot)' },
     { id: 'home-empty', group: 'Wallet', label: 'No transactions', build: homeEmpty, shot: null, swift: 'TransactionListView.swift (transactionContent)' },
     { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
+    // No screenshots show the next two yet: Today is the app before birch-wallet #90, Future the app after it
+    { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: null, swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, Theme.swift (BirchResizableSheet)' },
+    { id: 'edit-cosigners', group: 'Wallet', label: 'Edit cosigners', build: editCosigners, shot: null, swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift' },
     { id: 'send-empty', group: 'Send', label: 'Send, empty', build: sendEmpty, shot: '11-Send', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'send', group: 'Send', label: 'Recipients and amount', build: send, shot: '27-SendRecipientsFilled', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'fee', group: 'Send', label: 'Network fee sheet', build: fee, shot: '26-NetworkFee-Custom', swift: 'SendFeeSheetView.swift' },
@@ -1289,6 +1465,30 @@
       change:
         "Settings drops the inset grouped List for the app's own cards (12pt corners, card fill, light-mode shadow), with system-style section headers, 52pt rows and dividers; each choice shows its value and a chevron and pushes a list of the options instead of opening a menu",
       swift: 'SettingsView.swift',
+    },
+    {
+      screens: ['home', 'home-loading', 'home-empty'],
+      change:
+        "The top-left button is slider.horizontal.3 (18pt, secondary text) and opens Wallet Settings directly instead of a menu; Dashboard moves out of the menu to a small chart.bar.xaxis icon (15pt, primary text, a 44 × 22pt frame) at the trailing end of the Transactions header, and the labels import and export move to Wallet Settings",
+      swift: 'TransactionListView.swift',
+    },
+    {
+      screens: ['wallet-picker'],
+      change:
+        "The wallet picker panel is 16pt in from each side instead of 35pt, so long names fit, and each wallet's row ends in a slider.horizontal.3 button (17pt, secondary text, a 40 × 36pt frame) that opens that wallet's settings without switching to it",
+      swift: 'TransactionListView.swift (walletPickerOverlay)',
+    },
+    {
+      screens: ['wallet-settings'],
+      change:
+        "Wallet Settings gets a grabber and a half-height stop, opening at full height and returning to it when the keyboard appears (birchResizableSheet, also on Dashboard and Connection Status); a Wallet Labels card above Privacy Mode holds the BIP 329 import and export by file and by QR as tonal buttons, for the loaded wallet only; the Cosigners card's Edit is plain 15pt text without the pencil",
+      swift: 'WalletInfoView.swift (WalletLabelsCard), Theme.swift (BirchResizableSheet)',
+    },
+    {
+      screens: ['edit-cosigners'],
+      change:
+        'Edit Cosigners uses the Import cosigners form (CosignerForm): folder tabs with completion checks, Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, field-level flags, under a centered 28pt title with no navigation bar, and Cancel and Save Changes in the setup footer; Save is outlined until every cosigner is complete',
+      swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift',
     },
   ]
 

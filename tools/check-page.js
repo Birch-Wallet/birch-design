@@ -598,8 +598,8 @@ async function views(p) {
   await settle(p, 100)
   const shots = await p.locator('#scope .shot').count()
   const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
-  check(shots === 24 && listed.split(',').length === 24, area, 'Focus shows all twenty-four screens', listed)
-  for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty', 'cosigner-errors']) {
+  check(shots === 26 && listed.split(',').length === 26, area, 'Focus shows all twenty-six screens', listed)
+  for (const id of ['wallet-picker', 'home-loading', 'home-empty', 'bump', 'wallet-settings', 'edit-cosigners', 'send-empty', 'utxos', 'utxo', 'utxo-filter', 'settings', 'welcome', 'setup', 'descriptor', 'descriptor-empty', 'cosigner-empty', 'cosigner-errors']) {
     const n = await p.locator(`#scope [data-screen="${id}"] .ph-screen`).count()
     const blank = await p.evaluate((id) => [...document.querySelectorAll(`#scope [data-screen="${id}"] .ph-screen`)].some((s) => s.innerText.trim().length < 20), id)
     check(n === 2 && !blank, area, `Screen ${id} renders in both modes`)
@@ -717,7 +717,7 @@ async function devices(p) {
       },
       [dev, name],
     )
-    check(st.n === 48 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 24 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
+    check(st.n === 52 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 26 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
     const loads = await p.evaluate(
       ([pw, ph]) =>
         Promise.all(

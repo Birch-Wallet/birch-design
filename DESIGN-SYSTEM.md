@@ -5,7 +5,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | Part | Status |
 |---|---|
 | 1. Current state | Done. Documents the Birch Light and Birch Dark themes as shipped: build 31, with the setup flow and the seedling loader from [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82). |
-| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped; it now carries the Settings cards. |
+| 2. Exploration | In review. The Future design and three color themes in `design-system.html`, tuned and commented in the browser. Future's first changes have shipped; it now carries the Settings cards and the Transactions, wallet picker, Wallet Settings and Edit Cosigners changes from [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90). |
 | 3. Final system | Written once an option is chosen and refined: tokens, components, SwiftUI mapping, migration plan, voice and copy. |
 
 ## Files
@@ -16,7 +16,7 @@ Birch is a watch-only Bitcoin multisig coordinator for iOS. This document is the
 | `design/README.md`, `design/AGENTS.md` | How to use this repo, for people and for AI agents. The folder is the [birch-design](https://github.com/Birch-Wallet/birch-design) submodule, published at https://birch-wallet.github.io/birch-design/. |
 | `design/design-system.html` | Interactive exploration. Open it directly in a browser. Safari is the reference: it renders SF Pro Rounded and SF Mono exactly as iOS does. |
 | `design/assets/ds-tokens.js` | Token engine and the presets. Every color is derived from a few OKLCH parameters. |
-| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-four app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
+| `design/assets/ds-shipped.js`, `ds-shipped.css` | The twenty-six app screens, rebuilt point for point from the SwiftUI views for four devices, and the Future design's change log. Every size, spacing, radius, type and color value is a Tune variable. |
 | `design/assets/seedling/` | The first sync's loading animation (`SeedlingLoadingView`): eight frames of a birch seed growing into a tree, 360px WebP. |
 | `design/assets/ds-assets.js` | Generated: real SF Symbols, the status bars (iPhone, iPhone Duo, iPad), QR modules sampled from the screenshots, and the app icon artwork. |
 | `design/assets/ds-screens.js` | Component boards (buttons, inputs, callouts and so on), built from tokens. |
@@ -176,7 +176,7 @@ Welcome · Wallet Setup · Descriptor Import · Transactions · Wallet Picker ·
 | Broadcast (`BroadcastResultView`) | Ready to broadcast, broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
 | Connection (`ConnectionStatusView`) | Connected, error, test result; Sync now, Full refresh, Test connection, Copy debug info |
-| Wallet Settings (`WalletInfoView`) | Edit cosigners, Electrum server, block explorer, gap limit, full refresh, privacy mode, delete wallet; descriptor QR, MP4 export, PDF |
+| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF. The sheet as it opens and Edit Cosigners are in the page. |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
 | Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
@@ -243,10 +243,14 @@ Future started as an exact copy of Today, and becomes one again whenever its cha
 
 ### Changes so far
 
-Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1). The changes since:
+Future's first changes, the setup flow and the seedling loader, shipped in [birch-wallet #82](https://github.com/Birch-Wallet/birch-wallet/pull/82) and are now part of Today (Part 1). The changes since are below. The rows marked shipped in #90 are in the app already; Today takes them over once `fastlane screenshots` has captured them.
 
 | Screen | Change | SwiftUI |
 |---|---|---|
+| Transactions | The top-left button is `slider.horizontal.3` (18pt, secondary text) and opens Wallet Settings directly instead of a menu. Dashboard moves to a small `chart.bar.xaxis` icon (15pt, primary text) at the trailing end of the Transactions header, in a 44 × 22pt frame that widens the tap area and makes the header 2pt taller. The labels import and export move to Wallet Settings. Also on Transactions, loading and No transactions. Shipped in [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90). | `TransactionListView.swift` |
+| Wallet picker | The panel is 16pt in from each side instead of 35pt, so long names fit. Each row ends in a `slider.horizontal.3` button (17pt, secondary text, 40 × 36pt) that opens that wallet's settings without switching to it. Shipped in #90. | `TransactionListView.swift` (`walletPickerOverlay`) |
+| Wallet settings | A grabber and a half-height stop (`birchResizableSheet`): the sheet opens at full height and returns to it when the keyboard appears. Dashboard and Connection Status get the same. A Wallet Labels card above Privacy Mode holds the BIP 329 import and export, by file and by QR, as two rows of tonal buttons (import in the brand tint, export neutral); it only shows for the loaded wallet. The Cosigners card's Edit is plain 15pt text without the pencil. Shipped in #90. | `WalletInfoView.swift` (`WalletLabelsCard`), `Theme.swift` (`BirchResizableSheet`) |
+| Edit cosigners | Uses the Import cosigners form, now shared as `CosignerForm`: folder tabs with completion checks, then Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, with field-level flags. A centered 28pt title replaces the navigation bar, and Cancel and Save Changes sit in the setup footer; Save is outlined until every cosigner is complete. Shipped in #90. | `WalletInfoView.swift` (`EditCosignersView`), `CosignerForm.swift` |
 | Settings | The inset grouped List becomes the app's own cards: 12pt corners, the card fill and the light-mode shadow, as on UTXO Detail. Section headers keep the system style (17pt semibold, secondary label color, 4pt in from the card). A card has 16pt sides and 4pt above and below its rows; a row is 8pt above and below and at least 52pt, with an `HBDivider` between rows. A choice (Fee Source, Bitcoin Unit, Price Source, Currency, Theme, Lock After) shows its value in secondary text and a chevron and pushes a card of the options with a gold checkmark, instead of opening a menu: on iOS 26 a menu collapses back into its button and leaves the value misaligned for a moment. In review in [birch-wallet #86](https://github.com/Birch-Wallet/birch-wallet/pull/86). | `SettingsView.swift` |
 
 ## How a preset becomes colors
@@ -289,6 +293,8 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
 | UTXO filter sheet | `UTXOFilterSheet` | None. At its medium detent over the UTXO list, with the default filter. Checked in the simulator. |
+| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | None. The sheet over Transactions as it opens, at full height. Today is the app before [birch-wallet #90](https://github.com/Birch-Wallet/birch-wallet/pull/90), Future the app after it. The large title's position is estimated (34pt bold, 52pt under the toolbar), not measured. |
+| Edit cosigners | `EditCosignersView`, `CosignerForm` | None. The sheet over Wallet Settings with cosigner 1 open. Today is the app before #90, Future the app after it. |
 
 Platform details that the rebuild reproduces:
 
@@ -360,7 +366,7 @@ To re-check the page after a change, run `node design/tools/check-page.js webkit
 
 ## Using `design-system.html`
 
-1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-four app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
+1. **Pick a preset** in the toolbar, or press 1 to 5. The toolbar groups the designs (Today, Future) apart from the color themes (Catkin, Leaf, Bark). The page opens on Today in Focus view, which shows the preset's tokens, type, the button matrix and patterns, the component boards and the twenty-six app screens in light and dark, for the device chosen above them. **Overlay Screenshot** (O) shows the simulator screenshot on top.
 2. **Compare** shows one screen across all presets side by side, with Today if you include it.
 3. **Tune** (T) opens the panel. Drag a slider or type a value and press Enter. Every change shows a dot; click the dot to reset that value, or Reset preset for all of them. "Save as preset" keeps a named copy.
 4. **Comment** (C) lets you click any element to pin a note. Each pin records the option, the mode, the screen or board, the element and its current computed styles. Section notes sit at the end of each section.
