@@ -558,16 +558,17 @@
   }
 
   /** Edit Cosigners, a sheet over Wallet Settings. Future (birch-wallet #90): the Import cosigners form
-   *  (CosignerForm) under a centered title, with Cancel and Save Changes in the setup footer; Save is filled
+   *  (CosignerForm) under a centered title, with Cancel and Save in the setup footer; Save is filled
    *  once every cosigner is complete. Today: an inline title with Cancel, icon tabs, the old field order
    *  with Paste and Scan QR Code as text links, and a full-width Save Changes */
   function editCosigners(mode, design) {
     const [first] = birchCosigners()
     if (design === 'future') {
-      return `${sheetOpen()}<div class="sx" style="top:0"><div class="col" style="gap:${S(24)};padding-top:${S(24)};align-items:stretch">
+      // On the closed Duo the content stops at the safe area, short of the sheet's trailing edge
+      return `${sheetOpen()}<div class="sx" style="top:0;padding-right:${sheetEnd()}px"><div class="col" style="gap:${S(24)};padding-top:${S(24)};align-items:stretch">
         <div class="row" style="justify-content:center"${c('title', 'Sheet title')}>${T('Edit Cosigners', 'r', 28, 'W', 'ink', LH)}</div>
         ${gutterBox(cosignerForm([[true, true], [false, true]], 1, first.key, field('Master Fingerprint (8 hex chars)', first.fp, 'm', 14, 'fingerprint')))}
-        ${wizFooter('Cancel', 'Save Changes')}
+        ${wizFooter('Cancel', 'Save')}
       </div><div style="height:${D.bottom}px"></div></div></div>`
     }
     const tab = (i, on) => `<div class="col cx" style="flex:1 1 0;gap:4px"${c('tab-' + i, `Cosigner ${i} tab${on ? ', selected' : ''}`)}>
@@ -1517,7 +1518,7 @@
     {
       screens: ['edit-cosigners'],
       change:
-        'Edit Cosigners uses the Import cosigners form (CosignerForm): folder tabs with completion checks, Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, field-level flags, under a centered 28pt title with no navigation bar, and Cancel and Save Changes in the setup footer; Save is outlined until every cosigner is complete',
+        'Edit Cosigners uses the Import cosigners form (CosignerForm): folder tabs with completion checks, Label, Extended Public Key with Scan QR and Paste, Master Fingerprint and Derivation Path, field-level flags, under a centered 28pt title with no navigation bar, and Cancel and Save in the setup footer (Save, not Save Changes, so the pair fits side by side on the iPhone 13 mini and the closed Duo); Save is outlined until every cosigner is complete',
       swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift',
     },
   ]
