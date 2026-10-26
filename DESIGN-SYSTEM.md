@@ -150,6 +150,9 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 7. **Address chunking.** Addresses are shown in groups of four with alternating weights, in mono, for checking by eye.
 8. **Verification chips.** `PSBTVerificationBadge`/`ChangeVerificationBadge`: icon, title and detail on an 8% tint of the state color. The four states (not checked, verified, partial, failed) map to secondary text, success, accent and error.
 9. **Progress.** The setup wizard uses a segmented bar in the progress color, only while creating a wallet: Multisig configuration, Import cosigners and Verify wallet are steps 1 to 3. The Send flow has no step indicator; each step starts with its content.
+   - **Sync hairline.** A sync shows a 2pt bar in the progress color, with no track, along the bottom edge of Transactions' header (`SyncProgressBar`). It moves like Safari's loading bar: 10% at once, then easing toward where each batch of addresses should end, at the pace the wallet's last syncs measured, never backward, and under 85% until the scan returns. It fills when the sync finishes and fades out; after a failure it fades where it is.
+   - **First sync.** It has no total, so a segment 30% wide sweeps across in 1.2s instead. Reduce Motion holds it centered at half opacity.
+   - **Status.** The header's right side reads Connecting…, then Fetching transactions · 64% (no percent on a first sync), then Saving…, then Synced 2s ago. A failure reads Couldn't sync in the error color and opens the connection sheet.
 10. **Network badge.** Capsule, 11pt semibold, 15% tint of the network color.
 11. **QR presentation.** Black on white with quiet-zone padding and a glow in the brand color. Animated UR/BBQR frames.
 12. **Tab bar.** The native iOS 26 Liquid Glass bar, tinted with `hbTabTint`.
@@ -199,14 +202,14 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | App lock (`ContentView`, `PINPadView`) | Face ID / Touch ID prompt, PIN entry, wrong PIN, progressive lockout (60s to 24h), privacy cover in the app switcher, data wipe |
 | Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
-| Connection (`ConnectionStatusView`) | Connected, error, test result; Sync now, Full refresh, Test connection, Copy debug info |
+| Connection (`ConnectionStatusView`) | Connected, error, test result; while syncing, an Action row under State (label above, the step in technical English with its batch and a whole-second timer); Sync now, Test connection, Copy debug info |
 | Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF; the half-height stop. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
 | Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
 | Transaction rows | Unconfirmed (clock, warning), labeled (tag), privacy mode (masked amounts), fiat display |
 | Verification | Inputs not checked, verified, partially verified, failed. Change verified, needs a look, failed |
-| Sync status | Not started, syncing (pulse), synced, error |
+| Sync status | Not started, syncing (the dot's pulse, and the header's hairline and status: Connecting…, Fetching transactions · 64%, Saving…), synced, Couldn't sync |
 | Networks | All four badges: Mainnet, Testnet4, Testnet3, Signet |
 | Validation | Invalid address prefix, amount over spendable, Max is zero, fee rate of 0, port out of range, a missing Electrum host on Mainnet (the Host field flagged), a bad or wrong-network descriptor (the field flagged) |
 | Alerts | Insecure SSL, delete wallet, reset Electrum, save changes, exit signing, edit transaction, QR settings changed, log export warning, import labels result, authentication unavailable, rename and delete PSBT, paste signed PSBT, changing between Mainnet and a test network with keys entered, lowering the cosigner count below a filled cosigner, errors |
@@ -308,7 +311,7 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Wallet setup | `WalletCreationChoiceView` | `02-Wallet-Setup` |
 | Import descriptor | `DescriptorImportView`, `WalletNameNetworkCard`, `CharWrappingTextEditor` | `03-DescriptorImport` |
 | Import descriptor, empty | `DescriptorImportView` | `35-DescriptorImport-Empty`. The field at its 120pt minimum showing the format as its placeholder, and Import disabled. |
-| Transactions, loading | `TransactionListView` (`transactionContent`), `SeedlingLoadingView`, `SyncStatusDot` | None. A new wallet's first sync: the seedling 100pt under the title, a birch seed growing into a tree over 3s, the syncing dot with its halo pulsing, and its message. Checked against the view built in the simulator. |
+| Transactions, loading | `TransactionListView` (`transactionContent`), `SeedlingLoadingView`, `SyncStatusDot`, `SyncProgressBar` | None. A new wallet's first sync: the seedling 100pt under the title, a birch seed growing into a tree over 3s, the syncing dot with its halo pulsing, Fetching transactions, and the hairline's segment sweeping along the header's bottom edge (held centered in the harness). Checked against the view built in the simulator. |
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
 | UTXO filter sheet | `UTXOFilterSheet` | `38-UTXOFilter`. At its medium detent over the UTXO list, with the default filter. |

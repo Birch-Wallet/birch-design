@@ -238,6 +238,15 @@
 @keyframes halo { to { transform: scale(0.5); } }
 body.harness .sync-halo { animation: none; }
 
+/* SyncProgressBar, the hairline along the bottom of Transactions' header (TransactionListView). With a total it
+   fills to the sync's progress; a first sync has none, so a segment 30% wide sweeps across in 1.2s. Held still
+   (Reduce Motion, the harness) the segment sits centered at half opacity */
+.sync-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; }
+.sync-sweep { position: absolute; top: 0; bottom: 0; left: 35%; width: 30%; background: var(--progress); opacity: 0.5; }
+body:not(.harness) .sync-sweep { opacity: 1; animation: sync-sweep 1.2s linear infinite; }
+@keyframes sync-sweep { from { left: -30%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { body:not(.harness) .sync-sweep { opacity: 0.5; animation: none; } }
+
 /* SeedlingLoadingView, the first sync's loading view: a birch seed grows into a tree. The eight frames (assets/seedling, 360px WebP from
    the 1254px artwork) are stacked; each fades in over the one before it in 150ms, and that one fades out
    once covered. A cycle is 3s: the seed 0.4s, six growing frames 0.3s each, the tree 0.8s, then

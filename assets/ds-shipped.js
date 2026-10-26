@@ -342,14 +342,15 @@
   function home(mode, design, picker = false, state = 'list', age = null) {
     const list = state === 'list'
     const syncing = state === 'loading'
-    const status = syncing ? 'Scanning addresses…' : `Last refreshed ${age || '2s'} ago`
+    // A first sync has no total to show a percent against, so its hairline sweeps (.sync-sweep)
+    const status = syncing ? 'Fetching transactions' : `Synced ${age || '2s'} ago`
     const content = list
       ? `<div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>`
       : syncing
         ? `<div class="row" style="justify-content:center;padding-top:100.67px">${seedling()}</div>`
         : `<div style="padding-top:115.67px">${unavailable('bitcoinsign.circle:41:regular', 'No Transactions', 'Time to acquire the world’s best money', 'no-transactions')}</div>`
     return `<div class="sx">
-      <div style="background:var(--hero);padding:${D.top + 16}px calc(${M16} + ${D.end}px) ${S(16)} ${M16};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
+      <div style="position:relative;background:var(--hero);padding:${D.top + 16}px calc(${M16} + ${D.end}px) ${S(16)} ${M16};display:flex;flex-direction:column;gap:${S(12)}"${c('wallet-header', 'Wallet header')}>
         <div class="row" style="height:44px">
           <span style="width:44px;height:44px;display:grid;place-items:center;color:var(--ink2)"${c('wallet-settings', 'Wallet Settings button')}>${Y('slider.horizontal.3:18:regular')}</span>
           <span class="sp"></span>
@@ -363,6 +364,7 @@
           <span class="nbadge" style="--nb:var(--net_testnet4)"${c('network-badge', 'Network badge')}>Testnet4</span><span class="sp"></span>
           ${T(status, 'd', 11, 400, 'ink2', '', '')}
         </div>
+        ${syncing ? `<span class="sync-bar"${c('sync-bar', 'Sync progress')}><i class="sync-sweep"></i></span>` : ''}
       </div>
       ${
         // Dashboard is a small icon on this header. Its 22pt frame, 2pt taller than the title, sets the
@@ -537,8 +539,8 @@
           ${cardTitle('Block Explorer')}
           ${settingsField('Host', 'mempool.space', 'explorer-host', true, caption('Uses mempool.space-compatible URL format: host/tx/, host/address/'))}
         </div>
-        <div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('refresh', 'Refresh Settings card')}>
-          ${cardTitle('Refresh Settings')}
+        <div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('sync', 'Sync Settings card')}>
+          ${cardTitle('Sync Settings')}
           <div class="col" style="gap:${S(6)};align-items:stretch">
             ${T('Address Gap Limit', 'd', 13, 400, 'ink2')}
             <div class="row" style="gap:8px"><span class="nest row" style="width:100px;justify-content:center;padding:calc(var(--fpad) - 1px) calc(var(--fpad) - 2px)"${c('gap-limit', 'Gap limit field')}>${T('20', 'm', 16, 400, 'ink', 'line-height:1.1934')}</span>${T('addresses', 'd', 14, 400, 'ink2')}</div>
@@ -546,8 +548,8 @@
           </div>
           <div class="divider"></div>
           <div class="col" style="gap:${S(12)};align-items:stretch">
-            ${utility('arrow.clockwise:17:regular', 'Force Full Refresh', 'var(--u-brand)', 'full-refresh')}
-            ${caption('Refreshes all addresses from scratch using the gap limit above. This may take a while.')}
+            ${utility('arrow.clockwise:17:regular', 'Sync', 'var(--u-brand)', 'sync')}
+            ${caption('Checks every address up to the gap limit above. A large wallet can take a minute.')}
           </div>
         </div>
         ${labels}
