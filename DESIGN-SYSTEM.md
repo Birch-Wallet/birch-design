@@ -178,7 +178,7 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 - **Outlined brand:** Next on Import cosigners and Save on Edit Cosigners until every cosigner is complete.
 - **Card fill with brand text:** Next Address, and Back on the setup footers.
 - **Tonal:** Scan QR (brand tint) and Paste (nested fill) inside the setup cards.
-- **Tinted fills in five colors:** Show Descriptor QR (brand), Copy Descriptor and Test Connection (info), PDF/Print (purple), Delete Wallet (error), Copy debug info (nested).
+- **Tinted fills in five colors:** Show Descriptor QR, and Sync now and Full resync on the connection sheet (brand), Copy Descriptor and Test Connection (info), PDF/Print (purple), Delete Wallet (error), Copy debug info (nested).
 - **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses and Inspect PSBT (brand), Copy TXID (info).
 - **Footers in two layouts:** full-width primary with a text Back below (Create Wallet), and a compact secondary Back on the left with a compact primary on the right (Import, Next). Get Started stands alone.
 
@@ -202,7 +202,7 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | App lock (`ContentView`, `PINPadView`) | Face ID / Touch ID prompt, PIN entry, wrong PIN, progressive lockout (60s to 24h), privacy cover in the app switcher, data wipe |
 | Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
-| Connection (`ConnectionStatusView`) | Connected, error, test result; while syncing, an Action row under State (label above, the step in technical English with its batch and a whole-second timer); Sync now, Test connection, Copy debug info |
+| Connection (`ConnectionStatusView`) | Connected, error, test result; while syncing, an Action row under State (label above, the step in technical English with its batch and a whole-second timer); Sync now, Full resync, Test connection, Copy debug info. Full resync downloads every transaction again over a new connection instead of reusing the saved ones, and reads Resyncing… while it runs. Both sync buttons are disabled during any sync. |
 | Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF; the half-height stop. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |

@@ -193,7 +193,7 @@
     ['tonal', 'Tonal', 'b-tonal', 'Scan QR'],
     ['tonal-neutral', 'Tonal, neutral', 'b-tonal neutral', 'Copy'],
     ['danger', 'Destructive primary', 'b-danger', 'Delete'],
-    ['danger-secondary', 'Destructive secondary', 'b-secondary b-danger-ink', 'Full refresh'],
+    ['danger-secondary', 'Destructive secondary', 'b-secondary b-danger-ink', 'Reset'],
     ['danger-tertiary', 'Destructive tertiary', 'b-tertiary b-danger-ink', 'Remove'],
   ]
   const BTN_STATES = [
