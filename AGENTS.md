@@ -53,7 +53,7 @@ The page is plain HTML, CSS and JavaScript loaded with `<script>` tags. It has n
 | File | Contents |
 |---|---|
 | `assets/ds-tokens.js` | The OKLCH token engine. `derive()` turns a preset's parameters into tokens and holds every text token at 4.5:1 or better. Presets: T Today and F Future (group `design`), and B Leaf (group `theme`). T carries `overrides` with the exact `Theme.swift` colors; F starts as a copy of T. |
-| `assets/ds-shipped.js`, `ds-shipped.css` | The twenty-seven app screens, each rebuilt from its SwiftUI view for four devices (`DEVICES`), and `FUTURE_CHANGES`, the Future design's change log. Every size, spacing, radius, type and color value goes through a CSS variable. The header comment lists the variables and their shipped values. |
+| `assets/ds-shipped.js`, `ds-shipped.css` | The twenty-eight app screens, each rebuilt from its SwiftUI view for four devices (`DEVICES`), and `FUTURE_CHANGES`, the Future design's change log. Every size, spacing, radius, type and color value goes through a CSS variable. The header comment lists the variables and their shipped values. |
 | `assets/ds-app.js` | State, `cssFor()` (turns a preset into CSS variables and rules), the Tune panel schema (`DIAL`), comments, export, views and the `?harness=` mode. |
 | `assets/ds-screens.js` | The component boards and the type board. |
 | `assets/ds-icons.js` | Line icons standing in for SF Symbols on the component boards. |

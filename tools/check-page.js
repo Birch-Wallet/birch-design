@@ -706,7 +706,7 @@ async function views(p) {
   await settle(p, 100)
   const shots = await p.locator('#scope .shot').count()
   const listed = await p.evaluate(() => window.BirchShipped.SCREENS.map((s) => s.id).join(','))
-  check(shots === 27 && listed.split(',').length === 27, area, 'Focus shows all twenty-seven screens', listed)
+  check(shots === 28 && listed.split(',').length === 28, area, 'Focus shows all twenty-eight screens', listed)
   check((await p.evaluate(() => location.hash)) === '', area, 'Leaving Compare drops its link from the address')
   // In Focus, the screen menu scrolls to the screen it picks
   await p.locator('#rail [data-screen-menu]').click()
@@ -837,7 +837,7 @@ async function devices(p) {
       },
       [dev, name],
     )
-    check(st.n === 54 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 27 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
+    check(st.n === 56 && st.all && st.w === w && st.h === h && st.blank === 0, area, `${name}: all 28 screens rebuild at ${w} × ${h} pt`, `${st.n} phones, ${st.w} × ${st.h}`)
     const loads = await p.evaluate(
       ([pw, ph]) =>
         Promise.all(

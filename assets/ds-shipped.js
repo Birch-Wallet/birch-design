@@ -327,23 +327,25 @@
   }
 
   /** SyncStatusDot: an 8pt dot on a 10% tint; syncing adds a 16pt halo at 30% in the progress color, which
-   *  pulses (.sync-halo in ds-shipped.css) */
-  function syncDot(syncing) {
-    const col = syncing ? 'var(--progress)' : 'var(--success)'
+   *  pulses (.sync-halo in ds-shipped.css). Offline, with no sync running, it is secondary text */
+  function syncDot(syncing, offline = false) {
+    const col = syncing ? 'var(--progress)' : offline ? 'var(--ink2)' : 'var(--success)'
     return `<span style="position:relative;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb, ${col} 10%, transparent)"${c('sync-dot', syncing ? 'Sync status: syncing' : 'Sync status')}><i style="width:8px;height:8px;border-radius:50%;background:${col}"></i>${
       syncing ? `<i class="sync-halo" style="position:absolute;left:6px;top:6px;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb, ${col} 30%, transparent)"></i>` : ''
     }</span>`
   }
 
   /** TransactionListView. `state` is 'list' (the shipped screenshot), 'loading' (a new wallet's first sync:
-   *  no transactions yet, so the seedling 100pt down) or 'empty' (synced with nothing in it: the No
-   *  Transactions view 100pt down, its symbol a further 15.67pt inside it). Both are measured from the
-   *  view built in the simulator */
+   *  no transactions yet, so the seedling 100pt down), 'empty' (synced with nothing in it: the No
+   *  Transactions view 100pt down, its symbol a further 15.67pt inside it) or 'offline' (the list while the
+   *  phone has no network: Offline in place of the sync age, and a secondary dot). The loading and empty
+   *  states are measured from the view built in the simulator */
   function home(mode, design, picker = false, state = 'list', age = null) {
-    const list = state === 'list'
+    const offline = state === 'offline'
+    const list = state === 'list' || offline
     const syncing = state === 'loading'
     // A first sync has no total to show a percent against, so its hairline sweeps (.sync-sweep)
-    const status = syncing ? 'Fetching transactions' : `Synced ${age || '2s'} ago`
+    const status = syncing ? 'Fetching transactions' : offline ? 'Offline' : `Synced ${age || '2s'} ago`
     const content = list
       ? `<div class="txlist"${c('tx-list', 'Transaction list')}>${TXS.map(txRow).join('')}</div>`
       : syncing
@@ -357,7 +359,7 @@
           <span class="row" style="gap:8px;padding:8px 12px;border-radius:calc(var(--r-chip) * 1.375);background:color-mix(in srgb, var(--ink) 8%, transparent)"${c('wallet-picker', 'Wallet picker')}>
             ${identicon(24)}${T('Birch', 'r', 17, 600, 'ink')}<span style="color:var(--ink2);display:flex">${Y(picker ? 'chevron.up:12:semibold' : 'chevron.down:12:semibold')}</span></span>
           <span class="sp"></span>
-          ${syncDot(syncing)}
+          ${syncDot(syncing, offline)}
         </div>
         <div class="col cx" style="gap:2px"${c('balance', 'Balance')}>${T(list ? '193,885 sats' : '0 sats', 'a', 36, 700, 'ink')}${T(list ? '$ 158.92' : '$ 0.00', 'd', 14, 400, 'ink2')}</div>
         <div class="row">
@@ -378,6 +380,7 @@
 
   const homeLoading = (mode, design) => home(mode, design, false, 'loading')
   const homeEmpty = (mode, design) => home(mode, design, false, 'empty')
+  const homeOffline = (mode, design) => home(mode, design, false, 'offline')
 
   /** A sheet's toolbar as the app draws it: HBBarButtonStyle buttons 21pt down and 16pt in (the
    *  prominent one in the brand fill) around the inline title in the system label color. The sheet's
@@ -1394,9 +1397,10 @@
   const SCREENS = [
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
     { id: 'wallet-picker', group: 'Wallet', label: 'Wallet picker', build: walletPicker, shot: '05-WalletPicker', swift: 'TransactionListView.swift (walletPickerOverlay)' },
-    // No simulator screenshots show the next three: they are rebuilt from the SwiftUI views
+    // No simulator screenshots show the next four: they are rebuilt from the SwiftUI views
     { id: 'home-loading', group: 'Wallet', label: 'Transactions, loading', build: homeLoading, shot: null, swift: 'TransactionListView.swift (transactionContent), SeedlingLoadingView.swift, Theme.swift (SyncStatusDot)' },
     { id: 'home-empty', group: 'Wallet', label: 'No transactions', build: homeEmpty, shot: null, swift: 'TransactionListView.swift (transactionContent)' },
+    { id: 'home-offline', group: 'Wallet', label: 'Transactions, offline', build: homeOffline, shot: null, swift: 'TransactionListView.swift (syncStatus), Theme.swift (SyncStatusDot)' },
     { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
     // Their screenshots show the app after birch-wallet #90, which Future rebuilds; Today is the app before it
     { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: '36-WalletSettings', shotNote: AFTER_90, swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, Theme.swift (BirchResizableSheet)' },
