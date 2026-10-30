@@ -51,7 +51,7 @@ Everything below describes the app as it ships today. Values come from `birch/Vi
   | `brandInk` | `hbBrandInk` | The brand as text or an icon on a surface |
   | `selection`, `onSelection` | `hbSelection`, `hbOnSelection` | Selection ring and fill (`birchSelected`), checkmarks, selected radios, and the checkmark on a filled selection circle |
   | `toggle`, `progress`, `tabTint`, `link`, `amount` | `hbToggle`, `hbProgress`, `hbTabTint`, `hbLink`, `hbAmount` | Switches, spinners and progress bars, the active tab, forward text links (Inspect PSBT, Export PSBT File), Bitcoin amounts on review |
-  | `success`, `warning`, `error`, `errorFill`, `info` | `hbSuccess`, `hbWarning`, `hbError`, `hbErrorFill`, `hbInfo` | Confirmed; unconfirmed and partly verified; errors and a destructive fill; neutral information (change, labels, copy and paste) |
+  | `success`, `warning`, `error`, `errorFill`, `info` | `hbSuccess`, `hbWarning`, `hbError`, `hbErrorFill`, `hbInfo` | Confirmed; unconfirmed, partly verified, the use-your-own-node warning and No server; errors and a destructive fill; neutral information (change, labels, copy and paste) |
   | `disabledFill`, `disabledInk` | `hbDisabledFill`, `hbDisabledInk` | A disabled primary button |
   | `mainnet`, `testnet4`, `testnet3`, `purple` | `hbNetwork(_:)`, `hbPurple` | The network badges; the palette's purple also draws PDF/Print |
 
@@ -152,7 +152,7 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 9. **Progress.** The setup wizard uses a segmented bar in the progress color, only while creating a wallet: Multisig configuration, Import cosigners and Verify wallet are steps 1 to 3. The Send flow has no step indicator; each step starts with its content.
    - **Sync hairline.** A sync shows a 2pt bar in the progress color, with no track, along the bottom edge of Transactions' header (`SyncProgressBar`). It moves like Safari's loading bar: 10% at once, under 20% until the server answers, then easing toward where each batch of addresses should end, at the pace the wallet's last syncs measured, never backward, and under 85% until the scan returns. It fills when the sync finishes and fades out; after a failure it fades where it is.
    - **First sync.** It has no total, so a segment 30% wide sweeps across in 1.2s instead. Reduce Motion holds it centered at half opacity.
-   - **Status.** The header's right side reads Connecting…, then Fetching transactions · 64% (no percent on a first sync), then Saving…, then Synced 2s ago. A failure reads Couldn't sync in the error color and opens the connection sheet. While the phone is offline and no sync is running, it reads Offline in the secondary text color and the dot turns secondary; Offline opens the connection sheet too.
+   - **Status.** The header's right side reads Connecting…, then Fetching transactions · 64% (no percent on a first sync), then Saving…, then Synced 2s ago. A failure reads Couldn't sync in the error color and opens the connection sheet. While the phone is offline and no sync is running, it reads Offline in the secondary text color and the dot turns secondary; Offline opens the connection sheet too. A wallet with no Electrum server (the user deleted the one it used) reads No server in the warning color, ahead of Offline, with the dot secondary; No server opens the server picker, and the wallet doesn't sync until one is chosen.
 10. **Network badge.** Capsule, 11pt semibold, 15% tint of the network color.
 11. **QR presentation.** Black on white with quiet-zone padding and a glow in the brand color. Animated UR/BBQR frames.
 12. **Tab bar.** The native iOS 26 Liquid Glass bar, tinted with `hbTabTint`.
@@ -160,9 +160,14 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 14. **In-card utilities.** Actions on a field sit under it inside its card as equal tonal buttons (`HBTonalButton`): 44pt tall, 12pt corners, 15pt semibold with the symbol, brand ink on a 12% tint of it for the most useful action and ink on the nested fill for the rest. Scan QR and Paste on Import descriptor and Import cosigners, and the labels import and export in Wallet Settings.
 15. **Field errors.** Validation shows only after the user asks to go on. The field gets a 1.5pt `hbError` border inside its nested fill and the reason under it in `hbLabel` and `hbError` (`hbFieldError`). Editing the field clears it. Next scrolls the first flagged field into view and reads the reason out.
 16. **Folder tabs.** Import cosigners puts one tab per cosigner on top of the form card (`CosignerTabs`): the open tab stands 4pt taller and joins the card, whose top corners are square (`hbCard(squareTop:)`); a check in the success color marks a cosigner whose fields all validate. Past six cosigners the tabs scroll.
-17. **Settings rows.** Settings is the app's own cards, not an inset grouped List: a system-style section header over a `BirchCard`, 52pt rows with an `HBDivider` between them, and each choice showing its value and a chevron and pushing a list of the options with a checkmark in the selection color.
+17. **Settings rows.** Settings is the app's own cards, not an inset grouped List: a system-style section header over a `BirchCard`, 52pt rows with an `HBDivider` between them, and each choice showing its value and a chevron and pushing a list of the options with a checkmark in the selection color. The Electrum server picker uses the same sections and rows (`SettingsSection`, `settingsRow()`).
 18. **Resizable sheets.** Wallet Settings, Dashboard and Connection Status open at full height with a grabber and a half-height stop, and return to full height when the keyboard appears (`birchResizableSheet`).
-19. **Machine data wraps at the character.** Keys and descriptors fill every line to the edge instead of breaking after slashes and commas: `CharWrappingTextEditor` (a `UITextView` set to `.byCharWrapping`) for the fields, and `String.charWrapped` in a `Text` for display.
+19. **Machine data wraps at the character.** Keys, descriptors and server addresses fill every line to the edge instead of breaking after slashes, commas and dots: `CharWrappingTextEditor` (a `UITextView` set to `.byCharWrapping`) for the fields, and `String.charWrapped` in a `Text` for display.
+20. **Electrum servers.** A wallet syncs from a public server Birch ships (`ElectrumServerCatalog`) or one of the user's own (`ElectrumServer`), chosen on one page.
+    - **Server row** (`ElectrumServerRow`), on Multisig configuration, Import descriptor and Wallet Settings: a row on the nested fill with 12pt padding that pushes the picker. It shows the server's name in `hbBody`, with a `lock.fill` (11pt semibold, secondary) when its certificate is pinned, and its address under it in `hbMono(13)` secondary, wrapped at the character, with a 12pt semibold chevron. An unnamed server shows its host as the name and "Port 50002" under it. With no server it reads None, then Choose Server in the warning color. On setup the card's label is `hbLabel` secondary, like the other setup cards; in Wallet Settings it's the card title, with Test Connection under the row while the wallet has a server.
+    - **Own-node warning** (`OwnNodeWarning`): "Use your own node. You're trusting someone else's node to verify your bitcoin." in `hbLabel` and the warning color, with `exclamationmark.triangle.fill` on the first line's baseline. It sits 10pt under the row while a Mainnet wallet uses a public server. Over the public servers on the picker it's a banner: 12pt padding on an 8% tint of the warning color, 8pt corners.
+    - **Picker** (`ElectrumServerPickerView`), titled Electrum Server: Your Servers, then Public Servers, for the wallet's network only. Each row is the name, the address in mono and capsule tags in 11pt semibold secondary on a 12% tint of it: TCP, Pinned certificate, Pins on next sync, and the signet's name (Signet, Mutinynet or Custom signet). The chosen server carries the checkmark, and choosing pops back. The user's own rows have an `ellipsis.circle` menu and a context menu with Edit and Delete, and Add Server ends the section as a row with a plus, in brand ink. With none yet, the hint "Running your own node? Add its Electrum server." sits under the section.
+    - **Add and Edit Server** (`ElectrumServerEditSheet`): a sheet with Cancel and Save in `HBBarButtonStyle`. One card holds the network badge, Name, Host (mono), Port (mono) and a TCP/SSL segmented control. Save checks the server first, showing Checking server…: one that can't be reached, is on another network or is already added is flagged on the Host field (`hbFieldError`). A certificate iOS doesn't trust opens a second card, Trust This Certificate? (or Certificate Changed), with `lock.trianglebadge.exclamationmark.fill` in the warning color, `hbHeadline`, the reason, Issued To, the SHA-256 fingerprint in 13pt mono wrapped at the character on the nested fill, and a primary Trust and Save (Trust New Certificate).
 
 ## 1.6 Inconsistencies
 
@@ -179,11 +184,12 @@ All type is SF: SF Pro, SF Pro Rounded and SF Mono, via `Font.hb*`.
 - **Card fill with brand text:** Next Address, and Back on the setup footers.
 - **Tonal:** Scan QR (brand tint) and Paste (nested fill) inside the setup cards.
 - **Tinted fills in five colors:** Show Descriptor QR, and Sync now and Full resync on the connection sheet (brand), Copy Descriptor and Test Connection (info), PDF/Print (purple), Delete Wallet (error), Copy debug info (nested).
-- **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses and Inspect PSBT (brand), Copy TXID (info).
+- **Text buttons in three colors:** Back on Wallet setup and Verify wallet (secondary text), View All Addresses, Inspect PSBT and Add Server (brand), Copy TXID (info).
 - **Footers in two layouts:** full-width primary with a text Back below (Create Wallet), and a compact secondary Back on the left with a compact primary on the right (Import, Next). Get Started stands alone.
 
 **Type and numbers**
 - Mono is used for amounts in lists and detail rows as well as for machine data, so "8,717 sats" and a txid look alike.
+- A server address wraps at the character like other machine data, so the port can split across lines: the iPhone shows fulcrum.sethforprivacy.com:500 over 02 on the server row.
 - Title styles vary: system large titles on tab roots, centered Rounded 28 in setup, inline titles on detail screens, and a custom header on Transactions.
 
 **Shape and spacing**
@@ -202,17 +208,18 @@ Welcome · Wallet Setup · Descriptor Import (filled, empty) · Transactions · 
 | App lock (`ContentView`, `PINPadView`) | Face ID / Touch ID prompt, PIN entry, wrong PIN, progressive lockout (60s to 24h), privacy cover in the app switcher, data wipe |
 | Broadcast (`BroadcastResultView`) | Ready to broadcast (in the page), broadcasting, animated success with countdown, export transaction |
 | Bump fee (`BumpFeeView`) | Full RBF flow with its own fee entry, QR display, scan and broadcast. The fee entry step is in the page. |
-| Connection (`ConnectionStatusView`) | Connected, error, test result; while syncing, an Action row under State (label above, the step in technical English with its batch and a whole-second timer); Sync now, Full resync, Test connection, Copy debug info. Full resync downloads every transaction again over a new connection instead of reusing the saved ones, and reads Resyncing… while it runs. Both sync buttons are disabled during any sync. |
-| Wallet Settings (`WalletInfoView`) | Electrum server test result, rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF; the half-height stop. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
+| Connection (`ConnectionStatusView`) | The server's name and address, or None; connected, error, test result; while syncing, an Action row under State (label above, the step in technical English with its batch and a whole-second timer); Sync now, Full resync, Test connection, Copy debug info. Full resync downloads every transaction again over a new connection instead of reusing the saved ones, and reads Resyncing… while it runs. Both sync buttons are disabled during any sync. |
+| Wallet Settings (`WalletInfoView`) | Electrum server test result, no server (None and Choose Server, without Test Connection), rename, the labels import result, delete confirmation; descriptor QR, MP4 export, PDF; the half-height stop. The sheet as it opens and Edit Cosigners are in the screenshots and the page. |
+| Electrum servers (`ElectrumServerPickerView`, `ElectrumServerEditSheet`) | The picker: Your Servers empty with its hint or listing servers, the tags, the Edit and Delete menu, the own-node banner over Mainnet's public servers. Add and Edit Server: Checking server…, unreachable, on another network, already added, Trust This Certificate?, Certificate Changed |
 | Saved PSBTs | List with swipe to rename or delete, resume-PSBT sheet |
 | UTXOs | Filter sheet (in the page), frozen UTXOs, swipe to freeze, coin control picker in Send |
 | Empty states | No transactions and the first sync's seedling (both in the page), No UTXOs, no addresses |
 | Transaction rows | Unconfirmed (clock, warning), labeled (tag), privacy mode (masked amounts), fiat display |
 | Verification | Inputs not checked, verified, partially verified, failed. Change verified, needs a look, failed |
-| Sync status | Not started, syncing (the dot's pulse, and the header's hairline and status: Connecting…, Fetching transactions · 64%, Saving…), synced, Couldn't sync, offline (Offline and a secondary dot) |
+| Sync status | Not started, syncing (the dot's pulse, and the header's hairline and status: Connecting…, Fetching transactions · 64%, Saving…), synced, Couldn't sync, offline (Offline and a secondary dot), no server (No server in the warning color and a secondary dot) |
 | Networks | All four badges: Mainnet, Testnet4, Testnet3, Signet |
-| Validation | Invalid address prefix, amount over spendable, Max is zero, fee rate of 0, port out of range, a missing Electrum host on Mainnet (the Host field flagged), a bad or wrong-network descriptor (the field flagged) |
-| Alerts | Insecure SSL, delete wallet, reset Electrum, save changes, exit signing, edit transaction, QR settings changed, log export warning, import labels result, authentication unavailable, rename and delete PSBT, paste signed PSBT, changing between Mainnet and a test network with keys entered, lowering the cosigner count below a filled cosigner, errors |
+| Validation | Invalid address prefix, amount over spendable, Max is zero, fee rate of 0, port out of range, an Electrum server that can't be reached, is on another network or is already added (the Host field flagged), a bad or wrong-network descriptor (the field flagged) |
+| Alerts | Delete wallet, delete an Electrum server (naming the wallets it leaves without one), switch to a server on another signet, save changes, exit signing, edit transaction, QR settings changed, log export warning, import labels result, authentication unavailable, rename and delete PSBT, paste signed PSBT, changing between Mainnet and a test network with keys entered, lowering the cosigner count below a filled cosigner, errors |
 | Layouts | iPad (portrait and landscape), iPhone Duo closed and open (two-column setup across the fold), short screens |
 
 ---
@@ -299,7 +306,7 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | PSBT QR | `PSBTDisplayView` | `31-PSBTQRDisplay` |
 | Scan signed PSBT | `PSBTScanView`, `URScannerSheet` | `33-ScanSignedPSBT` |
 | Ready to broadcast | `BroadcastResultView`, `SignatureProgressView` | None. Every signature collected, before Broadcast is tapped: both slots signed, the status block centered in the space above the buttons. Checked against a capture from the app on the iPhone 17 Pro in dark mode, to within a third of a point across and about a point down. |
-| Multisig configuration | `MultisigConfigView`, `WalletNameNetworkCard` | `15-MultisigConfig-Testnet4` |
+| Multisig configuration | `MultisigConfigView`, `WalletNameNetworkCard`, `ElectrumServerSetupSection`, `ElectrumServerRow` | `15-MultisigConfig-Testnet4`. On Testnet4, which the tour picks, with its public server. |
 | Import cosigners, empty | `CosignerImportView` | `17-CosignerImport-Empty` |
 | Import cosigners | `CosignerImportView`, `CharWrappingTextEditor` | `18-CosignerImport-Cosigner1` |
 | Import cosigners, flagged | `CosignerImportView`, `hbFieldError` | `20-CosignerImport-Errors` |
@@ -309,14 +316,14 @@ The screens in `design-system.html` are the shipped layouts, not redesigns. Each
 | Settings | `SettingsView` | `14-Settings` |
 | Welcome | `WelcomeStepView`, `SetupWizardView` | `01-Welcome` |
 | Wallet setup | `WalletCreationChoiceView` | `02-Wallet-Setup` |
-| Import descriptor | `DescriptorImportView`, `WalletNameNetworkCard`, `CharWrappingTextEditor` | `03-DescriptorImport` |
-| Import descriptor, empty | `DescriptorImportView` | `35-DescriptorImport-Empty`. The field at its 120pt minimum showing the format as its placeholder, and Import disabled. |
+| Import descriptor | `DescriptorImportView`, `WalletNameNetworkCard`, `ElectrumServerRow`, `CharWrappingTextEditor` | `03-DescriptorImport` |
+| Import descriptor, empty | `DescriptorImportView`, `ElectrumServerRow` (`OwnNodeWarning`) | `35-DescriptorImport-Empty`. The field at its 120pt minimum showing the format as its placeholder, and Import disabled. On Mainnet, where a new wallet starts, with the public server the tour always starts on (Seth For Privacy, its certificate pinned) and the own-node warning. |
 | Transactions, loading | `TransactionListView` (`transactionContent`), `SeedlingLoadingView`, `SyncStatusDot`, `SyncProgressBar` | None. A new wallet's first sync: the seedling 100pt under the title, a birch seed growing into a tree over 3s, the syncing dot with its halo pulsing, Fetching transactions, and the hairline's segment sweeping along the header's bottom edge (held centered in the harness). Checked against the view built in the simulator. |
 | No transactions | `TransactionListView` (`transactionContent`) | None. Synced and empty: ContentUnavailableView 100pt under the title (a 40pt symbol, a 20pt bold title and a 20pt description). Checked in the simulator. |
 | Transactions, offline | `TransactionListView` (`syncStatus`), `SyncStatusDot` | None. The list while the phone has no network: Offline in place of the sync age, in the same 11pt secondary text, and the dot in secondary text on its 10% tint. Checked against Transactions, which differs only in those two places. |
 | Bump fee | `BumpFeeView` (`BumpFeeInputView`, `BumpFeeRateCard`), `HBBarButtonStyle` | None. The fee step as it opens: the rate card expanded, Custom prefilled at the minimum. Checked in the simulator. |
 | UTXO filter sheet | `UTXOFilterSheet` | `38-UTXOFilter`. At its medium detent over the UTXO list, with the default filter. |
-| Wallet settings | `WalletInfoView`, `CosignerCardView`, `BirchResizableSheet` | `36-WalletSettings`. The sheet over Transactions as it opens, at full height. On the iPad it's the resizable sheet, 580pt wide from 32pt down to 20pt above the bottom, not a form sheet; the closed Duo sets the title at 28pt on the toolbar row. The utility buttons' symbols take the sheet's 17pt body size. |
+| Wallet settings | `WalletInfoView`, `CosignerCardView`, `ElectrumServerRow`, `BirchResizableSheet` | `36-WalletSettings`. The sheet over Transactions as it opens, at full height. On the iPad it's the resizable sheet, 580pt wide from 32pt down to 20pt above the bottom, not a form sheet; the closed Duo sets the title at 28pt on the toolbar row. The utility buttons' symbols take the sheet's 17pt body size. |
 | Edit cosigners | `EditCosignersView`, `CosignerForm` | `37-EditCosigners`. The sheet stacked on Wallet Settings with cosigner 1 open: 10pt lower than a first sheet on the iPhone and the closed Duo, 20pt on the open Duo, and on the iPad as wide as Wallet Settings, from 368pt for 640pt, with Wallet Settings dimmed behind it. |
 
 Platform details that the rebuild reproduces:
@@ -333,7 +340,8 @@ Platform details that the rebuild reproduces:
 - **Lists** use the system metrics iOS 27.2 draws: plain lists (Transactions, UTXOs) with 16pt insets, the system chevron and system separators (`#3A393A` on the dark card, `#E7E7E7` on the light one). Switches are iOS's 63 × 28pt. Settings is the app's own cards, with section headers in the system style (17pt semibold, secondary label color).
 - **Navigation bars** have the Liquid Glass back button (44pt) and the inline title in the system label color.
 - **Sheet toolbars** use `HBBarButtonStyle`: 15pt semibold on the card fill (the prominent one on the brand fill), 34pt tall, 21pt down and 16pt in, around the inline title.
-- **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button, the warning symbol on Verify wallet).
+- **SF Symbol frames** sometimes differ from the AppKit render by a point. Where that moves a layout, the builder sets the frame SwiftUI uses (the Welcome feature icons, the Add Label button, the warning symbol on Verify wallet). The own-node warning's symbol sits on the text's baseline: SwiftUI's frame for it is 1.33pt narrower, and its triangle sits 1.33pt lower without making the line taller.
+- **A server address** (`String.charWrapped` in 13pt mono) breaks where the app's does (`serverLines`): a line holds the row's width less about 45pt for the chevron and the spacing around it, a character every 7.97pt, and iOS's standard line breaking moves a character down rather than leave one alone on the last line.
 - **The app icon** is the artwork from `Assets.xcassets`. On Welcome, a ground-colored 24pt stroke blurred by 12pt fades its edges, as in `WelcomeStepView`.
 - **The PSBT and receive QR codes** are the actual module grids sampled from the screenshots.
 - **Liquid Glass** uses system colors sampled from the screenshots. **The segmented control** is drawn the way UIKit composites it: the `nested` fill under iOS's translucent track (rgb 118,118,128 at 24% dark, 12% light), with a white thumb in light mode.
@@ -359,7 +367,7 @@ What changes on the other devices, beyond size:
 - **Setup**: Import descriptor is full screen everywhere; the open Duo splits Welcome, Wallet setup and Import descriptor in two columns; the iPad's steps take 40pt more at the top, and the first-launch wizard starts 32pt down there (no tab bar).
 - **Data** in the screenshots is the same on every device, because the tour runs on fixed data (`ScreenshotFixtures` in the app: the price, the fee rates, the clock, the identicons, the chain tip and the transaction). Only the Duo differs, with Touch ID where the others have Face ID, and the builders follow it.
 - The Duo, which has its own iOS 27.2 simulator runtime, spaces wrapped address lines 1.67pt further apart than the iPhone and the iPad do. A few long Duo and iPad screens drift by 1 to 2pt mid-screen from rounding differences.
-- **Known gaps:** on Review transaction the app spaces a wrapped address's lines 1.3pt further apart than the page, so the rows under the To and Change addresses sit up to 4pt lower in the app. The iPad's Wallet Settings drifts by up to 4pt below the descriptor buttons.
+- **Known gaps:** on Review transaction the app spaces a wrapped address's lines 1.3pt further apart than the page, so the rows under the To and Change addresses sit up to 4pt lower in the app. The iPad's Wallet Settings drifts by up to 6.5pt from the cosigner cards down.
 - The flagged Import cosigners screenshot is scrolled on the Duo, where Next brings the flagged key into view: 10.33pt closed and 15pt open. The page scrolls the screen to match.
 
 ### The harness
@@ -368,14 +376,14 @@ To check a screen against its screenshot, open `design-system.html?harness=<scre
 
 ## Tune controls
 
-Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no warnings, error states, destructive buttons, tertiary text or Mainnet badge).
+Each control applies to the app screens unless marked *, which means the element exists only in the component sections (the app screens shown have no error states, destructive buttons, tertiary text or Mainnet badge). The warning color reaches the empty Import descriptor, as the own-node warning.
 
 | Group | Controls |
 |---|---|
 | Brand | Hue, chroma, lightness per mode, text on brand |
 | Accent and roles | Second hue on/off; with it on, the accent hue, chroma and lightness, and which elements use it: selection, progress, amounts, active tab, toggles (Settings, the UTXO filter sheet) |
 | Dark and light surfaces | Tint hue and amount, ground, surface step or card and field depth, secondary text, tertiary text* |
-| Semantic | Success, info, warning*, danger* hues and chroma |
+| Semantic | Success, info, warning, danger* hues and chroma |
 | Networks | Testnet4, Signet, Testnet3, Mainnet* hues and chroma |
 | App chrome | Wallet header fill, tab bar glass or solid, glass opacity, sheet dimming |
 | Shape | Card, field, button, pill and sheet radius; selection ring; card stroke; light-mode shadow |

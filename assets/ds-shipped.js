@@ -529,14 +529,8 @@
         </div>
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('electrum', 'Electrum Server card')}>
           ${cardTitle('Electrum Server')}
-          ${settingsField('Host', 'testnet4.mempool.space', 'host', true)}
-          ${settingsField('Port', '40002', 'port', true)}
-          <div class="col" style="gap:${S(6)};align-items:stretch">${T('Protocol', 'd', 13, 400, 'ink2')}<div style="height:31px"><div class="seg"${c('protocol', 'Protocol')}><span>TCP</span><span class="on">SSL</span></div></div></div>
-          <div class="row" style="gap:8px"${c('insecure-ssl', 'Allow insecure SSL switch')}>${T('Allow insecure SSL', 'd', 13, 400, 'ink')}<span class="sp"></span>${toggle(false)}</div>
-          <div class="row" style="gap:12px">
-            ${smallBtn('antenna.radiowaves.left.and.right:17:regular', 'Test Connection', 'ub', '--uc:var(--u-info)', 'test-connection')}
-            ${smallBtn('arrow.counterclockwise:17:regular', 'Reset', 'nest', 'color:var(--ink2)', 'reset-electrum')}
-          </div>
+          ${serverRow(SERVERS.testnet4)}
+          <div class="row">${smallBtn('antenna.radiowaves.left.and.right:17:regular', 'Test Connection', 'ub', '--uc:var(--u-info)', 'test-connection')}</div>
         </div>
         <div class="hcard col" style="gap:${S(12)};align-items:stretch"${c('explorer', 'Block Explorer card')}>
           ${cardTitle('Block Explorer')}
@@ -546,7 +540,7 @@
           ${cardTitle('Sync Settings')}
           <div class="col" style="gap:${S(6)};align-items:stretch">
             ${T('Address Gap Limit', 'd', 13, 400, 'ink2')}
-            <div class="row" style="gap:8px"><span class="nest row" style="width:100px;justify-content:center;padding:calc(var(--fpad) - 1px) calc(var(--fpad) - 2px)"${c('gap-limit', 'Gap limit field')}>${T('20', 'm', 16, 400, 'ink', 'line-height:1.1934')}</span>${T('addresses', 'd', 14, 400, 'ink2')}</div>
+            <div class="row" style="gap:8px"><span class="nest row" style="width:100px;justify-content:center;padding:calc(var(--fpad) - 1px) calc(var(--fpad) - 2px)"${c('gap-limit', 'Gap limit field')}>${T('50', 'm', 16, 400, 'ink', 'line-height:1.1934')}</span>${T('addresses', 'd', 14, 400, 'ink2')}</div>
             ${caption('Number of consecutive unused addresses to scan. Increase if funds are missing.')}
           </div>
           <div class="divider"></div>
@@ -887,17 +881,75 @@
   /** WalletNameNetworkCard: the optional wallet name and the network picker share one card, both labels
    *  leading like form fields. Empty, the name shows the "My Wallet" placeholder the wallet is saved with,
    *  in the system placeholder color. UISegmentedControl takes a 31pt frame and draws its 32pt track 1pt
-   *  past it */
-  const walletNameNetworkCard = () => `<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('name-network', 'Wallet name and network card')}>
+   *  past it. A new wallet starts on Mainnet; the tour picks Testnet4 for every step after the empty
+   *  Import descriptor */
+  const walletNameNetworkCard = (network = 'Testnet4') => `<div class="hcard col" style="gap:${S(16)};align-items:stretch"${c('name-network', 'Wallet name and network card')}>
       <div class="col" style="gap:${S(6)};align-items:stretch"${c('wallet-name', 'Wallet name field')}>
         ${T('Wallet Name', 'd', 13, 400, 'ink2')}
         <div class="nest" style="padding:calc(var(--fpad) + 1px) var(--fpad)">${T('My Wallet', 'd', 16, 400, 'var(--sysInk3)', EMPTY_LH)}</div>
       </div>
       <div class="col" style="gap:${S(8)};align-items:stretch"${c('network', 'Network picker')}>
         ${T('Bitcoin Network', 'd', 13, 400, 'ink2', LH)}
-        <div style="height:31px"><div class="seg"${c('network-seg', 'Segmented control')}><span>Mainnet</span><span class="on">Testnet4</span><span>Testnet3</span><span>Signet</span></div></div>
+        <div style="height:31px"><div class="seg"${c('network-seg', 'Segmented control')}>${['Mainnet', 'Testnet4', 'Testnet3', 'Signet'].map((n) => `<span${n === network ? ' class="on"' : ''}>${n}</span>`).join('')}</div></div>
       </div>
     </div>`
+
+  /** The public servers the screens show (ElectrumServerCatalog): Testnet4's, and the Mainnet one the
+   *  screenshot tour always starts on. Its certificate is self-signed and pinned, so it shows the lock */
+  const SERVERS = {
+    testnet4: { name: 'mempool.space', detail: 'testnet4.mempool.space:40002' },
+    mainnet: { name: 'Seth For Privacy', detail: 'fulcrum.sethforprivacy.com:50002', pinned: true, warn: true },
+  }
+
+  /** OwnNodeWarning: the nudge to run your own node while a mainnet wallet uses a public server, 13pt in
+   *  the warning color with its symbol on the first line's baseline. SwiftUI puts the symbol's baseline
+   *  above the bottom of its frame, so it doesn't make the line taller and its triangle sits a little
+   *  below the text's baseline; here its frame sits on the baseline, so the negative top margin keeps it
+   *  from raising the line and it's drawn 1.33pt lower. SwiftUI's frame is also 1.33pt narrower than the
+   *  AppKit render's */
+  const ownNodeWarning = () =>
+    `<div class="row" style="gap:6px;align-items:baseline;color:var(--warning)"${c('own-node-warning', 'Use your own node warning')}><span style="display:flex;flex:none;margin:-4px -1.33px 0 0;position:relative;top:1.33px">${Y('exclamationmark.triangle.fill:13:regular')}</span>${T("Use your own node. You're trusting someone else's node to verify your bitcoin.", 'd', 13, 400, 'currentColor', '', 'tw')}</div>`
+
+  /** The lines of a server row's address as the app breaks them (String.charWrapped): a line holds what
+   *  fits in the row less its chevron and the spacing around it, about 45pt, a character every 7.97pt of
+   *  13pt mono. iOS's standard line breaking then moves a character down rather than leave one alone on
+   *  the last line, so the iPhone's 31-character row breaks fulcrum.sethforprivacy.com:500 / 02. `card`
+   *  is the card's width */
+  function serverLines(text, card) {
+    const per = Math.floor((card - 32 - 24 - 45) / 7.97)
+    const lines = []
+    for (let i = 0; i < text.length; i += per) lines.push(text.slice(i, i + per))
+    const n = lines.length
+    if (n > 1 && lines[n - 1].length === 1) {
+      lines[n - 1] = lines[n - 2].slice(-1) + lines[n - 1]
+      lines[n - 2] = lines[n - 2].slice(0, -1)
+    }
+    return lines
+  }
+
+  /** ElectrumServerRow: the wallet's server as a row that opens the picker, on the nested fill: its name in
+   *  16pt with a lock when its certificate is pinned, its address under it in 13pt mono wrapped at the
+   *  character, and a chevron, with the own-node warning under the row for a public mainnet server. Given
+   *  the card's width, the address breaks where the app's does (serverLines) */
+  function serverRow({ name, detail, pinned = false, warn = false }, card) {
+    const address = card ? serverLines(detail, card).join('<br>') : detail
+    return `<div class="col" style="gap:${S(10)};align-items:stretch">
+      <div class="nest row" style="padding:var(--fpad);gap:12px"${c('server-row', 'Electrum server row')}>
+        <div class="col" style="gap:${S(3)};align-items:flex-start;flex:0 1 auto;min-width:0">
+          <div class="row" style="gap:6px">${T(name, 'd', 16, 400, 'ink')}${pinned ? `<span style="color:var(--ink2);display:flex">${Y('lock.fill:11:semibold')}</span>` : ''}</div>
+          ${T(address, 'm', 13, 400, 'ink2', card ? '' : charWrap(), 'tw')}
+        </div>
+        <span class="sp" style="min-width:8px"></span>
+        <span style="color:var(--ink2);display:flex">${Y('chevron.right:12:semibold')}</span>
+      </div>
+      ${warn ? ownNodeWarning() : ''}
+    </div>`
+  }
+
+  /** ElectrumServerSetupSection on Multisig configuration and Import descriptor: a card with the label
+   *  over the server row. `card` is its width, for an address that wraps */
+  const electrumSetupCard = (server, card) =>
+    `<div class="hcard col" style="gap:${S(8)};align-items:stretch"${c('electrum', 'Electrum Server card')}>${T('Electrum Server', 'd', 13, 400, 'ink2')}${serverRow(server, card)}</div>`
 
   function multisig() {
     return setupSheet(NEW_WALLET_STEP.multisig, `
@@ -913,7 +965,7 @@
         </div>
         <div class="col" style="gap:${S(24)};padding:0 var(--gutter);align-items:stretch">
           ${walletNameNetworkCard()}
-          ${disclosureCard('Electrum Server', 'electrum')}
+          ${electrumSetupCard(SERVERS.testnet4)}
           ${disclosureCard('Advanced', 'advanced')}
         </div>
         ${wizFooter('Back', 'Next')}
@@ -956,7 +1008,15 @@
           <div class="nest" style="padding:calc(var(--fpad) + 8px) calc(var(--fpad) + 5px);min-height:144px${two ? ';flex:1 0 auto' : ''}"${c('descriptor-text', 'Descriptor text editor')}>${text}</div>
           <div class="row" style="gap:8px;margin-top:${S(4)}"${c('descriptor-utilities', 'In-card utilities')}>${tonal('qrcode.viewfinder:15:semibold', 'Scan QR', false, 'scan')}${tonal('doc.on.clipboard:15:semibold', 'Paste', true, 'paste')}</div>
         </div>`
-    const settings = [walletNameNetworkCard(), disclosureCard('Electrum Server', 'electrum'), disclosureCard('Advanced', 'advanced')]
+    // Empty, as the step opens: on Mainnet, with the public server the tour starts on. The tour then
+    // picks Testnet4 before the descriptor goes in
+    // The settings cards take the leading column on the open Duo, and the descriptor card's width elsewhere
+    const settingsW = two ? twoCols()[0][1] - twoCols()[0][0] : cardW
+    const settings = [
+      walletNameNetworkCard(empty ? 'Mainnet' : 'Testnet4'),
+      electrumSetupCard(empty ? SERVERS.mainnet : SERVERS.testnet4, settingsW),
+      disclosureCard('Advanced', 'advanced'),
+    ]
     if (two) {
       return twoColumn(
         `<div class="col" style="min-height:100%;gap:${S(16)};padding:${S(16)} 0;align-items:stretch">
@@ -1392,8 +1452,6 @@
   }
 
   /** On every device: the screenshot shows the app after birch-wallet #90, which Today predates */
-  const AFTER_90 = Object.fromEntries(DEVICES.map((d) => [d.id, 'Screenshot shows the app after #90: Future matches it, Today predates it']))
-
   const SCREENS = [
     { id: 'home', group: 'Wallet', label: 'Transactions', build: home, shot: '04-Transactions', swift: 'TransactionListView.swift, TransactionRowView.swift' },
     { id: 'wallet-picker', group: 'Wallet', label: 'Wallet picker', build: walletPicker, shot: '05-WalletPicker', swift: 'TransactionListView.swift (walletPickerOverlay)' },
@@ -1403,8 +1461,8 @@
     { id: 'home-offline', group: 'Wallet', label: 'Transactions, offline', build: homeOffline, shot: null, swift: 'TransactionListView.swift (syncStatus), Theme.swift (SyncStatusDot)' },
     { id: 'bump', group: 'Wallet', label: 'Bump fee', build: bumpFee, shot: null, swift: 'BumpFeeView.swift (BumpFeeInputView, BumpFeeRateCard), Theme.swift (HBBarButtonStyle)' },
     // Their screenshots show the app after birch-wallet #90, which Future rebuilds; Today is the app before it
-    { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: '36-WalletSettings', shotNote: AFTER_90, swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, Theme.swift (BirchResizableSheet)' },
-    { id: 'edit-cosigners', group: 'Wallet', label: 'Edit cosigners', build: editCosigners, shot: '37-EditCosigners', shotNote: AFTER_90, swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift' },
+    { id: 'wallet-settings', group: 'Wallet', label: 'Wallet settings', build: walletSettings, shot: '36-WalletSettings', swift: 'WalletInfoView.swift (WalletLabelsCard), CosignerCardView.swift, ElectrumServerRow.swift, Theme.swift (BirchResizableSheet)' },
+    { id: 'edit-cosigners', group: 'Wallet', label: 'Edit cosigners', build: editCosigners, shot: '37-EditCosigners', swift: 'WalletInfoView.swift (EditCosignersView), CosignerForm.swift' },
     { id: 'send-empty', group: 'Send', label: 'Send, empty', build: sendEmpty, shot: '11-Send', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'send', group: 'Send', label: 'Recipients and amount', build: send, shot: '27-SendRecipientsFilled', swift: 'SendFlowView.swift, SendAmountView.swift' },
     { id: 'fee', group: 'Send', label: 'Network fee sheet', build: fee, shot: '26-NetworkFee-Custom', swift: 'SendFeeSheetView.swift' },
@@ -1418,9 +1476,9 @@
     { id: 'settings', group: 'Settings', label: 'Settings', build: settings, shot: '14-Settings', swift: 'SettingsView.swift' },
     { id: 'welcome', group: 'Setup', label: 'Welcome', build: welcome, shot: '01-Welcome', swift: 'WelcomeStepView.swift, SetupWizardView.swift' },
     { id: 'setup', group: 'Setup', label: 'Wallet setup', build: walletSetup, shot: '02-Wallet-Setup', swift: 'WalletCreationChoiceView.swift' },
-    { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), CharWrapText.swift (CharWrappingTextEditor)' },
-    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: '35-DescriptorImport-Empty', swift: 'DescriptorImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
-    { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard)' },
+    { id: 'descriptor', group: 'Setup', label: 'Import descriptor', build: descriptorImport, shot: '03-DescriptorImport', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), ElectrumServerRow.swift, CharWrapText.swift (CharWrappingTextEditor)' },
+    { id: 'descriptor-empty', group: 'Setup', label: 'Import descriptor, empty', build: descriptorImportEmpty, shot: '35-DescriptorImport-Empty', swift: 'DescriptorImportView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), ElectrumServerRow.swift (OwnNodeWarning), CharWrapText.swift (CharWrappingTextEditor)' },
+    { id: 'multisig', group: 'Setup', label: 'Multisig configuration', build: multisig, shot: '15-MultisigConfig-Testnet4', swift: 'MultisigConfigView.swift, ElectrumServerSetupSection.swift (WalletNameNetworkCard), ElectrumServerRow.swift' },
     { id: 'cosigner-empty', group: 'Setup', label: 'Import cosigners, empty', build: cosignerEmpty, shot: '17-CosignerImport-Empty', swift: 'CosignerImportView.swift' },
     { id: 'cosigner', group: 'Setup', label: 'Import cosigners', build: cosignerFilled, shot: '18-CosignerImport-Cosigner1', swift: 'CosignerImportView.swift, CharWrapText.swift (CharWrappingTextEditor)' },
     // Next scrolls the flagged key into view, which moves the form on the Duo's shorter screens

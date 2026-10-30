@@ -82,7 +82,8 @@
 
   // Tuning panel schema: [path, label, kind, min|options, max, step, unit, flags]
   // Every control reaches the app screens unless flagged { only: 'components' }: those
-  // elements (warnings, errors, destructive buttons, tertiary text...) appear only in the component boards.
+  // elements (errors, destructive buttons, tertiary text...) appear only in the component boards. The
+  // warning color reaches the empty Import descriptor, as the own-node warning.
   const COMP = { only: 'components' }
   const NEEDS_ACCENT = { needsAccent: true }
   const DIAL = [
@@ -125,7 +126,7 @@
     { id: 'semantic', name: 'Semantic', color: true, sw: ['success', 'warning', 'danger', 'info'], rows: [
       ['semantic.successHue', 'Success', 'hue', 0, 360, 1],
       ['semantic.infoHue', 'Info', 'hue', 0, 360, 1],
-      ['semantic.warningHue', 'Warning', 'hue', 0, 360, 1, '', COMP],
+      ['semantic.warningHue', 'Warning', 'hue', 0, 360, 1],
       ['semantic.dangerHue', 'Danger', 'hue', 0, 360, 1, '', COMP],
       ['semantic.chroma', 'Chroma', 'chroma', 0.04, 0.2, 0.005],
     ] },
